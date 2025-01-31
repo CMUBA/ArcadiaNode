@@ -6,8 +6,8 @@
     <title>Arcadia Node - 服务列表</title>
     <style>
         body {
-            font-family: 'Courier New', Courier, monospace;
-            max-width: 1000px;
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
             line-height: 1.6;
@@ -19,32 +19,89 @@
             border-radius: 5px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
+            overflow-x: auto;
         }
         h1, h2 {
             color: #333;
             border-bottom: 2px solid #333;
             padding-bottom: 10px;
         }
-        .service-list {
-            list-style: none;
-            padding: 0;
-        }
-        .service-item {
-            background-color: #f8f9fa;
+        table {
+            width: 100%;
+            border-collapse: collapse;
             margin: 10px 0;
-            padding: 15px;
-            border-radius: 5px;
-            border-left: 4px solid #007bff;
+            font-size: 14px;
         }
-        .required {
-            color: #dc3545;
-            font-weight: bold;
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
         }
         .endpoint {
             font-family: monospace;
             background-color: #e9ecef;
             padding: 2px 5px;
             border-radius: 3px;
+        }
+        .type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: white;
+        }
+        .type-badge.basic {
+            background-color: #007bff;
+        }
+        .type-badge.extend {
+            background-color: #28a745;
+        }
+        .btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        .btn-test {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .btn-test:hover {
+            background-color: #138496;
+        }
+        .params-input {
+            width: 100%;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .response-area {
+            display: none;
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .directory-tree {
+            font-family: monospace;
+            white-space: pre;
+            font-size: 14px;
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -53,14 +110,37 @@
         <h1>Arcadia Node - 服务列表</h1>
         
         <h2>基础服务</h2>
-        <ul class="service-list" id="serviceList">
-            <!-- 服务列表将通过 JavaScript 动态加载 -->
-        </ul>
+        <table id="basicServiceTable">
+            <thead>
+                <tr>
+                    <th>服务</th>
+                    <th>名称</th>
+                    <th>端点</th>
+                    <th>参数</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h2>扩展服务</h2>
+        <table id="extendServiceTable">
+            <thead>
+                <tr>
+                    <th>服务</th>
+                    <th>名称</th>
+                    <th>端点</th>
+                    <th>参数</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <div class="container">
         <h2>目录结构</h2>
-        <pre>
+        <div class="directory-tree">
 root/
 ├── node_modules/        # 所有依赖
 ├── data/               # 服务配置数据
@@ -80,166 +160,86 @@ root/
     ├── gamex/        # 游戏服务
     ├── comment/      # 评论服务
     ├── item/         # 物品服务
-    └── asset/        # 资产服务
-        </pre>
+    └── asset/        # 资产服务</div>
     </div>
 
     <script>
+        // 默认参数配置
+        const defaultParams = {
+            'node_register': { nodeId: 'test-node-1', address: 'http://localhost:3001' },
+            'node_routes_list': { nodeId: 'test-node-1' },
+            'service_register': { serviceId: 'test-service-1', nodeId: 'test-node-1', type: 'basic' },
+            'service_list': { type: 'basic' },
+            'service_remove': { serviceId: 'test-service-1' },
+            'user_register': { username: 'testuser', password: 'password123' },
+            'user_login': { username: 'testuser', password: 'password123' },
+            'node_heartbeat': { nodeId: 'test-node-1' },
+            'chain_hero_create': { userId: '1', name: 'Hero1' },
+            'chain_hero_load': { userId: '1', heroId: '1' },
+            'chain_hero_save': { userId: '1', heroId: '1', data: {} }
+        };
+
+        // 测试服务接口
+        async function testService(name, url, params) {
+            const responseArea = document.getElementById(`response-${name}`);
+            responseArea.style.display = 'block';
+            responseArea.textContent = '请求中...';
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: params
+                });
+                const data = await response.json();
+                responseArea.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseArea.textContent = `错误：${error.message}`;
+            }
+        }
+
         // 获取服务列表
         fetch('/data/service_list.json')
             .then(response => response.json())
             .then(services => {
-                const serviceList = document.getElementById('serviceList');
+                const basicServiceTable = document.querySelector('#basicServiceTable tbody');
+                const extendServiceTable = document.querySelector('#extendServiceTable tbody');
+                
                 services.forEach(service => {
-                    const li = document.createElement('li');
-                    li.className = 'service-item';
-                    li.innerHTML = `
-                        <h3>${service.description} ${service.required ? '<span class="required">(必需)</span>' : ''}</h3>
-                        <p>名称：${service.name}</p>
-                        <p>端点：<span class="endpoint">${service.url}</span></p>
+                    const tr = document.createElement('tr');
+                    const defaultParam = defaultParams[service.name] || {};
+                    
+                    tr.innerHTML = `
+                        <td>
+                            ${service.description}
+                            <span class="type-badge ${service.type}">
+                                ${service.type === 'basic' ? '基础' : '扩展'}
+                            </span>
+                        </td>
+                        <td>${service.name}</td>
+                        <td><span class="endpoint">${service.url}</span></td>
+                        <td>
+                            <textarea class="params-input" id="params-${service.name}">${JSON.stringify(defaultParam, null, 2)}</textarea>
+                        </td>
+                        <td>
+                            <button class="btn btn-test" onclick="testService('${service.name}', '${service.url}', document.getElementById('params-${service.name}').value)">测试</button>
+                            <div class="response-area" id="response-${service.name}"></div>
+                        </td>
                     `;
-                    serviceList.appendChild(li);
+                    
+                    if (service.type === 'basic') {
+                        basicServiceTable.appendChild(tr);
+                    } else {
+                        extendServiceTable.appendChild(tr);
+                    }
                 });
             })
             .catch(error => console.error('Error loading services:', error));
     </script>
 </body>
-</html> 
-### Game Basic Service
-- Hero Data Management
-- Basic Game Logic
-- Chain Interaction
-- Data Persistence
-
-### Game Compute Service
-- Game Logic Processing
-- Data Validation
-- Combat Calculations
-- State Management
-
-### City Service
-- City State Management
-- Player Interaction
-- Resource Management
-- Map Service Integration
-
-### Map Service
-- Terrain Management
-- Position Tracking
-- Movement Validation
-- Area Effects
-
-### Auth Service
-- JWT Token Management
-- Node Authentication
-- User Authentication
-- Service Discovery
-- Health Monitoring
-- Failover Management
-
-### Chain Service
-- Multi-chain Support
-- Contract Interaction
-- Transaction Processing
-- Data Synchronization
-
-
-## Service Discovery and Recovery
-
-### Health Check Protocol
-1. Each service registers with Auth Service
-2. Regular heartbeat signals
-3. Service state monitoring
-4. Automatic failover triggers
-
-### Service Recovery Process
-1. Detection: Auth Service detects node failure
-2. Election: Backup nodes participate in election
-3. Promotion: Selected node becomes primary
-4. State Recovery: Load state from blockchain
-5. Service Resumption: New node takes over
-
-### Permissionless Node Participation
-1. Node Registration
-   - Generate keypair
-   - Register on chain
-   - Obtain node address
-   - Join service network
-
-2. Role Assignment
-   - Capability declaration
-   - State synchronization
-   - Service integration
-
-3. Monitoring and Validation
-   - Performance monitoring
-   - State validation
-   - Reputation tracking
-
-4. Graceful Exit
-   - State handover
-   - Network notification
-   - Chain record update
-
-## API 设计
-
-### 1. 节点 API
-
-#### 1.1 节点注册
-```
-POST /api/v1/node/register
-Headers:
-  - x-node-address
-  - x-node-sign
-Body:
-  - publicKey: string
-  - ip: string
-  - port: number
-```
-
-#### 1.2 节点认证
-```
-POST /api/v1/node/auth
-Headers:
-  - x-node-address
-  - x-node-sign
-Body:
-  - timestamp: number
-```
-
-### 2. 用户 API
-
-#### 2.1 用户认证
-```
-POST /api/v1/user/auth
-Headers:
-  - x-chain-id
-  - x-wallet-address
-  - x-user-sign
-Body:
-  - challenge: string
-```
-
-#### 2.2 创建英雄
-```
-POST /api/v1/hero/create
-Headers:
-  - x-chain-id
-  - x-wallet-address
-  - x-user-sign
-  - Authorization: Bearer <token>
-Body:
-  - nftId: string
-  - name: string
-  - class: string
-  - race: string
-```
-
-#### 2.3 加载英雄数据
-```
-GET /api/v1/hero/load
-Headers:
-  - x-chain-id
+</html> ain-id
   - x-wallet-address
   - Authorization: Bearer <token>
 ```
