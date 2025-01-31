@@ -1,5 +1,11 @@
 [
   {
+    "name": "node_getChallenge",
+    "url": "/api/v1/node/getChallenge",
+    "description": "获取挑战字符串",
+    "type": "basic"
+  },
+  {
     "name": "node_register",
     "url": "/api/v1/node/register",
     "description": "节点注册",

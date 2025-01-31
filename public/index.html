@@ -190,7 +190,23 @@ root/
     <script>
         // 默认参数配置
         const defaultParams = {
-            'node_register': { nodeId: 'test-node-1', address: 'http://localhost:3001' },
+            'node_getChallenge': {}, // 无需参数
+            'node_register': { 
+                node_address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",  // 示例钱包地址
+                node_url: "https://node.cmuba.org",
+                api_url: "https://node.cmuba.org/api/v1",
+                node_ens: "node1.asset3.eth",
+                node_ip: "127.0.0.1",
+                node_service_list: JSON.stringify([
+                    "node",
+                    "service",
+                    "user",
+                    "chain"
+                ]),
+                registry_contract_address: "0x1234567890123456789012345678901234567890",
+                challenge: "", // 需要先调用 getChallenge 获取
+                signature: "" // 需要使用私钥对 challenge 进行签名
+            },
             'node_routes_list': { nodeId: 'test-node-1' },
             'service_register': { serviceId: 'test-service-1', nodeId: 'test-node-1', type: 'basic' },
             'service_list': { type: 'basic' },
@@ -210,15 +226,28 @@ root/
             responseArea.textContent = '请求中...';
             
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
+                const method = name === 'node_getChallenge' ? 'GET' : 'POST';
+                const options = {
+                    method,
                     headers: {
                         'Content-Type': 'application/json'
-                    },
-                    body: params
-                });
+                    }
+                };
+                
+                if (method === 'POST') {
+                    options.body = params;
+                }
+
+                const response = await fetch(url, options);
                 const data = await response.json();
                 responseArea.textContent = JSON.stringify(data, null, 2);
+
+                // 如果是 getChallenge 接口，自动填充到 register 的参数中
+                if (name === 'node_getChallenge' && data.code === 0) {
+                    const registerParams = JSON.parse(document.getElementById('params-node_register').value);
+                    registerParams.challenge = data.data.challenge;
+                    document.getElementById('params-node_register').value = JSON.stringify(registerParams, null, 2);
+                }
             } catch (error) {
                 responseArea.textContent = `错误: ${error.message}`;
             }
