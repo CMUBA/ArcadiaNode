@@ -1,6 +1,11 @@
 # Compiler files
 cache/
 out/
+optimism/out/
+optimism/broadcast/
+optimism/cache/
+optimism/lib/openzeppelin-contracts
+optimism/lib/openzeppelin-contracts/*.*
 
 # Ignores development broadcast logs
 !/broadcast
