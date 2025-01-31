@@ -6,7 +6,6 @@
 graph TD
     subgraph Client Layer
         A[Game Client]
-        W[Website]
     end
 
     subgraph Service Layer
@@ -40,8 +39,6 @@ graph TD
     %% Client Layer connections
     A --> C1
     A --> D2
-    W --> C1
-    W --> D1
 
     %% Auth Service connections
     C1 -.->|Failover| C2
@@ -80,49 +77,26 @@ graph TD
 
 ## Service Components
 
-### Website Module
-- NFT Creation and Minting
-- NFT Marketplace
-- User Authentication
-- Wallet Connection
+1. **节点注册/节点验证组件**：依赖链上合约注册和节点提供 API。
+2. **服务注册/服务发现组件**：依赖节点运行此服务。
+3. **用户注册/登录组件**：处理用户的注册和认证。
+4. **链交互组件**：负责与区块链的交互。
 
-### Game Basic Service
-- Hero Data Management
-- Basic Game Logic
-- Chain Interaction
-- Data Persistence
+### 可选服务组件
 
-### Game Compute Service
-- Game Logic Processing
-- Data Validation
-- Combat Calculations
-- State Management
+- 至少运行一个可选的业务组件
+- **游戏服务组件**：处理游戏逻辑和数据。
+- **内容评论组件**：管理用户评论。
+- **物品交易组件**：处理物品的买卖。
+- **资产发行组件**：管理数字资产的发行。
+- **更多组件**：根据需求添加。
 
-### City Service
-- City State Management
-- Player Interaction
-- Resource Management
-- Map Service Integration
+### 架构设计
 
-### Map Service
-- Terrain Management
-- Position Tracking
-- Movement Validation
-- Area Effects
-
-### Auth Service
-- JWT Token Management
-- Node Authentication
-- User Authentication
-- Service Discovery
-- Health Monitoring
-- Failover Management
-
-### Chain Service
-- Multi-chain Support
-- Contract Interaction
-- Transaction Processing
-- Data Synchronization
+- **API 服务**：所有服务组件通过 API 提供对外服务。
+- **服务组件间通信**：主要通过 API 通信，部分采用进程内通信。
+- **服务发现**：通过服务发现组件获取依赖服务。
+- **节点**：运行服务组件的服务器，每个节点可选择运行相关组件。
 
 ## Service Discovery and Recovery
 
