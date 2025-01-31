@@ -33,9 +33,10 @@
             font-size: 14px;
         }
         th, td {
-            padding: 8px;
+            padding: 16px 8px;
             text-align: left;
             border-bottom: 1px solid #ddd;
+            line-height: 2;
         }
         th {
             background-color: #f8f9fa;
@@ -135,7 +136,6 @@
             <thead>
                 <tr>
                     <th>服务</th>
-                    <th>名称</th>
                     <th>端点</th>
                     <th>参数</th>
                     <th>操作</th>
@@ -149,7 +149,6 @@
             <thead>
                 <tr>
                     <th>服务</th>
-                    <th>名称</th>
                     <th>端点</th>
                     <th>参数</th>
                     <th>操作</th>
@@ -190,21 +189,25 @@ root/
     <script>
         // 默认参数配置
         const defaultParams = {
-            'node_getChallenge': {}, // 无需参数
+            'node_get_challenge': {}, // 无需参数
+            'node_sign': {
+                challenge: "" // 需要从 get-challenge 接口获取
+            },
             'node_register': { 
-                node_address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",  // 示例钱包地址
+                node_address: "", // 将从 sign 接口返回的 address 填充
                 node_url: "https://node.cmuba.org",
                 api_url: "https://node.cmuba.org/api/v1",
                 node_ens: "node1.asset3.eth",
                 node_ip: "127.0.0.1",
                 node_service_list: JSON.stringify([
-                    "node",
-                    "service",
-                    "user",
-                    "chain"
+                    "/api/v1/node/get-challenge",
+                    "/api/v1/node/sign",
+                    "/api/v1/node/register",
+                    "/api/v1/node/routes_list",
+                    "/api/v1/node/heartbeat"
                 ]),
                 registry_contract_address: "0x1234567890123456789012345678901234567890",
-                challenge: "", // 需要先调用 getChallenge 获取
+                challenge: "", // 需要先调用 get-challenge 获取
                 signature: "" // 需要使用私钥对 challenge 进行签名
             },
             'node_routes_list': { nodeId: 'test-node-1' },
@@ -226,7 +229,7 @@ root/
             responseArea.textContent = '请求中...';
             
             try {
-                const method = name === 'node_getChallenge' ? 'GET' : 'POST';
+                const method = name === 'node_get_challenge' ? 'GET' : 'POST';
                 const options = {
                     method,
                     headers: {
@@ -242,10 +245,26 @@ root/
                 const data = await response.json();
                 responseArea.textContent = JSON.stringify(data, null, 2);
 
-                // 如果是 getChallenge 接口，自动填充到 register 的参数中
-                if (name === 'node_getChallenge' && data.code === 0) {
+                // 如果是 get-challenge 接口，自动填充到其他接口的参数中
+                if (name === 'node_get_challenge' && data.code === 0) {
+                    const challenge = data.data.challenge;
+                    
+                    // 填充到签名接口
+                    const signParams = JSON.parse(document.getElementById('params-node_sign').value);
+                    signParams.challenge = challenge;
+                    document.getElementById('params-node_sign').value = JSON.stringify(signParams, null, 2);
+                    
+                    // 填充到注册接口
                     const registerParams = JSON.parse(document.getElementById('params-node_register').value);
-                    registerParams.challenge = data.data.challenge;
+                    registerParams.challenge = challenge;
+                    document.getElementById('params-node_register').value = JSON.stringify(registerParams, null, 2);
+                }
+                
+                // 如果是签名接口，自动填充签名和地址到注册接口
+                if (name === 'node_sign' && data.code === 0) {
+                    const registerParams = JSON.parse(document.getElementById('params-node_register').value);
+                    registerParams.signature = data.data.signature;
+                    registerParams.node_address = data.data.address; // 添加地址填充
                     document.getElementById('params-node_register').value = JSON.stringify(registerParams, null, 2);
                 }
             } catch (error) {
@@ -271,7 +290,6 @@ root/
                                 ${service.type === 'basic' ? '基础' : '扩展'}
                             </span>
                         </td>
-                        <td>${service.name}</td>
                         <td><span class="endpoint">${service.url}</span></td>
                         <td>
                             <textarea class="params-input" id="params-${service.name}">${JSON.stringify(defaultParam, null, 2)}</textarea>

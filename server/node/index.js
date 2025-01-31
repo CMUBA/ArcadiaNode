@@ -7,7 +7,7 @@ const router = express.Router();
 const challengeStore = new Map();
 
 // 生成随机挑战字符串
-router.get('/getChallenge', (req, res) => {
+router.get('/get-challenge', (req, res) => {
     try {
         // 生成32字节的随机数
         const challenge = randomBytes(32).toString('hex');
@@ -36,6 +36,72 @@ router.get('/getChallenge', (req, res) => {
         res.status(500).json({
             code: 1001,
             message: 'Failed to generate challenge',
+            details: error.message
+        });
+    }
+});
+
+// 签名挑战字符串
+router.post('/sign', async (req, res) => {
+    try {
+        const { challenge } = req.body;
+
+        // 验证挑战字符串
+        if (!challenge) {
+            return res.status(400).json({
+                code: 2001,
+                message: 'Challenge string is required'
+            });
+        }
+
+        // 验证挑战字符串是否存在
+        const challengeData = challengeStore.get(challenge);
+        if (!challengeData) {
+            return res.status(400).json({
+                code: 2002,
+                message: 'Invalid challenge'
+            });
+        }
+
+        // 验证是否过期
+        if (challengeData.expires < Math.floor(Date.now() / 1000)) {
+            challengeStore.delete(challenge);
+            return res.status(400).json({
+                code: 2003,
+                message: 'Challenge expired'
+            });
+        }
+
+        // 从环境变量获取私钥
+        const privateKey = process.env.NODE_PRIVATE_KEY;
+        if (!privateKey) {
+            return res.status(500).json({
+                code: 1002,
+                message: 'Node private key not configured'
+            });
+        }
+
+        // 创建钱包实例
+        const wallet = new ethers.Wallet(privateKey);
+        
+        // 签名挑战字符串
+        const signature = await wallet.signMessage(challenge);
+
+        // 返回签名结果
+        res.json({
+            code: 0,
+            message: 'success',
+            data: {
+                challenge,
+                signature,
+                address: wallet.address
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            code: 1003,
+            message: 'Failed to sign challenge',
             details: error.message
         });
     }

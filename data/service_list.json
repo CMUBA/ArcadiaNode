@@ -1,8 +1,14 @@
 [
   {
-    "name": "node_getChallenge",
-    "url": "/api/v1/node/getChallenge",
+    "name": "node_get_challenge",
+    "url": "/api/v1/node/get-challenge",
     "description": "获取挑战字符串",
+    "type": "basic"
+  },
+  {
+    "name": "node_sign",
+    "url": "/api/v1/node/sign",
+    "description": "签名挑战字符串",
     "type": "basic"
   },
   {
