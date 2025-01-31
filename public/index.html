@@ -109,6 +109,27 @@
     <div class="container">
         <h1>Arcadia Node - 服务列表</h1>
         
+        <h2>文档导航</h2>
+        <div style="margin-bottom: 20px;">
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin: 10px 0;">
+                    <a href="/docs/design.md" style="color: #007bff; text-decoration: none;">
+                        系统设计文档 (Design Document)
+                    </a>
+                </li>
+                <li style="margin: 10px 0;">
+                    <a href="/docs/APIs.md" style="color: #007bff; text-decoration: none;">
+                        API 接口文档 (API Documentation)
+                    </a>
+                </li>
+                <li style="margin: 10px 0;">
+                    <a href="/docs/node_registry_contract.md" style="color: #007bff; text-decoration: none;">
+                        节点注册合约文档 (Node Registry Contract)
+                    </a>
+                </li>
+            </ul>
+        </div>
+
         <h2>基础服务</h2>
         <table id="basicServiceTable">
             <thead>
@@ -144,6 +165,9 @@
 root/
 ├── node_modules/        # 所有依赖
 ├── data/               # 服务配置数据
+│   └── service_list.json # 服务列表配置
+├── docs/               # 项目文档
+│   └── design.md       # 系统设计文档
 ├── .env                # 环境变量
 ├── .env.example        # 环境变量示例
 ├── app.js             # 主入口文件
