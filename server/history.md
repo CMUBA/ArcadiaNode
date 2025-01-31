@@ -321,15 +321,16 @@ interface ErrorResponse {
 server 目录将运行基础的服务，对外提供 API 服务，同时依赖其他服务
 包括：
 1. Node Management: 节点注册/节点验证组件 (依赖链上合约注册和 node 提供 api）
-2. Service Management: 服务注册/服务发现组件（依赖 node 运行此服务）
-3. User Management: 用户注册/登陆组件和更多的账户生命周期服务组件
-4. Chain Management: 链交互组件
-5. Game Management: 游戏服务组件
-6. Comment Management: 内容 commnet 组件
-7. Item Management: Item 交易
-8. Asset Management: 资产发行组件
-9. 更多的 Cos72 规划的组件模块
-1-4 是所有 node 必选的组件，其他根据 stake 金额和服务能力来确定
+2. Service : 服务注册/服务发现组件（依赖 node 运行此服务）
+3. User: 用户注册/登陆组件和更多的账户生命周期服务组件
+4. Chain : 链交互组件
+以上是基础组件，在 server 内实现，以下是可选组件，独立目录实现，由一个根目录的统一入口 app.js，来加载 server 内和可选组件，统一管理路由，server 内部访问是/api/v1/service/xxx，外部访问是/apiex/v1/game/xxx
+1. Game : 游戏服务组件
+2. Comment : 内容 commnet 组件
+3. Item : Item 交易
+4. Asset : 资产发行组件
+5.  更多的 Cos72 规划的组件模块
+
 
 #### Node Management
 
