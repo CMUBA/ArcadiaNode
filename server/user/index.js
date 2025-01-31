@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 
-// Example endpoint for user registration
+// 用户注册
 router.post('/register', (req, res) => {
     const { username, password } = req.body;
     // Logic for user registration
     res.json({ message: 'User registered successfully', username });
 });
 
-// Example endpoint for user login
+// 用户登录
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
     // Logic for user login

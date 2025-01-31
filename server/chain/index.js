@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// Example endpoint for chain interaction
+// 链交互
 router.post('/interact', (req, res) => {
     const { action, data } = req.body;
     // Logic for chain interaction

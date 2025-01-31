@@ -246,3 +246,25 @@ interface ErrorResponse {
 - CI/CD自动化部署
 - 环境配置分离
 - 日志规范化 _MODULE_PUBLISHER_ACCOUNT_PRIVATE_KEY=
+
+
+
+## 目录结构
+root/
+├── node_modules/        # 所有依赖
+├── .env                # 环境变量
+├── .env.example        # 环境变量示例
+├── app.js             # 主入口文件
+├── package.json       # 项目配置
+│
+├── server/            # 基础服务
+│   ├── node/         # 节点服务
+│   ├── service/      # 服务发现
+│   ├── user/         # 用户服务
+│   └── chain/        # 链服务
+│
+└── game/             # 扩展服务
+    ├── gamex/        # 游戏服务
+    ├── comment/      # 评论服务
+    ├── item/         # 物品服务
+    └── asset/        # 资产服务
