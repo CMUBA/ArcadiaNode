@@ -1,110 +1,110 @@
-# Arcadia
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcadia Node - 服务列表</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .service-list {
+            list-style: none;
+            padding: 0;
+        }
+        .service-item {
+            background-color: #f8f9fa;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .required {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .endpoint {
+            font-family: monospace;
+            background-color: #e9ecef;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Arcadia Node - 服务列表</h1>
+        
+        <h2>基础服务</h2>
+        <ul class="service-list" id="serviceList">
+            <!-- 服务列表将通过 JavaScript 动态加载 -->
+        </ul>
+    </div>
 
-## System Architecture
+    <div class="container">
+        <h2>目录结构</h2>
+        <pre>
+root/
+├── node_modules/        # 所有依赖
+├── data/               # 服务配置数据
+├── .env                # 环境变量
+├── .env.example        # 环境变量示例
+├── app.js             # 主入口文件
+├── package.json       # 项目配置
+│
+├── server/            # 基础服务
+│   ├── node/         # 节点服务
+│   ├── service/      # 服务发现
+│   ├── user/         # 用户服务
+│   ├── chain/        # 链服务
+│   └── health/       # 健康检查
+│
+└── serverx/          # 扩展服务
+    ├── gamex/        # 游戏服务
+    ├── comment/      # 评论服务
+    ├── item/         # 物品服务
+    └── asset/        # 资产服务
+        </pre>
+    </div>
 
-```mermaid
-graph TD
-    subgraph Client Layer
-        A[Game Client]
-    end
-
-    subgraph Service Layer
-        subgraph Auth Service Cluster
-            C1[Auth Service Primary]
-            C2[Auth Service Backup]
-        end
-
-        subgraph Game Service
-            D1[Game Basic Service]
-            D2[Game Compute Service]
-        end
-
-        subgraph City Service Cluster
-            M1[City Server 1]
-            M2[City Server 2]
-            subgraph Map Services
-                MP1[Map Service 1]
-                MP2[Map Service 2]
-            end
-        end
-
-        E[Chain Service]
-    end
-
-    subgraph Chain Layer
-        F[Chain Adapter]
-        G[Different Blockchains]
-    end
-
-    %% Client Layer connections
-    A --> C1
-    A --> D2
-
-    %% Auth Service connections
-    C1 -.->|Failover| C2
-    C2 -.->|Monitor| C1
-
-    %% Game Service connections
-    D1 --> E
-    D2 --> D1
-    D2 --> M1
-    D2 --> M2
-
-    %% City Service connections
-    M1 --> MP1
-    M1 --> MP2
-    M2 --> MP1
-    M2 --> MP2
-
-    %% Chain Layer connections
-    E --> F
-    F --> G
-
-    %% Service Discovery and Recovery
-    C1 -.->|Health Check| D1
-    C1 -.->|Health Check| D2
-    D1 -.->|Health Check| M1
-    D1 -.->|Health Check| M2
-
-    classDef primary fill:#f96,stroke:#333,stroke-width:2px
-    classDef backup fill:#69f,stroke:#333,stroke-width:2px
-    classDef compute fill:#9f6,stroke:#333,stroke-width:2px
-    
-    class C1 primary
-    class C2 backup
-    class D2 compute
-```
-
-## Service Components
-
-1. **节点注册/节点验证组件**：依赖链上合约注册和节点提供 API。
-2. **服务注册/服务发现组件**：依赖节点运行此服务。
-3. **用户注册/登录组件**：处理用户的注册和认证。
-4. **链交互组件**：负责与区块链的交互。
-
-### 可选服务组件
-
-- **游戏服务组件**：处理游戏逻辑和数据。
-- **内容评论组件**：管理用户评论。
-- **物品交易组件**：处理物品的买卖。
-- **资产发行组件**：管理数字资产的发行。
-
-### 架构设计
-
-- **API 服务**：所有服务组件通过 API 提供对外服务。
-- **服务组件间通信**：主要通过 API 通信，部分采用进程内通信。
-- **服务发现**：通过服务发现组件获取依赖服务。
-- **节点**：运行服务组件的服务器，每个节点可选择运行相关组件。
-
-
-## Old
-
-### Website Module
-- NFT Creation and Minting
-- NFT Marketplace
-- User Authentication
-- Wallet Connection
-
+    <script>
+        // 获取服务列表
+        fetch('/data/service_list.json')
+            .then(response => response.json())
+            .then(services => {
+                const serviceList = document.getElementById('serviceList');
+                services.forEach(service => {
+                    const li = document.createElement('li');
+                    li.className = 'service-item';
+                    li.innerHTML = `
+                        <h3>${service.description} ${service.required ? '<span class="required">(必需)</span>' : ''}</h3>
+                        <p>名称：${service.name}</p>
+                        <p>端点：<span class="endpoint">${service.url}</span></p>
+                    `;
+                    serviceList.appendChild(li);
+                });
+            })
+            .catch(error => console.error('Error loading services:', error));
+    </script>
+</body>
+</html> 
 ### Game Basic Service
 - Hero Data Management
 - Basic Game Logic
@@ -364,7 +364,7 @@ server 目录将运行基础的服务，对外提供 API 服务，同时依赖�
 
 ##### Service list
 任何 node 都提供服务发现的 api 接口，返回的其实包含了一个全量的 APIlist，这个 list 会维护在 https://github.com/cmuba/service-list-contract,同时链上也有一个同步更新，这个更新由协议维护小组来维护和更新
-包括了 (1-4 是必选)
+包括了 (1-5 是必选)
   1. 节点注册/节点验证组件 (依赖链上合约注册和 node 提供 api）
      1. "/api/v1/node/register" 
   2. 服务注册/服务发现组件（依赖 node 运行此服务）
@@ -610,3 +610,10 @@ interface ErrorResponse {
 - 环境配置分离
 - 日志规范化 
 
+新增根目录下的 data 目录，新增了 service_list.json，用于描述服务列表，包括服务名称、url、描述、是否必须等
+一些思考：
+
+1. 节点的注册和发现，首先依赖于一个特定的链上合约：节点注册合约，只要注册，就表明你 stake 并承诺 24 小时不停提供基础服务，也会获得对应的奖励。
+2. 所有节点会定期同步链上合约的路由表（钱包地址和和域名等），如果你需要服务，就依赖于其他节点的节点发现服务接口，来获得服务列表，然后访问对应的服务。
+3. 而每个节点除了提供基础服务，还提供扩展服务，因此不同节点提供的服务不同，这些服务内容，默认每个节点维护一个 json 文件，外部接口询问你有什么服务？提供这个 json 文件来应答（后期这个文件要自动生成，根据有效的服务检测）。
+4. 此 json 文件未来会依赖一个特定的 ens，来访问这些接口，例如 api.cmuba.asset3.eth/service_list.json，来访问这些接口，实际会映射到可配置的 ens 二级三级域名，有助于灵活的配置和去中心的 API 机制。
