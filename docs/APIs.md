@@ -7,7 +7,7 @@
 #### Get Challenge String
 
 - **Name**: Get Challenge String
-- **URL**: `/api/v1/node/getChallenge`
+- **URL**: `/api/v1/node/get-challenge`
 - **Method**: GET
 - **JWT Required**: No
 - **Description**: Get a random challenge string for node registration signature.

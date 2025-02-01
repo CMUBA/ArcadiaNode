@@ -1,313 +1,180 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcadia Node - 服务列表</title>
+    <title>Arcadia Node - 服务导航</title>
     <style>
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
-            background-color: #f5f5f5;
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            line-height: 1.4;
+            background-color: #f5f7fa;
         }
-        .container {
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
+        }
+        .header {
             background-color: #fff;
-            padding: 20px;
-            border-radius: 5px;
+            padding: 20px 0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            overflow-x: auto;
+            margin-bottom: 30px;
         }
-        h1, h2 {
-            color: #333;
-            border-bottom: 2px solid #333;
+        .header h1 {
+            margin: 0;
+            color: #2c3e50;
+            text-align: center;
+        }
+        .service-groups {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .service-group {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .service-group:hover {
+            transform: translateY(-5px);
+        }
+        .service-group h2 {
+            color: #2c3e50;
+            margin-top: 0;
             padding-bottom: 10px;
+            border-bottom: 2px solid #e3f2fd;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0;
-            font-size: 14px;
+        .service-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
         }
-        th, td {
-            padding: 16px 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-            line-height: 2;
+        .service-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
         }
-        th {
+        .service-item:last-child {
+            border-bottom: none;
+        }
+        .service-link {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-decoration: none;
+            color: #34495e;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .service-link:hover {
             background-color: #f8f9fa;
-            font-weight: 600;
         }
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-        .endpoint {
-            font-family: monospace;
-            background-color: #e9ecef;
-            padding: 2px 5px;
-            border-radius: 3px;
-        }
-        .type-badge {
-            display: inline-block;
+        .service-index {
+            background-color: #e3f2fd;
+            color: #1976d2;
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 12px;
-            color: white;
+        }
+        .type-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 5px;
         }
         .type-badge.basic {
-            background-color: #007bff;
+            background-color: #e3f2fd;
+            color: #1976d2;
         }
         .type-badge.extend {
-            background-color: #28a745;
-        }
-        .btn {
-            padding: 4px 8px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: background-color 0.2s;
-        }
-        .btn-test {
-            background-color: #17a2b8;
-            color: white;
-        }
-        .btn-test:hover {
-            background-color: #138496;
-        }
-        .params-input {
-            width: 100%;
-            padding: 4px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-            margin-top: 4px;
-        }
-        .response-area {
-            display: none;
-            margin-top: 8px;
-            padding: 8px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-        }
-        .directory-tree {
-            font-family: monospace;
-            white-space: pre;
-            font-size: 14px;
-            line-height: 1.4;
+            background-color: #f3e5f5;
+            color: #7b1fa2;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Arcadia Node - 服务列表</h1>
-        
-        <h2>文档导航</h2>
-        <div style="margin-bottom: 20px;">
-            <ul style="list-style: none; padding: 0;">
-                <li style="margin: 10px 0;">
-                    <a href="/docs/design.md" style="color: #007bff; text-decoration: none;">
-                        系统设计文档 (Design Document)
-                    </a>
-                </li>
-                <li style="margin: 10px 0;">
-                    <a href="/docs/APIs.md" style="color: #007bff; text-decoration: none;">
-                        API 接口文档 (API Documentation)
-                    </a>
-                </li>
-                <li style="margin: 10px 0;">
-                    <a href="/docs/node_registry_contract.md" style="color: #007bff; text-decoration: none;">
-                        节点注册合约文档 (Node Registry Contract)
-                    </a>
-                </li>
-            </ul>
+    <div class="header">
+        <div class="container">
+            <h1>Arcadia Node - 服务导航</h1>
         </div>
-
-        <h2>基础服务</h2>
-        <table id="basicServiceTable">
-            <thead>
-                <tr>
-                    <th>服务</th>
-                    <th>端点</th>
-                    <th>参数</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-
-        <h2>扩展服务</h2>
-        <table id="extendServiceTable">
-            <thead>
-                <tr>
-                    <th>服务</th>
-                    <th>端点</th>
-                    <th>参数</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
     </div>
 
     <div class="container">
-        <h2>目录结构</h2>
-        <div class="directory-tree">
-root/
-├── node_modules/        # 所有依赖
-├── data/               # 服务配置数据
-│   └── service_list.json # 服务列表配置
-├── docs/               # 项目文档
-│   └── design.md       # 系统设计文档
-├── .env                # 环境变量
-├── .env.example        # 环境变量示例
-├── app.js             # 主入口文件
-├── package.json       # 项目配置
-│
-├── server/            # 基础服务
-│   ├── node/         # 节点服务
-│   ├── service/      # 服务发现
-│   ├── user/         # 用户服务
-│   ├── chain/        # 链服务
-│   └── health/       # 健康检查
-│
-└── serverx/          # 扩展服务
-    ├── gamex/        # 游戏服务
-    ├── comment/      # 评论服务
-    ├── item/         # 物品服务
-    └── asset/        # 资产服务</div>
+        <div class="service-groups">
+            <!-- 节点管理 -->
+            <div class="service-group">
+                <h2>节点管理</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/node-register.html" class="service-link">
+                            节点注册
+                            <span class="service-index">1-3</span>
+                        </a>
+                    </li>
+                    <li class="service-item">
+                        <a href="/pages/node-health.html" class="service-link">
+                            健康检测
+                            <span class="service-index">4-5</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 服务管理 -->
+            <div class="service-group">
+                <h2>服务管理</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/service-manage.html" class="service-link">
+                            服务注册与发现
+                            <span class="service-index">6-8</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 用户管理 -->
+            <div class="service-group">
+                <h2>用户管理</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/user-manage.html" class="service-link">
+                            用户注册与登录
+                            <span class="service-index">9-10</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 链交互 -->
+            <div class="service-group">
+                <h2>链交互</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/chain-interact.html" class="service-link">
+                            英雄数据管理
+                            <span class="service-index">11-13</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <script>
-        // 默认参数配置
-        const defaultParams = {
-            'node_get_challenge': {}, // 无需参数
-            'node_sign': {
-                challenge: "" // 需要从 get-challenge 接口获取
-            },
-            'node_register': { 
-                node_address: "", // 将从 sign 接口返回的 address 填充
-                node_url: "https://node.cmuba.org",
-                api_url: "https://node.cmuba.org/api/v1",
-                node_ens: "node1.asset3.eth",
-                node_ip: "127.0.0.1",
-                node_service_list: JSON.stringify([
-                    "/api/v1/node/get-challenge",
-                    "/api/v1/node/sign",
-                    "/api/v1/node/register",
-                    "/api/v1/node/routes_list",
-                    "/api/v1/node/heartbeat"
-                ]),
-                registry_contract_address: "0x1234567890123456789012345678901234567890",
-                challenge: "", // 需要先调用 get-challenge 获取
-                signature: "" // 需要使用私钥对 challenge 进行签名
-            },
-            'node_routes_list': { nodeId: 'test-node-1' },
-            'service_register': { serviceId: 'test-service-1', nodeId: 'test-node-1', type: 'basic' },
-            'service_list': { type: 'basic' },
-            'service_remove': { serviceId: 'test-service-1' },
-            'user_register': { username: 'testuser', password: 'password123' },
-            'user_login': { username: 'testuser', password: 'password123' },
-            'node_heartbeat': { nodeId: 'test-node-1' },
-            'chain_hero_create': { userId: '1', name: 'Hero1' },
-            'chain_hero_load': { userId: '1', heroId: '1' },
-            'chain_hero_save': { userId: '1', heroId: '1', data: {} }
-        };
-
-        // 测试服务接口
-        async function testService(name, url, params) {
-            const responseArea = document.getElementById(`response-${name}`);
-            responseArea.style.display = 'block';
-            responseArea.textContent = '请求中...';
-            
-            try {
-                const method = name === 'node_get_challenge' ? 'GET' : 'POST';
-                const options = {
-                    method,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                };
-                
-                if (method === 'POST') {
-                    options.body = params;
-                }
-
-                const response = await fetch(url, options);
-                const data = await response.json();
-                responseArea.textContent = JSON.stringify(data, null, 2);
-
-                // 如果是 get-challenge 接口，自动填充到其他接口的参数中
-                if (name === 'node_get_challenge' && data.code === 0) {
-                    const challenge = data.data.challenge;
-                    
-                    // 填充到签名接口
-                    const signParams = JSON.parse(document.getElementById('params-node_sign').value);
-                    signParams.challenge = challenge;
-                    document.getElementById('params-node_sign').value = JSON.stringify(signParams, null, 2);
-                    
-                    // 填充到注册接口
-                    const registerParams = JSON.parse(document.getElementById('params-node_register').value);
-                    registerParams.challenge = challenge;
-                    document.getElementById('params-node_register').value = JSON.stringify(registerParams, null, 2);
-                }
-                
-                // 如果是签名接口，自动填充签名和地址到注册接口
-                if (name === 'node_sign' && data.code === 0) {
-                    const registerParams = JSON.parse(document.getElementById('params-node_register').value);
-                    registerParams.signature = data.data.signature;
-                    registerParams.node_address = data.data.address; // 添加地址填充
-                    document.getElementById('params-node_register').value = JSON.stringify(registerParams, null, 2);
-                }
-            } catch (error) {
-                responseArea.textContent = `错误: ${error.message}`;
-            }
-        }
-
-        // 获取服务列表
+        // 从service_list.json加载服务列表
         fetch('/data/service_list.json')
             .then(response => response.json())
-            .then(services => {
-                const basicServiceTable = document.querySelector('#basicServiceTable tbody');
-                const extendServiceTable = document.querySelector('#extendServiceTable tbody');
-                
-                services.forEach(service => {
-                    const tr = document.createElement('tr');
-                    const defaultParam = defaultParams[service.name] || {};
-                    
-                    tr.innerHTML = `
-                        <td>
-                            ${service.description}
-                            <span class="type-badge ${service.type}">
-                                ${service.type === 'basic' ? '基础' : '扩展'}
-                            </span>
-                        </td>
-                        <td><span class="endpoint">${service.url}</span></td>
-                        <td>
-                            <textarea class="params-input" id="params-${service.name}">${JSON.stringify(defaultParam, null, 2)}</textarea>
-                        </td>
-                        <td>
-                            <button class="btn btn-test" onclick="testService('${service.name}', '${service.url}', document.getElementById('params-${service.name}').value)">测试</button>
-                            <div class="response-area" id="response-${service.name}"></div>
-                        </td>
-                    `;
-                    
-                    if (service.type === 'basic') {
-                        basicServiceTable.appendChild(tr);
-                    } else {
-                        extendServiceTable.appendChild(tr);
-                    }
-                });
+            .then(data => {
+                // 可以在这里添加动态更新服务列表的逻辑
+                console.log('Services loaded:', data);
             })
             .catch(error => console.error('Error loading services:', error));
     </script>
 </body>
-</html> 
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务管理 - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>服务管理</h1>
+            <a href="/" class="back-link">返回首页</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 服务注册 -->
+        <div class="card">
+            <h2>服务注册</h2>
+            <div class="form-group">
+                <label for="serviceId">服务ID：</label>
+                <input type="text" id="serviceId" class="form-control" placeholder="输入服务ID">
+            </div>
+            <div class="form-group">
+                <label for="nodeId">节点ID：</label>
+                <input type="text" id="nodeId" class="form-control" placeholder="输入节点ID">
+            </div>
+            <div class="form-group">
+                <label for="serviceType">服务类型：</label>
+                <select id="serviceType" class="form-control">
+                    <option value="basic">基础服务</option>
+                    <option value="extend">扩展服务</option>
+                </select>
+            </div>
+            <button class="btn" onclick="registerService()">注册服务</button>
+            <div id="registerResult" class="result"></div>
+        </div>
+
+        <!-- 服务发现 -->
+        <div class="card">
+            <h2>服务发现</h2>
+            <div class="form-group">
+                <label for="discoveryType">服务类型：</label>
+                <select id="discoveryType" class="form-control">
+                    <option value="basic">基础服务</option>
+                    <option value="extend">扩展服务</option>
+                </select>
+            </div>
+            <button class="btn" onclick="discoverServices()">查找服务</button>
+            <div id="discoveryResult" class="result"></div>
+        </div>
+
+        <!-- 服务移除 -->
+        <div class="card">
+            <h2>服务移除</h2>
+            <div class="form-group">
+                <label for="removeServiceId">服务ID：</label>
+                <input type="text" id="removeServiceId" class="form-control" placeholder="输入要移除的服务ID">
+            </div>
+            <button class="btn" onclick="removeService()">移除服务</button>
+            <div id="removeResult" class="result"></div>
+        </div>
+
+        <!-- 服务列表 -->
+        <div class="card">
+            <h2>已注册服务</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>服务ID</th>
+                        <th>节点ID</th>
+                        <th>类型</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="serviceTable">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 默认参数
+        const defaultParams = {
+            service_register: { serviceId: 'test-service-1', nodeId: 'test-node-1', type: 'basic' },
+            service_list: { type: 'basic' },
+            service_remove: { serviceId: 'test-service-1' }
+        };
+
+        // 注册服务
+        async function registerService() {
+            try {
+                const params = {
+                    serviceId: document.getElementById('serviceId').value,
+                    nodeId: document.getElementById('nodeId').value,
+                    type: document.getElementById('serviceType').value
+                };
+
+                const response = await fetch('/api/v1/service/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+                const data = await response.json();
+                document.getElementById('registerResult').textContent = JSON.stringify(data, null, 2);
+                updateServiceTable();
+            } catch (error) {
+                document.getElementById('registerResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 服务发现
+        async function discoverServices() {
+            try {
+                const type = document.getElementById('discoveryType').value;
+                const response = await fetch('/api/v1/service/list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ type })
+                });
+                const data = await response.json();
+                document.getElementById('discoveryResult').textContent = JSON.stringify(data, null, 2);
+                updateServiceTable(data.services);
+            } catch (error) {
+                document.getElementById('discoveryResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 移除服务
+        async function removeService() {
+            try {
+                const serviceId = document.getElementById('removeServiceId').value;
+                const response = await fetch('/api/v1/service/remove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ serviceId })
+                });
+                const data = await response.json();
+                document.getElementById('removeResult').textContent = JSON.stringify(data, null, 2);
+                updateServiceTable();
+            } catch (error) {
+                document.getElementById('removeResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 更新服务列表
+        function updateServiceTable(services = []) {
+            const table = document.getElementById('serviceTable');
+            table.innerHTML = services.map(service => `
+                <tr>
+                    <td>${service.serviceId}</td>
+                    <td>${service.nodeId}</td>
+                    <td><span class="badge badge-${service.type === 'basic' ? 'primary' : 'secondary'}">${service.type}</span></td>
+                    <td>${service.status || 'active'}</td>
+                    <td>
+                        <button class="btn btn-secondary" onclick="removeService('${service.serviceId}')">移除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 页面加载时填充默认值
+        window.onload = function() {
+            document.getElementById('serviceId').value = defaultParams.service_register.serviceId;
+            document.getElementById('nodeId').value = defaultParams.service_register.nodeId;
+            document.getElementById('serviceType').value = defaultParams.service_register.type;
+            document.getElementById('removeServiceId').value = defaultParams.service_remove.serviceId;
+            discoverServices();
+        };
+    </script>
+</body>
+</html> 

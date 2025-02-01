@@ -1,80 +1,95 @@
-[
-  {
-    "name": "node_get_challenge",
-    "url": "/api/v1/node/get-challenge",
-    "description": "获取挑战字符串",
-    "type": "basic"
-  },
-  {
-    "name": "node_sign",
-    "url": "/api/v1/node/sign",
-    "description": "签名挑战字符串",
-    "type": "basic"
-  },
-  {
-    "name": "node_register",
-    "url": "/api/v1/node/register",
-    "description": "节点注册",
-    "type": "basic"
-  },
-  {
-    "name": "node_routes_list",
-    "url": "/api/v1/node/routes_list",
-    "description": "节点发现",
-    "type": "basic"
-  },
-  {
-    "name": "service_register",
-    "url": "/api/v1/service/register",
-    "description": "服务注册",
-    "type": "basic"
-  },
-  {
-    "name": "service_list",
-    "url": "/api/v1/service/list",
-    "description": "服务发现",
-    "type": "basic"
-  },  
-  {
-    "name": "service_remove",
-    "url": "/api/v1/service/remove",
-    "description": "服务移除",
-    "type": "basic"
-  },    
-  {
-    "name": "user_register",
-    "url": "/api/v1/user/register",
-    "description": "用户注册",
-    "type": "basic"
-  },
-  {
-    "name": "user_login",
-    "url": "/api/v1/user/login",
-    "description": "用户登录",
-    "type": "basic"
-  },
-  {
-    "name": "node_heartbeat",
-    "url": "/api/v1/node/heartbeat",
-    "description": "健康检测",
-    "type": "basic"
-  },
-  {
-    "name": "chain_hero_create",
-    "url": "/api/v1/chain/hero/create",
-    "description": "链交互",
-    "type": "extend"
-  },
-  {
-    "name": "chain_hero_load",
-    "url": "/api/v1/chain/hero/load",
-    "description": "链交互",
-    "type": "extend"
-  },
-  {
-    "name": "chain_hero_save",
-    "url": "/api/v1/chain/hero/save",
-    "description": "链交互",
-    "type": "extend"
-  }
-]
+{
+  "services": [
+    {
+      "index": 1,
+      "name": "node_get_challenge",
+      "url": "/api/v1/node/get-challenge",
+      "description": "获取挑战字符串",
+      "type": "basic"
+    },
+    {
+      "index": 2,
+      "name": "node_sign",
+      "url": "/api/v1/node/sign",
+      "description": "签名验证",
+      "type": "basic"
+    },
+    {
+      "index": 3,
+      "name": "node_register",
+      "url": "/api/v1/node/register",
+      "description": "节点注册",
+      "type": "basic"
+    },
+    {
+      "index": 4,
+      "name": "node_routes_list",
+      "url": "/api/v1/node/routes-list",
+      "description": "获取路由列表",
+      "type": "basic"
+    },
+    {
+      "index": 5,
+      "name": "node_heartbeat",
+      "url": "/api/v1/node/heartbeat",
+      "description": "节点心跳",
+      "type": "basic"
+    },
+    {
+      "index": 6,
+      "name": "service_register",
+      "url": "/api/v1/service/register",
+      "description": "服务注册",
+      "type": "basic"
+    },
+    {
+      "index": 7,
+      "name": "service_list",
+      "url": "/api/v1/service/list",
+      "description": "服务发现",
+      "type": "basic"
+    },  
+    {
+      "index": 8,
+      "name": "service_remove",
+      "url": "/api/v1/service/remove",
+      "description": "服务移除",
+      "type": "basic"
+    },    
+    {
+      "index": 9,
+      "name": "user_register",
+      "url": "/api/v1/user/register",
+      "description": "用户注册",
+      "type": "basic"
+    },
+    {
+      "index": 10,
+      "name": "user_login",
+      "url": "/api/v1/user/login",
+      "description": "用户登录",
+      "type": "basic"
+    },
+    {
+          "index": 11,
+      "name": "chain_hero_create",
+      "url": "/api/v1/chain/hero/create",
+      "description": "链交互",
+      "type": "extend"
+    },
+    {
+      "index": 12,
+      "name": "chain_hero_load",
+      "url": "/api/v1/chain/hero/load",
+      "description": "链交互",
+      "type": "extend"
+    },
+    {
+     "index": 13,
+      "name": "chain_hero_save",
+      "url": "/api/v1/chain/hero/save",
+      "description": "链交互",
+      "type": "extend"
+    }
+  ]
+}

@@ -140,6 +140,37 @@ graph TD
 ### 1. 节点 API
 
 #### 1.1 节点注册
+
+新节点注册有两个验证：
+1. 新节点是否 address、公钥、challenge 挑战签名是否一致（注册服务节点提供）
+2. 新节点是否已经质押（链上合约验证）
+3. 注册服务节点提交交易（必须有 chain service 提供）
+4. 是否运行自我注册？鉴于挑战字符串是随机生成的，新节点无法提前知道，所以需要注册服务节点提供挑战字符串，然后获得 jwt，提交注册信息，注册服务节点帮助注册到合约。
+5.  - 合约部署者自动成为第一个注册者
+   - 只有注册者可以帮助其他节点注册
+
+
+##### Graph
+sequenceDiagram
+    participant NewNode as 新节点
+    participant API as 注册服务节点
+    participant Contract as 链上合约
+
+    NewNode->>API: 1. GET /api/v1/node/get-challenge
+    API->>Contract: 2. getChallenge()
+    Contract-->>API: 3. 返回挑战字符串
+    API-->>NewNode: 4. 返回挑战字符串
+
+    NewNode->>NewNode: 5. 使用私钥签名挑战
+    NewNode->>API: 6. POST /api/v1/node/sign
+    API->>API: 7. 验证签名
+    API-->>NewNode: 8. 返回 JWT token
+
+    NewNode->>API: 9. POST /api/v1/node/register (带 JWT)
+    API->>Contract: 10. registerNodeByRegistrar()
+    Contract-->>API: 11. 注册结果
+    API-->>NewNode: 12. 返回注册结果
+
 ```
 POST /api/v1/node/register
 Headers:
@@ -150,6 +181,22 @@ Body:
   - ip: string
   - port: number
 ```
+
+The registration process now works as follows:
+A node obtains a challenge from the API
+The node signs this challenge with their private key
+3. When registering, they provide:
+Their node address
+IP/Domain
+API indexes (as a JSON string of indexes)
+The challenge
+Their signature of the challenge
+The contract verifies:
+The registrar is a registered node
+The new node isn't already registered
+The signature is valid for the provided challenge
+The node has sufficient stake
+
 
 #### 1.2 节点认证
 ```

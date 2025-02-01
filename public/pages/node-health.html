@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>节点健康检测 - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>节点健康检测</h1>
+            <a href="/" class="back-link">返回首页</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 路由列表 -->
+        <div class="card">
+            <h2>路由列表</h2>
+            <div class="form-group">
+                <label for="nodeId">节点ID：</label>
+                <input type="text" id="nodeId" class="form-control" placeholder="输入节点ID">
+            </div>
+            <button class="btn" onclick="getRoutesList()">获取路由列表</button>
+            <div id="routesResult" class="result"></div>
+        </div>
+
+        <!-- 心跳检测 -->
+        <div class="card">
+            <h2>心跳检测</h2>
+            <div class="form-group">
+                <label for="heartbeatNodeId">节点ID：</label>
+                <input type="text" id="heartbeatNodeId" class="form-control" placeholder="输入节点ID">
+            </div>
+            <button class="btn" onclick="sendHeartbeat()">发送心跳</button>
+            <div id="heartbeatResult" class="result"></div>
+        </div>
+
+        <!-- 节点状态表 -->
+        <div class="card">
+            <h2>节点状态</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>节点ID</th>
+                        <th>状态</th>
+                        <th>最后心跳时间</th>
+                        <th>可用路由</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="nodeStatusTable">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 默认参数
+        const defaultParams = {
+            node_routes_list: { nodeId: 'test-node-1' },
+            node_heartbeat: { nodeId: 'test-node-1' }
+        };
+
+        // 获取路由列表
+        async function getRoutesList() {
+            try {
+                const nodeId = document.getElementById('nodeId').value;
+                const response = await fetch('/api/v1/node/routes-list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nodeId })
+                });
+                const data = await response.json();
+                document.getElementById('routesResult').textContent = JSON.stringify(data, null, 2);
+                updateNodeStatus(nodeId, data);
+            } catch (error) {
+                document.getElementById('routesResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 发送心跳
+        async function sendHeartbeat() {
+            try {
+                const nodeId = document.getElementById('heartbeatNodeId').value;
+                const response = await fetch('/api/v1/node/heartbeat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nodeId })
+                });
+                const data = await response.json();
+                document.getElementById('heartbeatResult').textContent = JSON.stringify(data, null, 2);
+                updateNodeStatus(nodeId, { status: 'active', lastHeartbeat: new Date().toISOString() });
+            } catch (error) {
+                document.getElementById('heartbeatResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 更新节点状态表
+        function updateNodeStatus(nodeId, data) {
+            const table = document.getElementById('nodeStatusTable');
+            let row = table.querySelector(`tr[data-node-id="${nodeId}"]`);
+            
+            if (!row) {
+                row = table.insertRow();
+                row.setAttribute('data-node-id', nodeId);
+            }
+
+            row.innerHTML = `
+                <td>${nodeId}</td>
+                <td><span class="badge badge-primary">${data.status || 'unknown'}</span></td>
+                <td>${data.lastHeartbeat || '-'}</td>
+                <td>${Array.isArray(data.routes) ? data.routes.join(', ') : '-'}</td>
+                <td>
+                    <button class="btn btn-secondary" onclick="sendHeartbeat('${nodeId}')">发送心跳</button>
+                </td>
+            `;
+        }
+
+        // 页面加载时填充默认值
+        window.onload = function() {
+            document.getElementById('nodeId').value = defaultParams.node_routes_list.nodeId;
+            document.getElementById('heartbeatNodeId').value = defaultParams.node_heartbeat.nodeId;
+        };
+    </script>
+</body>
+</html> 

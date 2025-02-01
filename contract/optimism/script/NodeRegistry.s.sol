@@ -10,16 +10,23 @@ contract NodeRegistryScript is Script {
     function setUp() public {}
 
     function run() public {
-        // 从环境变量加载 stake manager 地址
+        // 从环境变量加载配置
         address stakeManagerAddress = vm.envAddress("STAKE_MANAGER_ADDRESS");
+        string memory ipOrDomain = vm.envString("DEPLOYER_NODE_IP");
+        string memory apiIndexes = vm.envString("DEPLOYER_NODE_APIS");
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         
-        vm.startBroadcast();
+        vm.startBroadcast(deployerPrivateKey);
 
-        // 使用环境变量中的地址部署合约
-        registry = new NodeRegistry(stakeManagerAddress);
+        // 部署合约
+        registry = new NodeRegistry(
+            stakeManagerAddress,
+            ipOrDomain,
+            apiIndexes
+        );
         
         console.log("NodeRegistry deployed at:", address(registry));
-        console.log("Using StakeManager at:", stakeManagerAddress);
+        console.log("Using stake manager at:", stakeManagerAddress);
 
         vm.stopBroadcast();
     }

@@ -1,88 +1,136 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
 interface IStakeManager {
     function getStakeAmount(address account) external view returns (uint256);
 }
 
-contract NodeRegistry {
+contract NodeRegistry is ReentrancyGuard {
+    using ECDSA for bytes32;
+
     // 最小 stake 数量
     uint256 public constant MIN_STAKE_AMOUNT = 1000 * 10**18; // 1000 tokens
     
     // Stake 管理合约地址
-    address public stakeManager;
+    address public immutable stakeManager;
     
-    // 定义节点数据结构
-    struct NodeData {
+    // 节点信息结构
+    struct NodeInfo {
         string ipOrDomain;
-        string apiIndexes;
-        uint256 stakedAmount;  // 新增：记录质押数量
-        uint256 registeredAt;  // 新增：注册时间
+        string apiIndexes;  // 使用标准API的index列表，例如 "[1,2,3]"
+        uint256 registeredAt;
     }
 
-    // 节点注册表
-    mapping(address => NodeData) public nodeRegistry;
+    // 存储节点信息
+    mapping(address => NodeInfo) public nodes;
 
-    // 注册节点事件
-    event NodeRegistered(address indexed nodeAddress, string ipOrDomain, string apiIndexes, uint256 stakedAmount);
+    // 事件
+    event NodeRegistered(
+        address indexed nodeAddress,
+        address indexed registrarAddress,
+        string ipOrDomain,
+        string apiIndexes
+    );
 
-    constructor(address _stakeManager) {
+    constructor(
+        address _stakeManager,
+        string memory _ipOrDomain,
+        string memory _apiIndexes
+    ) {
+        require(_stakeManager != address(0), "Invalid stake manager address");
         stakeManager = _stakeManager;
+
+        // 验证注册服务者的质押数量
+        require(validateStake(msg.sender), "Deployer insufficient stake amount");
+
+        // 将合约部署者设置为第一个注册节点
+        nodes[msg.sender] = NodeInfo({
+            ipOrDomain: _ipOrDomain,
+            apiIndexes: _apiIndexes,
+            registeredAt: block.timestamp
+        });
+
+        emit NodeRegistered(msg.sender, msg.sender, _ipOrDomain, _apiIndexes);
     }
 
     // 验证 stake 数量
-    function validateStake(address /* nodeAddress */) public view returns (bool) {
-        // TODO: Phase 1 - 初期直接返回 true
+    function validateStake(address nodeAddress) public view returns (bool) {
         if (stakeManager == address(0)) {
             return true;
         }
-
-        // TODO: Phase 2 - 后期实现以下逻辑
-        // IStakeManager stake = IStakeManager(stakeManager);
-        // uint256 stakedAmount = stake.getStakeAmount(nodeAddress);
-        // return stakedAmount >= MIN_STAKE_AMOUNT;
-        return true;
+        IStakeManager stake = IStakeManager(stakeManager);
+        uint256 stakedAmount = stake.getStakeAmount(nodeAddress);
+        return stakedAmount >= MIN_STAKE_AMOUNT;
     }
 
-    // 注册节点函数
-    function registerNode(string memory ipOrDomain, string memory apiIndexes) public {
-        // 验证 stake 数量
-        require(validateStake(msg.sender), "Insufficient stake amount");
-
-        // TODO: Phase 2 - 获取实际质押数量
-        uint256 stakedAmount = 0; // 后期从 stakeManager 获取
-        
-        // 将节点数据存储在注册表中
-        nodeRegistry[msg.sender] = NodeData(
-            ipOrDomain, 
-            apiIndexes,
-            stakedAmount,
-            block.timestamp
+    // 验证签名
+    function verifySignature(
+        address signer,
+        bytes32 challenge,
+        bytes memory signature
+    ) internal pure returns (bool) {
+        bytes32 messageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", challenge)
         );
-
-        // 触发节点注册事件
-        emit NodeRegistered(msg.sender, ipOrDomain, apiIndexes, stakedAmount);
+        return messageHash.recover(signature) == signer;
     }
 
-    // 获取节点数据函数
-    function getNodeData(address nodeAddress) public view returns (
+    // 注册节点（只能由已注册节点调用）
+    function registerNode(
+        address nodeAddress,
         string memory ipOrDomain,
         string memory apiIndexes,
-        uint256 stakedAmount,
-        uint256 registeredAt
-    ) {
-        NodeData memory nodeData = nodeRegistry[nodeAddress];
+        bytes32 challenge,
+        bytes memory signature
+    ) 
+        external 
+        nonReentrant 
+    {
+        // 验证注册者必须是已注册节点
+        require(nodes[msg.sender].registeredAt > 0, "Registrar not registered");
+        
+        // 验证新节点未注册
+        require(nodes[nodeAddress].registeredAt == 0, "Node already registered");
+
+        // 验证签名（确保 nodeAddress 拥有私钥）
+        require(verifySignature(nodeAddress, challenge, signature), "Invalid signature");
+
+        // 验证新节点的质押数量
+        require(validateStake(nodeAddress), "Insufficient stake amount");
+
+        // 注册新节点
+        nodes[nodeAddress] = NodeInfo({
+            ipOrDomain: ipOrDomain,
+            apiIndexes: apiIndexes,
+            registeredAt: block.timestamp
+        });
+
+        emit NodeRegistered(nodeAddress, msg.sender, ipOrDomain, apiIndexes);
+    }
+
+    // 获取节点信息
+    function getNodeInfo(address nodeAddress) 
+        external 
+        view 
+        returns (
+            string memory ipOrDomain,
+            string memory apiIndexes,
+            uint256 registeredAt
+        ) 
+    {
+        NodeInfo memory node = nodes[nodeAddress];
         return (
-            nodeData.ipOrDomain,
-            nodeData.apiIndexes,
-            nodeData.stakedAmount,
-            nodeData.registeredAt
+            node.ipOrDomain,
+            node.apiIndexes,
+            node.registeredAt
         );
     }
 
-    // 更新 stake 管理合约地址（仅管理员可调用）
-    // function updateStakeManager(address _stakeManager) public {
-    //     // TODO: 添加管理员权限控制
-    //     stakeManager = _stakeManager;
-    // }
+    // 检查节点是否已注册
+    function isRegistered(address nodeAddress) external view returns (bool) {
+        return nodes[nodeAddress].registeredAt > 0;
+    }
 } 
