@@ -6,8 +6,8 @@
     <title>节点注册 - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
     <script type="module">
-        import { ethers } from '/node_modules/ethers/dist/ethers.min.js';
-        import { api } from '/js/api.js';
+        import { ethers } from 'ethers';
+        import { api } from '../api/index.js';
 
         // 导出到全局，以便按钮事件可以访问
         window.generateNewKeypair = async () => {
