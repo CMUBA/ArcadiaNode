@@ -9,5 +9,20 @@ export const routes = {
     },
     '/pages/node-register.html': {
         page: 'pages/node-register.html'
+    },
+    '/pages/node-health.html': {
+        page: 'pages/node-health.html'
+    },
+    '/pages/service-manage.html': {
+        page: 'pages/service-manage.html'
+    },
+    '/pages/user-manage.html': {
+        page: 'pages/user-manage.html'
+    },
+    '/pages/chain-interact.html': {
+        page: 'pages/chain-interact.html'
+    },
+    '/pages/node-registry-info.html': {
+        page: 'pages/node-registry-info.html'
     }
 }; 

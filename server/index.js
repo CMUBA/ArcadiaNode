@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const nodeRouter = require('./node');
-const envRouter = require('./env');
+const nodeRouter = require('./node/index.js');
+const envRouter = require('./env.js');
 require('dotenv').config();
 
 const app = express();
@@ -25,7 +25,7 @@ app.use('/api/v1/env', envRouter);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('Error:', err);
     res.status(500).json({
         code: 1001,
         message: 'Internal Server Error',
@@ -45,4 +45,9 @@ app.use((req, res) => {
 // 启动服务器
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log('Available routes:');
+    console.log('- GET  /');
+    console.log('- POST /api/v1/env/get');
+    console.log('- GET  /api/v1/node/get-challenge');
+    console.log('- POST /api/v1/node/register');
 }); 
