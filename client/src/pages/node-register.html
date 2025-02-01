@@ -12,7 +12,7 @@
         // 导出到全局，以便按钮事件可以访问
         window.generateNewKeypair = async () => {
             try {
-                // 生成新的随机钱包
+                // 生成新的随机钱包 (ethers v6)
                 const wallet = ethers.Wallet.createRandom();
                 
                 // 显示新节点信息
@@ -62,7 +62,7 @@
                     throw new Error('请先生成新节点密钥对');
                 }
 
-                // 使用私钥创建钱包实例
+                // 使用私钥创建钱包实例 (ethers v6)
                 const wallet = new ethers.Wallet(privateKey);
                 
                 // 签名消息
@@ -77,14 +77,20 @@
 
         window.registerNode = async () => {
             try {
+                // 首先检查是否有 challenge
+                const challenge = document.getElementById('challenge').value;
+                const signature = document.getElementById('signature').value;
+                
+                if (!challenge || !signature) {
+                    throw new Error('请先获取并签名 Challenge');
+                }
+
                 const nodeAddress = document.getElementById('newNodeAddress').value;
                 const nodeEndpoint = document.getElementById('nodeEndpoint').value;
                 const nodeApis = document.getElementById('nodeApis').value;
-                const challenge = document.getElementById('challenge').value;
-                const signature = document.getElementById('signature').value;
                 const nodeEns = document.getElementById('nodeEns').value;
 
-                if (!nodeAddress || !nodeEndpoint || !nodeApis || !challenge || !signature) {
+                if (!nodeAddress || !nodeEndpoint || !nodeApis) {
                     throw new Error('请填写所有必要信息');
                 }
 
@@ -99,6 +105,8 @@
                     challenge,
                     signature
                 };
+
+                console.log('Sending registration request:', requestData);
 
                 // 显示请求信息
                 document.getElementById('requestResponseCard').style.display = 'block';

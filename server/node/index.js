@@ -1,6 +1,6 @@
 const express = require('express');
 const { randomBytes } = require('node:crypto');
-const ethers = require('ethers');
+const { ethers } = require('ethers');
 const router = express.Router();
 
 // 存储挑战字符串
@@ -56,6 +56,13 @@ router.post('/sign', async (req, res) => {
 
         // 验证挑战字符串是否存在
         const challengeData = challengeStore.get(challenge);
+        console.log('Challenge verification:', {
+            receivedChallenge: challenge,
+            storedChallenges: Array.from(challengeStore.keys()),
+            challengeData: challengeData,
+            currentTime: Math.floor(Date.now() / 1000)
+        });
+        
         if (!challengeData) {
             return res.status(400).json({
                 code: 2002,
@@ -65,6 +72,10 @@ router.post('/sign', async (req, res) => {
 
         // 验证是否过期
         if (challengeData.expires < Math.floor(Date.now() / 1000)) {
+            console.log('Challenge expired:', {
+                expires: challengeData.expires,
+                currentTime: Math.floor(Date.now() / 1000)
+            });
             challengeStore.delete(challenge);
             return res.status(400).json({
                 code: 2003,
@@ -117,7 +128,6 @@ router.post('/register', async (req, res) => {
             node_ens,
             node_ip,
             node_service_list,
-            registry_contract_address,
             challenge,
             signature
         } = req.body;
@@ -132,6 +142,13 @@ router.post('/register', async (req, res) => {
 
         // 验证挑战字符串
         const challengeData = challengeStore.get(challenge);
+        console.log('Challenge verification:', {
+            receivedChallenge: challenge,
+            storedChallenges: Array.from(challengeStore.keys()),
+            challengeData: challengeData,
+            currentTime: Math.floor(Date.now() / 1000)
+        });
+        
         if (!challengeData) {
             return res.status(400).json({
                 code: 2002,
@@ -141,6 +158,10 @@ router.post('/register', async (req, res) => {
 
         // 验证是否过期
         if (challengeData.expires < Math.floor(Date.now() / 1000)) {
+            console.log('Challenge expired:', {
+                expires: challengeData.expires,
+                currentTime: Math.floor(Date.now() / 1000)
+            });
             challengeStore.delete(challenge);
             return res.status(400).json({
                 code: 2003,
@@ -150,6 +171,7 @@ router.post('/register', async (req, res) => {
 
         // 验证是否已使用
         if (challengeData.used) {
+            console.log('Challenge already used');
             return res.status(400).json({
                 code: 2004,
                 message: 'Challenge already used'
@@ -161,10 +183,7 @@ router.post('/register', async (req, res) => {
             console.log('Signature:', signature);
             console.log('Node address:', node_address);
 
-            // 验证签名
-            const messageHash = ethers.hashMessage(challenge);
-            console.log('Message hash:', messageHash);
-            
+            // 验证签名 (使用 ethers v6 的方式)
             const recoveredAddress = ethers.verifyMessage(challenge, signature);
             console.log('Recovered address:', recoveredAddress);
             
@@ -186,16 +205,21 @@ router.post('/register', async (req, res) => {
             // 获取环境变量
             const rpcUrl = process.env.OPTIMISM_TESTNET_RPC_URL;
             const privateKey = process.env.NODE_PRIVATE_KEY;
+            const registryAddress = process.env.NODE_REGISTRY_ADDRESS;
 
+            // 验证必要的配置
             if (!rpcUrl) {
                 throw new Error('OPTIMISM_TESTNET_RPC_URL not configured');
             }
             if (!privateKey) {
                 throw new Error('NODE_PRIVATE_KEY not configured');
             }
+            if (!registryAddress) {
+                throw new Error('NODE_REGISTRY_ADDRESS not configured');
+            }
 
+            // 执行链上注册
             console.log('Initializing provider with RPC URL:', rpcUrl);
-            // 调用合约注册节点
             const provider = new ethers.JsonRpcProvider(rpcUrl);
             const wallet = new ethers.Wallet(privateKey, provider);
             
@@ -203,16 +227,16 @@ router.post('/register', async (req, res) => {
                 "function registerNode(address nodeAddress, string memory ipOrDomain, string memory apiIndexes, bytes32 challenge, bytes memory signature) external"
             ];
             
-            console.log('Creating contract instance at address:', registry_contract_address);
-            const contract = new ethers.Contract(registry_contract_address, abi, wallet);
+            console.log('Creating contract instance at address:', registryAddress);
+            const contract = new ethers.Contract(registryAddress, abi, wallet);
             
             // 准备合约调用参数
             const contractCallParams = {
                 nodeAddress: node_address,
                 nodeUrl: node_url,
                 apiIndexes: node_service_list,
-                challenge: ethers.id(challenge),
-                signature
+                challenge: ethers.keccak256(ethers.toUtf8Bytes(challenge)),
+                signature: signature
             };
             console.log('Contract call params:', contractCallParams);
             
@@ -223,7 +247,7 @@ router.post('/register', async (req, res) => {
                 contractCallParams.nodeUrl,
                 contractCallParams.apiIndexes,
                 contractCallParams.challenge,
-                contractCallParams.signature
+                ethers.getBytes(contractCallParams.signature) // 将签名转换为字节数组
             );
             
             console.log('Transaction sent:', tx.hash);
@@ -239,10 +263,11 @@ router.post('/register', async (req, res) => {
                 message: 'success',
                 data: {
                     nodeId: node_address,
-                    registry_address: registry_contract_address,
+                    registry_address: registryAddress,
                     tx_hash: receipt.hash
                 }
             });
+
         } catch (error) {
             console.error('Registration process failed:', error);
             console.error('Error details:', {
@@ -251,21 +276,19 @@ router.post('/register', async (req, res) => {
                 code: error.code,
                 reason: error.reason
             });
-            
+
             return res.status(500).json({
                 code: 1002,
-                message: 'Failed to register node',
-                details: error.message,
-                errorCode: error.code,
-                errorReason: error.reason
+                message: 'Registration failed',
+                details: error.message
             });
         }
-    } catch (outer_error) {
-        console.error('Outer registration error:', outer_error);
-        return res.status(500).json({
-            code: 1002,
-            message: 'Failed to register node',
-            details: outer_error.message
+    } catch (error) {
+        console.error('Unexpected error:', error);
+        res.status(500).json({
+            code: 1001,
+            message: 'Internal server error',
+            details: error.message
         });
     }
 });
