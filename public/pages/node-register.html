@@ -5,13 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>节点注册 - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+    <script src="/node_modules/ethers/dist/ethers.umd.min.js"></script>
     <script>
         // 检查 ethers 是否加载成功
         window.addEventListener('load', function() {
             if (typeof ethers === 'undefined') {
-                alert('Error: ethers.js 加载失败，请检查网络连接后刷新页面');
+                console.error('ethers.js 加载失败，尝试使用 CDN 加载');
+                // 如果本地加载失败，尝试从 CDN 加载
+                var script = document.createElement('script');
+                script.src = 'https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js';
+                script.type = 'application/javascript';
+                script.onload = function() {
+                    console.log('ethers.js 从 CDN 加载成功');
+                    initEthers().catch(console.error);
+                };
+                script.onerror = function() {
+                    alert('Error: ethers.js 加载失败，请检查网络连接后刷新页面');
+                };
+                document.head.appendChild(script);
             } else {
+                console.log('ethers.js 从本地加载成功');
                 initEthers().catch(console.error);
             }
         });
@@ -91,29 +104,46 @@
         // 初始化 ethers
         async function initEthers() {
             try {
+                console.log('Initializing ethers...');
                 // 从环境变量获取注册服务节点的私钥
                 const response = await fetch('/api/v1/env/get', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key: 'NODE_PRIVATE_KEY' })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        key: 'NODE_PRIVATE_KEY'
+                    })
                 });
                 
+                console.log('Response status:', response.status);
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+                
                 if (!response.ok) {
-                    throw new Error('Failed to fetch NODE_PRIVATE_KEY');
+                    throw new Error(`Failed to fetch NODE_PRIVATE_KEY: ${response.status} ${responseText}`);
                 }
                 
-                const data = await response.json();
+                const data = JSON.parse(responseText);
+                console.log('Parsed response:', data);
                 
                 if (data.code === 0 && data.value) {
                     // 使用 Optimism Sepolia 网络
                     provider = new ethers.providers.JsonRpcProvider('https://sepolia.optimism.io');
                     registryWallet = new ethers.Wallet(data.value, provider);
+                    console.log('Wallet initialized with address:', registryWallet.address);
                     
                     // 获取合约地址
                     const contractResponse = await fetch('/api/v1/env/get', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key: 'NODE_REGISTRY_ADDRESS' })
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            key: 'NODE_REGISTRY_ADDRESS'
+                        })
                     });
                     
                     if (!contractResponse.ok) {
@@ -121,6 +151,7 @@
                     }
                     
                     const contractData = await contractResponse.json();
+                    console.log('Contract data:', contractData);
                     
                     if (contractData.code === 0 && contractData.value) {
                         // 初始化合约
@@ -129,10 +160,13 @@
                             "function getNodeInfo(address nodeAddress) external view returns (string memory ipOrDomain, string memory apiIndexes, bool isActive)"
                         ];
                         nodeRegistryContract = new ethers.Contract(contractData.value, abi, registryWallet);
+                        console.log('Contract initialized at:', contractData.value);
                     }
 
                     // 生成第一个新节点密钥对
                     generateNewKeypair();
+                } else {
+                    throw new Error('Invalid response format or missing value');
                 }
             } catch (error) {
                 console.error('初始化失败:', error);
@@ -165,17 +199,17 @@
         // 获取 Challenge
         async function getChallenge() {
             try {
-                const response = await fetch('/api/v1/node/challenge', {
+                const response = await fetch('/api/v1/node/get-challenge', {
                     method: 'GET',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 const data = await response.json();
                 
-                if (data.code === 0 && data.challenge) {
-                    document.getElementById('challenge').value = data.challenge;
+                if (data.code === 0 && data.data && data.data.challenge) {
+                    document.getElementById('challenge').value = data.data.challenge;
                     document.getElementById('challengeResult').textContent = '获取 Challenge 成功';
                 } else {
-                    document.getElementById('challengeResult').textContent = '获取 Challenge 失败: ' + data.message;
+                    document.getElementById('challengeResult').textContent = '获取 Challenge 失败: ' + (data.message || '未知错误');
                 }
             } catch (error) {
                 document.getElementById('challengeResult').textContent = 'Error: ' + error.message;
@@ -232,9 +266,13 @@
                         'X-Registry-Address': registryWallet.address
                     },
                     body: JSON.stringify({
-                        nodeAddress: newNodeWallet.address,
-                        nodeEndpoint,
-                        nodeApis,
+                        node_address: newNodeWallet.address,
+                        node_url: nodeEndpoint,
+                        api_url: `${nodeEndpoint}/api/v1`,
+                        node_ens: document.getElementById('nodeEns').value || '',
+                        node_ip: '',
+                        node_service_list: nodeApis,
+                        registry_contract_address: nodeRegistryContract.address,
                         challenge,
                         signature
                     })
@@ -248,6 +286,7 @@
                 }
             } catch (error) {
                 document.getElementById('registerResult').textContent = 'Error: ' + error.message;
+                console.error('注册失败:', error);
             }
         }
 

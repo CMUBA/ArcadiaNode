@@ -13,8 +13,10 @@ const serviceList = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/servic
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/data', express.static(path.join(__dirname, 'data')));
+app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
 
 // 基础服务路由 (/api/v1/...)
+app.use('/api/v1/env', require('./server/env'));
 app.use('/api/v1/node', require('./server/node'));
 app.use('/api/v1/service', require('./server/service'));
 app.use('/api/v1/user', require('./server/user'));
