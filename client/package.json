@@ -1,0 +1,33 @@
+{
+  "name": "arcadia-node-client",
+  "version": "1.0.0",
+  "description": "Arcadia Node Client Application",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "keywords": [
+    "arcadia",
+    "node",
+    "client"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5",
+    "express": "^4.21.2",
+    "viem": "^2.22.17"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9",
+    "vite": "^5.4.14",
+    "vitest": "^1.6.0"
+  }
+}
