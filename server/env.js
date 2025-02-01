@@ -5,7 +5,8 @@ const router = express.Router();
 const ALLOWED_ENV_VARS = [
     'NODE_PRIVATE_KEY',
     'NODE_REGISTRY_ADDRESS',
-    'RPC_URL'
+    'RPC_URL',
+    'OPTIMISM_TESTNET_RPC_URL'
 ];
 
 // 格式化私钥

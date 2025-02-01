@@ -5,26 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>节点注册 - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
-    <script src="/node_modules/ethers/dist/ethers.umd.min.js"></script>
+    <script src="/js/ethers.umd.min.js"></script>
     <script>
         // 检查 ethers 是否加载成功
         window.addEventListener('load', function() {
             if (typeof ethers === 'undefined') {
-                console.error('ethers.js 加载失败，尝试使用 CDN 加载');
-                // 如果本地加载失败，尝试从 CDN 加载
-                var script = document.createElement('script');
-                script.src = 'https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js';
-                script.type = 'application/javascript';
-                script.onload = function() {
-                    console.log('ethers.js 从 CDN 加载成功');
-                    initEthers().catch(console.error);
-                };
-                script.onerror = function() {
-                    alert('Error: ethers.js 加载失败，请检查网络连接后刷新页面');
-                };
-                document.head.appendChild(script);
+                console.error('ethers.js 加载失败');
+                alert('Error: ethers.js 加载失败，请检查网络连接后刷新页面');
             } else {
-                console.log('ethers.js 从本地加载成功');
+                console.log('ethers.js 加载成功');
                 initEthers().catch(console.error);
             }
         });
@@ -93,7 +82,54 @@
             <button class="btn" onclick="registerNode()">注册节点</button>
             <div id="registerResult" class="result"></div>
         </div>
+
+        <!-- 新增：请求和响应信息显示区域 -->
+        <div class="card" id="requestResponseCard" style="display: none;">
+            <h2>请求和响应信息</h2>
+            <div class="info-section">
+                <h3>请求信息</h3>
+                <pre id="requestInfo" class="code-block"></pre>
+            </div>
+            <div class="info-section">
+                <h3>响应信息</h3>
+                <pre id="responseInfo" class="code-block"></pre>
+            </div>
+        </div>
     </div>
+
+    <style>
+        /* 添加新的样式 */
+        .info-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .info-section h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .code-block {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+            margin: 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success-message {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .error-message {
+            color: #f44336;
+            font-weight: bold;
+        }
+    </style>
 
     <script>
         let registryWallet = null;  // 注册服务节点的钱包
@@ -129,8 +165,29 @@
                 console.log('Parsed response:', data);
                 
                 if (data.code === 0 && data.value) {
+                    // 获取 RPC URL
+                    const rpcResponse = await fetch('/api/v1/env/get', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            key: 'OPTIMISM_TESTNET_RPC_URL'
+                        })
+                    });
+
+                    if (!rpcResponse.ok) {
+                        throw new Error('Failed to fetch RPC URL');
+                    }
+
+                    const rpcData = await rpcResponse.json();
+                    if (rpcData.code !== 0 || !rpcData.value) {
+                        throw new Error('Invalid RPC URL response');
+                    }
+
                     // 使用 Optimism Sepolia 网络
-                    provider = new ethers.providers.JsonRpcProvider('https://sepolia.optimism.io');
+                    provider = new ethers.JsonRpcProvider(rpcData.value);
                     registryWallet = new ethers.Wallet(data.value, provider);
                     console.log('Wallet initialized with address:', registryWallet.address);
                     
@@ -156,8 +213,8 @@
                     if (contractData.code === 0 && contractData.value) {
                         // 初始化合约
                         const abi = [
-                            "function registerNode(address nodeAddress, string memory ipOrDomain, string memory apiIndexes) external",
-                            "function getNodeInfo(address nodeAddress) external view returns (string memory ipOrDomain, string memory apiIndexes, bool isActive)"
+                            "function registerNode(address nodeAddress, string memory ipOrDomain, string memory apiIndexes, bytes32 challenge, bytes memory signature) external",
+                            "function getNodeInfo(address nodeAddress) external view returns (tuple(string ipOrDomain, string apiIndexes, uint256 registeredAt))"
                         ];
                         nodeRegistryContract = new ethers.Contract(contractData.value, abi, registryWallet);
                         console.log('Contract initialized at:', contractData.value);
@@ -249,44 +306,90 @@
                     throw new Error('请先生成新节点密钥对');
                 }
 
+                const nodeAddress = document.getElementById('newNodeAddress').value;
                 const nodeEndpoint = document.getElementById('nodeEndpoint').value;
                 const nodeApis = document.getElementById('nodeApis').value;
                 const challenge = document.getElementById('challenge').value;
                 const signature = document.getElementById('signature').value;
+                const nodeEns = document.getElementById('nodeEns').value;
 
-                if (!nodeEndpoint || !nodeApis || !challenge || !signature) {
+                if (!nodeAddress || !nodeEndpoint || !nodeApis || !challenge || !signature) {
                     throw new Error('请填写所有必要信息');
                 }
 
-                // 使用注册服务节点的身份发送请求
+                // 构建请求数据
+                const requestData = {
+                    node_address: nodeAddress,
+                    node_url: nodeEndpoint,
+                    api_url: `${nodeEndpoint}/api/v1`,
+                    node_ens: nodeEns || '',
+                    node_ip: '',
+                    node_service_list: nodeApis,
+                    registry_contract_address: nodeRegistryContract.address,
+                    challenge,
+                    signature
+                };
+
+                // 显示请求信息
+                document.getElementById('requestResponseCard').style.display = 'block';
+                document.getElementById('requestInfo').textContent = JSON.stringify(requestData, null, 2);
+
+                // 发送注册请求
                 const response = await fetch('/api/v1/node/register', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
                         'X-Registry-Address': registryWallet.address
                     },
-                    body: JSON.stringify({
-                        node_address: newNodeWallet.address,
-                        node_url: nodeEndpoint,
-                        api_url: `${nodeEndpoint}/api/v1`,
-                        node_ens: document.getElementById('nodeEns').value || '',
-                        node_ip: '',
-                        node_service_list: nodeApis,
-                        registry_contract_address: nodeRegistryContract.address,
-                        challenge,
-                        signature
-                    })
+                    body: JSON.stringify(requestData)
                 });
-                
-                const data = await response.json();
-                if (data.code === 0) {
-                    document.getElementById('registerResult').textContent = '注册成功！请保存新节点私钥：' + newNodeWallet.privateKey;
+
+                const responseData = await response.json();
+
+                // 显示响应信息
+                document.getElementById('responseInfo').textContent = JSON.stringify(responseData, null, 2);
+
+                // 更新注册结果显示
+                const registerResult = document.getElementById('registerResult');
+                if (response.ok && responseData.code === 0) {
+                    registerResult.innerHTML = `
+                        <div class="success-message">
+                            注册成功！<br>
+                            节点地址: ${nodeAddress}<br>
+                            请保存新节点私钥：${newNodeWallet.privateKey}
+                        </div>
+                    `;
+
+                    // 保存新注册的地址到本地存储
+                    const recentAddresses = JSON.parse(localStorage.getItem('recentAddresses') || '[]');
+                    if (!recentAddresses.includes(nodeAddress)) {
+                        recentAddresses.push(nodeAddress);
+                        localStorage.setItem('recentAddresses', JSON.stringify(recentAddresses));
+                    }
+
+                    // 添加交易链接
+                    const txHash = responseData.tx_hash; // 假设后端返回了交易哈希
+                    registerResult.innerHTML += `
+                        <div class="transaction-info">
+                            <p>交易哈希: ${txHash}</p>
+                            <p>查看交易: <a href="https://sepolia-optimism.etherscan.io/tx/${txHash}" target="_blank">Etherscan</a></p>
+                        </div>
+                    `;
                 } else {
-                    document.getElementById('registerResult').textContent = JSON.stringify(data, null, 2);
+                    registerResult.innerHTML = `
+                        <div class="error-message">
+                            注册失败：${responseData.message || '未知错误'}
+                        </div>
+                    `;
                 }
             } catch (error) {
-                document.getElementById('registerResult').textContent = 'Error: ' + error.message;
-                console.error('注册失败:', error);
+                console.error('注册节点失败：', error);
+                document.getElementById('registerResult').innerHTML = `
+                    <div class="error-message">
+                        注册失败：${error.message}
+                    </div>
+                `;
+                document.getElementById('responseInfo').textContent = `Error: ${error.message}`;
             }
         }
 
