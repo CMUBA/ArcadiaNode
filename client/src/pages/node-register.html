@@ -5,17 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>节点注册 - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
-    <script src="/js/ethers.umd.min.js"></script>
-    <script>
-        // 检查 ethers 是否加载成功
+    <script type="module">
+        import { createPublicClient, createWalletClient, http, optimismSepolia } from '/node_modules/viem/dist/viem.js';
+        import { api } from '/js/api.js';
+
+        // 检查依赖是否加载成功
         window.addEventListener('load', function() {
-            if (typeof ethers === 'undefined') {
-                console.error('ethers.js 加载失败');
-                alert('Error: ethers.js 加载失败，请检查网络连接后刷新页面');
-            } else {
-                console.log('ethers.js 加载成功');
-                initEthers().catch(console.error);
-            }
+            console.log('依赖库加载成功');
+            initViem().catch(console.error);
         });
     </script>
 </head>
@@ -137,10 +134,10 @@
         let provider = null;
         let nodeRegistryContract = null;
 
-        // 初始化 ethers
-        async function initEthers() {
+        // 初始化 viem
+        async function initViem() {
             try {
-                console.log('Initializing ethers...');
+                console.log('Initializing viem...');
                 // 从环境变量获取注册服务节点的私钥
                 const response = await fetch('/api/v1/env/get', {
                     method: 'POST',
@@ -256,10 +253,7 @@
         // 获取 Challenge
         async function getChallenge() {
             try {
-                const response = await fetch('/api/v1/node/get-challenge', {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const response = await api.node.getChallenge();
                 const data = await response.json();
                 
                 if (data.code === 0 && data.data && data.data.challenge) {
@@ -325,7 +319,7 @@
                     node_ens: nodeEns || '',
                     node_ip: '',
                     node_service_list: nodeApis,
-                    registry_contract_address: nodeRegistryContract.address,
+                    registry_contract_address: registryWallet.address,
                     challenge,
                     signature
                 };
@@ -335,15 +329,7 @@
                 document.getElementById('requestInfo').textContent = JSON.stringify(requestData, null, 2);
 
                 // 发送注册请求
-                const response = await fetch('/api/v1/node/register', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Registry-Address': registryWallet.address
-                    },
-                    body: JSON.stringify(requestData)
-                });
-
+                const response = await api.node.register(requestData);
                 const responseData = await response.json();
 
                 // 显示响应信息
@@ -368,7 +354,7 @@
                     }
 
                     // 添加交易链接
-                    const txHash = responseData.tx_hash; // 假设后端返回了交易哈希
+                    const txHash = responseData.tx_hash;
                     registerResult.innerHTML += `
                         <div class="transaction-info">
                             <p>交易哈希: ${txHash}</p>
@@ -421,7 +407,7 @@
 
         // 修改页面加载初始化
         window.onload = function() {
-            initEthers();
+            initViem();
             // 设置默认值
             document.getElementById('nodeEndpoint').value = 'node.cmuba.org';
             document.getElementById('nodeApis').value = '[1,2,3,4,5,6,7,8,9,10,11,12,13]';
