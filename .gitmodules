@@ -1,3 +1,6 @@
 [submodule "contract/optimism/lib/openzeppelin-contracts"]
 	path = contract/optimism/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "contract/optimism/lib/forge-std"]
+	path = contract/optimism/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
