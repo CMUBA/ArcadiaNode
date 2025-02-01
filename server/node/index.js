@@ -9,20 +9,28 @@ const challengeStore = new Map();
 // 生成随机挑战字符串
 router.get('/get-challenge', (req, res) => {
     try {
-        // 生成32字节的随机数
-        const challenge = randomBytes(32).toString('hex');
+        // 使用 crypto.getRandomValues() 生成随机字节
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        const randomBytes32 = Buffer.from(array);
+        
+        // 计算 keccak256 哈希确保是 32 字节
+        const challenge = ethers.keccak256(randomBytes32);
+        
+        console.log('Challenge generation:', {
+            randomBytes: ethers.hexlify(randomBytes32),
+            challenge,
+            challengeLength: ethers.getBytes(challenge).length
+        });
         
         // 设置5分钟过期时间
-        const expires = Math.floor(Date.now() / 1000) + 300; // 5 minutes
+        const expires = Math.floor(Date.now() / 1000) + 300;
         
         // 存储挑战字符串
         challengeStore.set(challenge, {
             expires,
             used: false
         });
-
-        // 清理过期的挑战字符串
-        cleanExpiredChallenges();
 
         res.json({
             code: 0,
@@ -33,6 +41,7 @@ router.get('/get-challenge', (req, res) => {
             }
         });
     } catch (error) {
+        console.error('Challenge generation error:', error);
         res.status(500).json({
             code: 1001,
             message: 'Failed to generate challenge',
@@ -179,25 +188,54 @@ router.post('/register', async (req, res) => {
         }
 
         try {
-            console.log('Verifying signature for challenge:', challenge);
-            console.log('Signature:', signature);
-            console.log('Node address:', node_address);
+            console.log('Registration request:', {
+                node_address,
+                challenge,
+                signature,
+                challengeLength: ethers.getBytes(challenge).length
+            });
 
-            // 验证签名 (使用 ethers v6 的方式)
-            const recoveredAddress = ethers.verifyMessage(challenge, signature);
-            console.log('Recovered address:', recoveredAddress);
+            // 验证签名
+            // 完全匹配合约的验证逻辑：
+            // bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", challenge));
+            const messageBytes = ethers.getBytes(challenge);
             
+            // 注意：这里不需要将 prefix 转换为 UTF8 字节，因为它本身就是字节序列
+            const prefixBytes = new Uint8Array([
+                0x19, ...ethers.toUtf8Bytes("Ethereum Signed Message:\n32")
+            ]);
+            
+            // 使用 Uint8Array 直接拼接字节，模拟 abi.encodePacked
+            const prefixedMessage = new Uint8Array(prefixBytes.length + messageBytes.length);
+            prefixedMessage.set(prefixBytes);
+            prefixedMessage.set(messageBytes, prefixBytes.length);
+            
+            // 计算哈希
+            const prefixedMessageHash = ethers.keccak256(prefixedMessage);
+            
+            console.log('Signature verification details:', {
+                challenge,
+                challengeHex: ethers.hexlify(messageBytes),
+                prefixBytes: ethers.hexlify(prefixBytes),
+                prefixedMessageHex: ethers.hexlify(prefixedMessage),
+                prefixedMessageHash,
+                signature
+            });
+
+            // 验证签名
+            const recoveredAddress = ethers.recoverAddress(prefixedMessageHash, signature);
+            console.log('Signature verification:', {
+                recoveredAddress,
+                expectedAddress: node_address,
+                matches: recoveredAddress.toLowerCase() === node_address.toLowerCase()
+            });
+
             if (recoveredAddress.toLowerCase() !== node_address.toLowerCase()) {
-                console.log('Signature verification failed:');
-                console.log('Expected:', node_address.toLowerCase());
-                console.log('Got:', recoveredAddress.toLowerCase());
                 return res.status(400).json({
                     code: 2005,
                     message: 'Invalid signature'
                 });
             }
-
-            console.log('Signature verified successfully');
 
             // 标记挑战字符串为已使用
             challengeData.used = true;
@@ -235,10 +273,16 @@ router.post('/register', async (req, res) => {
                 nodeAddress: node_address,
                 nodeUrl: node_url,
                 apiIndexes: node_service_list,
-                challenge: ethers.keccak256(ethers.toUtf8Bytes(challenge)),
+                challenge: challenge,  // 这里的 challenge 已经是 32 字节
                 signature: signature
             };
-            console.log('Contract call params:', contractCallParams);
+
+            console.log('Contract call parameters:', {
+                params: contractCallParams,
+                challengeLength: ethers.getBytes(challenge).length,
+                signatureLength: ethers.getBytes(signature).length,
+                challengeHex: ethers.hexlify(ethers.getBytes(challenge))
+            });
             
             // 调用合约注册节点
             console.log('Calling registerNode function...');
@@ -247,7 +291,7 @@ router.post('/register', async (req, res) => {
                 contractCallParams.nodeUrl,
                 contractCallParams.apiIndexes,
                 contractCallParams.challenge,
-                ethers.getBytes(contractCallParams.signature) // 将签名转换为字节数组
+                signature
             );
             
             console.log('Transaction sent:', tx.hash);

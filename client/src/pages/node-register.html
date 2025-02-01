@@ -65,12 +65,43 @@
                 // 使用私钥创建钱包实例 (ethers v6)
                 const wallet = new ethers.Wallet(privateKey);
                 
-                // 签名消息
-                const signature = await wallet.signMessage(challenge);
+                // 1. 获取challenge字节
+                const challengeBytes = ethers.getBytes(challenge);
                 
-                document.getElementById('signature').value = signature;
+                // 2. 构造前缀（与合约完全一致）
+                const prefix = "\x19Ethereum Signed Message:\n32";
+                const prefixBytes = ethers.toUtf8Bytes(prefix);
+                
+                // 3. 连接前缀和challenge（模拟abi.encodePacked）
+                const prefixedMessage = new Uint8Array(prefixBytes.length + challengeBytes.length);
+                prefixedMessage.set(prefixBytes);
+                prefixedMessage.set(challengeBytes, prefixBytes.length);
+                
+                // 4. 计算哈希
+                const messageHash = ethers.keccak256(prefixedMessage);
+                
+                // 5. 对哈希进行签名（不使用signMessage，因为它会再次添加前缀）
+                const signature = await wallet.signingKey.sign(messageHash);
+                const signatureHex = ethers.hexlify(ethers.concat([signature.r, signature.s, signature.yParity ? "0x1c" : "0x1b"]));
+                
+                // 调试输出
+                console.log('Challenge:', challenge);
+                console.log('Challenge Bytes:', ethers.hexlify(challengeBytes));
+                console.log('Prefix:', prefix);
+                console.log('Prefixed Message:', ethers.hexlify(prefixedMessage));
+                console.log('Message Hash:', messageHash);
+                console.log('Signature:', signatureHex);
+                
+                // 验证签名（调试用）
+                const recoveredAddress = ethers.recoverAddress(messageHash, signatureHex);
+                console.log('Recovered Address:', recoveredAddress);
+                console.log('Wallet Address:', wallet.address);
+                console.log('Addresses Match:', recoveredAddress.toLowerCase() === wallet.address.toLowerCase());
+                
+                document.getElementById('signature').value = signatureHex;
                 document.getElementById('signResult').textContent = '签名成功';
             } catch (error) {
+                console.error('签名失败:', error);
                 document.getElementById('signResult').textContent = 'Error: ' + error.message;
             }
         };
