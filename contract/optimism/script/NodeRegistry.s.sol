@@ -12,9 +12,9 @@ contract NodeRegistryScript is Script {
     function run() public {
         // 从环境变量加载配置
         address stakeManagerAddress = vm.envAddress("STAKE_MANAGER_ADDRESS");
-        string memory ipOrDomain = vm.envString("DEPLOYER_NODE_IP");
-        string memory apiIndexes = vm.envString("DEPLOYER_NODE_APIS");
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        string memory ipOrDomain = vm.envString("NODE_IP");
+        string memory apiIndexes = vm.envString("NODE_APIS");
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         
         vm.startBroadcast(deployerPrivateKey);
 

@@ -6,6 +6,8 @@ node_modules
 .husky
 
 .env
+.env.optimism-testnet
+.env.optimism-mainnet
 
 # Node.js
 node_modules/
@@ -95,3 +97,4 @@ dist
 .tern-port
 contract/optimism/lib/openzeppelin-contracts
 contract/optimism/lib/openzeppelin-contracts
+contract/optimism/script/.env.optimism-testnet

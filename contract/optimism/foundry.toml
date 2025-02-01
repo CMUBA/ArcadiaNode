@@ -1,14 +1,26 @@
 [profile.default]
-src = "src"
-out = "out"
-libs = ["lib"]
+src = 'src'
+out = 'out'
+libs = ['lib']
 remappings = [
-    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+    '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
+    'forge-std/=lib/forge-std/src/',
+    'ds-test/=lib/forge-std/lib/ds-test/src/',
 ]
 
-[fmt]
+[profile.fmt]
 line_length = 120
 tab_width = 4
 bracket_spacing = true
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[profile.rpc_endpoints]
+optimism-sepolia = "${RPC_URL}"
+
+[profile.etherscan]
+optimism-sepolia = { key = "${OPTIMISM_ETHERSCAN_API_KEY}", url = "https://api-sepolia-optimistic.etherscan.io/api", chain = 11155420 }
+
+# Chain IDs
+[profile.chains]
+optimism-sepolia = 11155420

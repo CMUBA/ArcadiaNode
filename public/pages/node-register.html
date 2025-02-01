@@ -4,62 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>节点注册 - Arcadia Node</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
     <link rel="stylesheet" href="/css/common.css">
-    <style>
-        .registration-flow {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .step {
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .step h3 {
-            margin-top: 0;
-            color: #2c3e50;
-            border-bottom: 2px solid #e3f2fd;
-            padding-bottom: 10px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #34495e;
-        }
-        .form-control {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .btn {
-            background-color: #1976d2;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .btn:hover {
-            background-color: #1565c0;
-        }
-        .result {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            font-family: monospace;
-            white-space: pre-wrap;
-        }
-    </style>
+    <script src="/node_modules/ethers/dist/ethers.umd.min.js"></script>
+    <script>
+        // 检查 ethers 是否加载成功
+        window.addEventListener('load', function() {
+            if (typeof ethers === 'undefined') {
+                alert('Error: ethers.js 加载失败，请检查网络连接后刷新页面');
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="header">
@@ -70,149 +24,250 @@
     </div>
 
     <div class="container">
-        <div class="registration-flow">
-            <div class="step">
-                <h3>1. 获取挑战字符串</h3>
-                <button class="btn" onclick="getChallenge()">获取挑战字符串</button>
-                <div id="challengeResult" class="result"></div>
+        <div class="card">
+            <h2>新节点信息</h2>
+            <div class="form-group">
+                <label for="newNodeAddress">新节点地址：</label>
+                <input type="text" id="newNodeAddress" class="form-control" readonly>
             </div>
+            <div class="form-group">
+                <label for="newNodePrivateKey">新节点私钥：</label>
+                <input type="text" id="newNodePrivateKey" class="form-control" readonly>
+                <small class="text-muted">请保存此私钥，它只会显示一次！</small>
+            </div>
+            <div class="form-group">
+                <label for="nodeEndpoint">节点 IP/域名：</label>
+                <input type="text" id="nodeEndpoint" class="form-control" placeholder="例如: https://example.com" value="node.cmuba.org">
+            </div>
+            <div class="form-group">
+                <label for="nodeApis">API 索引：</label>
+                <input type="text" id="nodeApis" class="form-control" placeholder="例如: [1,2,3,4,5]" value="[1,2,3,4,5,6,7,8,9,10,11,12,13]">
+            </div>
+            <div class="form-group">
+                <label for="nodeEns">节点 ENS：</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="nodeEns" class="form-control" placeholder="TODO" readonly style="background-color: #f5f5f5;">
+                    <button class="btn" onclick="getENS()">获取 ENS</button>
+                </div>
+            </div>
+            <button class="btn" onclick="generateNewKeypair()">生成新密钥对</button>
+        </div>
 
-            <div class="step">
-                <h3>2. 签名挑战</h3>
-                <div class="form-group">
-                    <label for="challengeToSign">挑战字符串：</label>
-                    <input type="text" id="challengeToSign" class="form-control" placeholder="输入挑战字符串">
-                </div>
-                <button class="btn" onclick="signChallenge()">签名</button>
-                <div id="signResult" class="result"></div>
-            </div>
+        <div class="card">
+            <h2>获取 Challenge</h2>
+            <button class="btn" onclick="getChallenge()">获取 Challenge</button>
+            <div id="challengeResult" class="result"></div>
+        </div>
 
-            <div class="step">
-                <h3>3. 注册节点</h3>
-                <div class="form-group">
-                    <label for="nodeAddress">节点地址：</label>
-                    <input type="text" id="nodeAddress" class="form-control" placeholder="节点地址">
-                </div>
-                <div class="form-group">
-                    <label for="nodeUrl">节点URL：</label>
-                    <input type="text" id="nodeUrl" class="form-control" placeholder="节点URL">
-                </div>
-                <div class="form-group">
-                    <label for="apiUrl">API URL：</label>
-                    <input type="text" id="apiUrl" class="form-control" placeholder="API URL">
-                </div>
-                <div class="form-group">
-                    <label for="nodeEns">节点ENS：</label>
-                    <input type="text" id="nodeEns" class="form-control" placeholder="节点ENS">
-                </div>
-                <div class="form-group">
-                    <label for="nodeIp">节点IP：</label>
-                    <input type="text" id="nodeIp" class="form-control" placeholder="节点IP">
-                </div>
-                <div class="form-group">
-                    <label for="challenge">挑战字符串：</label>
-                    <input type="text" id="challenge" class="form-control" placeholder="挑战字符串">
-                </div>
-                <div class="form-group">
-                    <label for="signature">签名：</label>
-                    <input type="text" id="signature" class="form-control" placeholder="签名">
-                </div>
-                <button class="btn" onclick="registerNode()">注册</button>
-                <div id="registerResult" class="result"></div>
+        <div class="card">
+            <h2>签名 Challenge</h2>
+            <div class="form-group">
+                <label for="challenge">Challenge：</label>
+                <input type="text" id="challenge" class="form-control" readonly>
             </div>
+            <button class="btn" onclick="signChallenge()">签名 Challenge</button>
+            <div id="signResult" class="result"></div>
+        </div>
+
+        <div class="card">
+            <h2>注册节点</h2>
+            <div class="form-group">
+                <label for="signature">签名：</label>
+                <input type="text" id="signature" class="form-control" readonly>
+            </div>
+            <button class="btn" onclick="registerNode()">注册节点</button>
+            <div id="registerResult" class="result"></div>
         </div>
     </div>
 
     <script>
-        // 从环境变量获取合约地址
-        const NODE_REGISTRY_CONTRACT_ADDRESS = process.env.NODE_REGISTRY_CONTRACT_ADDRESS;
+        let registryWallet = null;  // 注册服务节点的钱包
+        let newNodeWallet = null;   // 新节点的钱包
+        let provider = null;
+        let nodeRegistryContract = null;
 
-        // 默认参数
-        const defaultParams = {
-            node_register: {
-                node_address: "",
-                node_url: "https://node.cmuba.org",
-                api_url: "https://node.cmuba.org/api/v1",
-                node_ens: "node1.asset3.eth",
-                node_ip: "127.0.0.1",
-                node_service_list: JSON.stringify([1, 2, 3, 4, 5]),
-                registry_contract_address: NODE_REGISTRY_CONTRACT_ADDRESS,
-                challenge: "",
-                signature: ""
-            }
-        };
-
-        async function getChallenge() {
+        // 初始化 ethers
+        async function initEthers() {
             try {
-                const response = await fetch('/api/v1/node/get-challenge', {
-                    method: 'GET'
+                // 从环境变量获取注册服务节点的私钥
+                const response = await fetch('/api/v1/env/get', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'NODE_PRIVATE_KEY' })
                 });
                 const data = await response.json();
-                document.getElementById('challengeResult').textContent = JSON.stringify(data, null, 2);
-                document.getElementById('challengeToSign').value = data.challenge;
+                
+                if (data.code === 0 && data.value) {
+                    provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || 'http://localhost:8545');
+                    registryWallet = new ethers.Wallet(data.value, provider);
+                    
+                    // 获取合约地址
+                    const contractResponse = await fetch('/api/v1/env/get', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key: 'NODE_REGISTRY_ADDRESS' })
+                    });
+                    const contractData = await contractResponse.json();
+                    
+                    if (contractData.code === 0 && contractData.value) {
+                        // 初始化合约
+                        const abi = [/* 这里需要添加合约 ABI */];
+                        nodeRegistryContract = new ethers.Contract(contractData.value, abi, registryWallet);
+                    }
+
+                    // 生成第一个新节点密钥对
+                    generateNewKeypair();
+                }
+            } catch (error) {
+                console.error('初始化失败:', error);
+            }
+        }
+
+        // 生成新的密钥对
+        function generateNewKeypair() {
+            try {
+                // 生成新的随机钱包
+                newNodeWallet = ethers.Wallet.createRandom();
+                
+                // 显示新节点信息
+                document.getElementById('newNodeAddress').value = newNodeWallet.address;
+                document.getElementById('newNodePrivateKey').value = newNodeWallet.privateKey;
+                
+                // 清空之前的结果
+                document.getElementById('challenge').value = '';
+                document.getElementById('signature').value = '';
+                document.getElementById('challengeResult').textContent = '';
+                document.getElementById('signResult').textContent = '';
+                document.getElementById('registerResult').textContent = '';
+                document.getElementById('nodeEns').value = '';
+            } catch (error) {
+                console.error('生成密钥对失败:', error);
+            }
+        }
+
+        // 获取 Challenge
+        async function getChallenge() {
+            try {
+                const response = await fetch('/api/v1/node/challenge', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.code === 0 && data.challenge) {
+                    document.getElementById('challenge').value = data.challenge;
+                    document.getElementById('challengeResult').textContent = '获取 Challenge 成功';
+                } else {
+                    document.getElementById('challengeResult').textContent = '获取 Challenge 失败: ' + data.message;
+                }
             } catch (error) {
                 document.getElementById('challengeResult').textContent = 'Error: ' + error.message;
             }
         }
 
+        // 签名 Challenge
         async function signChallenge() {
             try {
-                const challenge = document.getElementById('challengeToSign').value;
-                const response = await fetch('/api/v1/node/sign', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        challenge: challenge
-                    })
-                });
-                const data = await response.json();
-                document.getElementById('signResult').textContent = JSON.stringify(data, null, 2);
-                document.getElementById('signature').value = data.signature;
-                document.getElementById('challenge').value = challenge;
-                if (data.address) {
-                    document.getElementById('nodeAddress').value = data.address;
+                const challenge = document.getElementById('challenge').value;
+                if (!challenge) {
+                    throw new Error('请先获取 Challenge');
                 }
+
+                if (!newNodeWallet) {
+                    throw new Error('请先生成新节点密钥对');
+                }
+
+                // 使用新节点的私钥签名
+                const signature = await newNodeWallet.signMessage(challenge);
+                
+                document.getElementById('signature').value = signature;
+                document.getElementById('signResult').textContent = '签名成功';
             } catch (error) {
                 document.getElementById('signResult').textContent = 'Error: ' + error.message;
             }
         }
 
+        // 注册节点
         async function registerNode() {
             try {
-                const params = {
-                    node_address: document.getElementById('nodeAddress').value,
-                    node_url: document.getElementById('nodeUrl').value,
-                    api_url: document.getElementById('apiUrl').value,
-                    node_ens: document.getElementById('nodeEns').value,
-                    node_ip: document.getElementById('nodeIp').value,
-                    node_service_list: defaultParams.node_register.node_service_list,
-                    registry_contract_address: NODE_REGISTRY_CONTRACT_ADDRESS,
-                    challenge: document.getElementById('challenge').value,
-                    signature: document.getElementById('signature').value
-                };
+                if (!registryWallet) {
+                    throw new Error('注册服务节点未初始化');
+                }
 
+                if (!newNodeWallet) {
+                    throw new Error('请先生成新节点密钥对');
+                }
+
+                const nodeEndpoint = document.getElementById('nodeEndpoint').value;
+                const nodeApis = document.getElementById('nodeApis').value;
+                const challenge = document.getElementById('challenge').value;
+                const signature = document.getElementById('signature').value;
+
+                if (!nodeEndpoint || !nodeApis || !challenge || !signature) {
+                    throw new Error('请填写所有必要信息');
+                }
+
+                // 使用注册服务节点的身份发送请求
                 const response = await fetch('/api/v1/node/register', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Registry-Address': registryWallet.address
                     },
-                    body: JSON.stringify(params)
+                    body: JSON.stringify({
+                        nodeAddress: newNodeWallet.address,
+                        nodeEndpoint,
+                        nodeApis,
+                        challenge,
+                        signature
+                    })
                 });
+                
                 const data = await response.json();
-                document.getElementById('registerResult').textContent = JSON.stringify(data, null, 2);
+                if (data.code === 0) {
+                    document.getElementById('registerResult').textContent = '注册成功！请保存新节点私钥：' + newNodeWallet.privateKey;
+                } else {
+                    document.getElementById('registerResult').textContent = JSON.stringify(data, null, 2);
+                }
             } catch (error) {
                 document.getElementById('registerResult').textContent = 'Error: ' + error.message;
             }
         }
 
-        // 页面加载时填充默认值
+        // 获取 ENS
+        async function getENS() {
+            try {
+                const address = document.getElementById('newNodeAddress').value;
+                if (!address) {
+                    throw new Error('请先生成节点地址');
+                }
+
+                // 这里添加获取 ENS 的逻辑
+                const response = await fetch('/api/v1/node/ens', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address })
+                });
+                
+                const data = await response.json();
+                if (data.code === 0 && data.ens) {
+                    document.getElementById('nodeEns').value = data.ens;
+                } else {
+                    throw new Error(data.message || '获取 ENS 失败');
+                }
+            } catch (error) {
+                alert('获取 ENS 失败: ' + error.message);
+            }
+        }
+
+        // 修改页面加载初始化
         window.onload = function() {
-            document.getElementById('nodeUrl').value = defaultParams.node_register.node_url;
-            document.getElementById('apiUrl').value = defaultParams.node_register.api_url;
-            document.getElementById('nodeEns').value = defaultParams.node_register.node_ens;
-            document.getElementById('nodeIp').value = defaultParams.node_register.node_ip;
+            initEthers();
+            // 设置默认值
+            document.getElementById('nodeEndpoint').value = 'node.cmuba.org';
+            document.getElementById('nodeApis').value = '[1,2,3,4,5,6,7,8,9,10,11,12,13]';
+            // 生成第一个新节点密钥对
+            generateNewKeypair();
         };
     </script>
 </body>
