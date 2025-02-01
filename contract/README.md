@@ -269,49 +269,89 @@ OPTIMISM_ETHERSCAN_API_KEY=your_optimism_etherscan_api_key
 
 1. 部署 MushroomToken：
 ```bash
-chmod +x script/deploy-*.sh
+chmod +x script/deploy-*.sh script/verify-*.sh script/stake-*.sh
 ./script/deploy-token.sh optimism-sepolia
-# 记录输出的合约地址，例如：
-# MushroomToken deployed at: 0x1234...
+# 记录输出的合约地址到 .env.optimism-sepolia：
+# TOKEN_CONTRACT_ADDRESS=<deployed_address>
 ```
 
-2. 部署 StakeManager：
+2. 验证 MushroomToken：
 ```bash
-./script/deploy-stake.sh optimism-sepolia <mushroom_token_address>
-# 记录输出的合约地址，例如：
-# StakeManager deployed at: 0x5678...
+./script/verify-token.sh optimism-sepolia
 ```
 
-3. 部署 NodeRegistry：
+3. 转移初始代币：
 ```bash
-./script/deploy-registry.sh optimism-sepolia <stake_manager_address>
-# 记录输出的合约地址，例如：
-# NodeRegistry deployed at: 0x9abc...
+./script/transfer-initial-tokens.sh optimism-sepolia
+```
+
+4. 部署 StakeManager：
+```bash
+./script/deploy-stake.sh optimism-sepolia
+# 记录输出的合约地址到 .env.optimism-sepolia：
+# STAKE_MANAGER_ADDRESS=<deployed_address>
+```
+
+5. 验证 StakeManager：
+```bash
+./script/verify-stake.sh optimism-sepolia
+```
+
+6. 质押代币：
+```bash
+./script/stake-tokens.sh optimism-sepolia
+```
+
+7. 部署 NodeRegistry：
+```bash
+./script/deploy-registry.sh optimism-sepolia
+# 记录输出的合约地址到 .env.optimism-sepolia：
+# NODE_REGISTRY_ADDRESS=<deployed_address>
+```
+
+8. 验证 NodeRegistry：
+```bash
+./script/verify-registry.sh optimism-sepolia
 ```
 
 ### 部署验证
 
 部署完成后，可以在 Optimism Sepolia 区块浏览器上验证合约：
-- MushroomToken: https://sepolia-optimism.etherscan.io/address/<mushroom_token_address>
-- StakeManager: https://sepolia-optimism.etherscan.io/address/<stake_manager_address>
-- NodeRegistry: https://sepolia-optimism.etherscan.io/address/<node_registry_address>
+- MushroomToken: https://sepolia-optimism.etherscan.io/address/<TOKEN_CONTRACT_ADDRESS>
+- StakeManager: https://sepolia-optimism.etherscan.io/address/<STAKE_MANAGER_ADDRESS>
+- NodeRegistry: https://sepolia-optimism.etherscan.io/address/<NODE_REGISTRY_ADDRESS>
 
 ### 合约交互
 
 1. MushroomToken:
 - 总供应量：21,000,000 MUSH
-- 部署时全部代币铸造给部署者
+- 部署时全部代币铸造给合约本身
 - 支持标准 ERC20 功能
+- 部署者可以通过 transferFromContract 函数从合约转出代币
 
 2. StakeManager:
 - 质押代币：使用 MushroomToken
-- 质押数量：由合约参数决定
+- 最低质押数量：1000 MUSH
 - 支持质押和解质押操作
+- 可以通过 getStakeAmount 查询质押余额
 
 3. NodeRegistry:
-- 需要先在 StakeManager 中质押足够代币
+- 需要先在 StakeManager 中质押足够代币（1000 MUSH）
 - 使用 NODE_PRIVATE_KEY 作为初始注册服务节点
 - 支持节点注册和信息更新
+
+### 快速部署脚本
+
+如果要一次性完成所有部署，可以使用：
+```bash
+# optimism testnet
+./script/deploy.sh optimism-sepolia
+
+# optimism mainnet
+./script/deploy.sh optimism-mainnet
+```
+
+注意：快速部署脚本会自动处理所有步骤，包括部署、验证和必要的代币转移/质押操作。
 
 
 
@@ -424,3 +464,6 @@ Response: `OK`
 Details: `Pass - Verified`
 Contract successfully verified
 Contract verification completed successfully!
+
+
+

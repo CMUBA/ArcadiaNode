@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>节点注册 - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
-    <script src="/node_modules/ethers/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
     <script>
         // 检查 ethers 是否加载成功
         window.addEventListener('load', function() {
             if (typeof ethers === 'undefined') {
                 alert('Error: ethers.js 加载失败，请检查网络连接后刷新页面');
+            } else {
+                initEthers().catch(console.error);
             }
         });
     </script>
@@ -95,10 +97,16 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'NODE_PRIVATE_KEY' })
                 });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch NODE_PRIVATE_KEY');
+                }
+                
                 const data = await response.json();
                 
                 if (data.code === 0 && data.value) {
-                    provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || 'http://localhost:8545');
+                    // 使用 Optimism Sepolia 网络
+                    provider = new ethers.providers.JsonRpcProvider('https://sepolia.optimism.io');
                     registryWallet = new ethers.Wallet(data.value, provider);
                     
                     // 获取合约地址
@@ -107,11 +115,19 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ key: 'NODE_REGISTRY_ADDRESS' })
                     });
+                    
+                    if (!contractResponse.ok) {
+                        throw new Error('Failed to fetch NODE_REGISTRY_ADDRESS');
+                    }
+                    
                     const contractData = await contractResponse.json();
                     
                     if (contractData.code === 0 && contractData.value) {
                         // 初始化合约
-                        const abi = [/* 这里需要添加合约 ABI */];
+                        const abi = [
+                            "function registerNode(address nodeAddress, string memory ipOrDomain, string memory apiIndexes) external",
+                            "function getNodeInfo(address nodeAddress) external view returns (string memory ipOrDomain, string memory apiIndexes, bool isActive)"
+                        ];
                         nodeRegistryContract = new ethers.Contract(contractData.value, abi, registryWallet);
                     }
 
@@ -120,6 +136,7 @@
                 }
             } catch (error) {
                 console.error('初始化失败:', error);
+                throw error;
             }
         }
 
