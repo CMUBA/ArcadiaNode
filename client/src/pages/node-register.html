@@ -30,18 +30,46 @@
             document.querySelector('a[href="/"]').textContent = t.backToHome;
             document.querySelector('a[href="node-registry-info.html"]').textContent = t.registeredNodes;
 
-            // Update form labels
-            document.querySelector('label[for="newNodeAddress"]').textContent = t.nodeAddress;
-            document.querySelector('label[for="nodeEndpoint"]').textContent = t.ipOrDomain;
-            document.querySelector('label[for="nodeApis"]').textContent = t.apiServices;
-            document.querySelector('label[for="nodeEns"]').textContent = 'ENS';
+            // Update card titles
+            document.querySelector('.card h2:first-of-type').textContent = t.newNodeInfo || 'New Node Information';
+            document.querySelector('.card:nth-of-type(2) h2').textContent = t.registrationProcess || 'Registration Process';
+            document.querySelector('#requestResponseCard h2').textContent = t.requestResponseInfo || 'Request and Response Info';
+
+            // Update form labels and placeholders
+            document.querySelector('label[for="newNodeAddress"]').textContent = t.nodeAddress + ':';
+            document.querySelector('#newNodeAddress').placeholder = t.enterOrGenerateAddress || 'Enter or generate new address';
+            
+            document.querySelector('label[for="newNodePrivateKey"]').textContent = t.nodePrivateKey || 'Node Private Key:';
+            document.querySelector('#newNodePrivateKey').placeholder = t.enterOrGenerateKey || 'Enter or generate new private key';
+            document.querySelector('.text-muted').textContent = t.privateKeyWarning || 'Please keep your private key safe!';
+            
+            document.querySelector('label[for="nodeEndpoint"]').textContent = t.ipOrDomain + ':';
+            document.querySelector('#nodeEndpoint').placeholder = t.ipDomainExample || 'Example: https://example.com';
+            
+            document.querySelector('label[for="nodeApis"]').textContent = t.apiServices + ':';
+            document.querySelector('#nodeApis').placeholder = t.apiExample || 'Example: [1,2,3,4,5]';
+            
+            document.querySelector('label[for="nodeEns"]').textContent = 'ENS:';
 
             // Update buttons
-            document.querySelector('button[onclick="generateNewKeypair()"]').textContent = t.registerNewNode;
-            document.querySelector('button[onclick="transferETH()"]').textContent = 'Transfer ETH';
-            document.querySelector('button[onclick="transferTokens()"]').textContent = 'Transfer Tokens';
-            document.querySelector('button[onclick="approveTokens()"]').textContent = 'Approve Tokens';
-            document.querySelector('button[onclick="stakeTokens()"]').textContent = 'Stake Tokens';
+            document.querySelector('button[onclick="generateNewKeypair()"]').textContent = t.generateNewKeypair || 'Generate New Keypair';
+            document.querySelector('button[onclick="transferETH()"]').textContent = t.transferETH || 'Transfer ETH';
+            document.querySelector('button[onclick="transferTokens()"]').textContent = t.transferTokens || 'Transfer Tokens';
+            document.querySelector('button[onclick="approveTokens()"]').textContent = t.approveTokens || 'Approve Tokens';
+            document.querySelector('button[onclick="stakeTokens()"]').textContent = t.stakeTokens || 'Stake Tokens';
+
+            // Update registration process buttons
+            document.querySelector('button[onclick="getChallenge()"]').textContent = t.getChallenge || '1. Get Challenge';
+            document.querySelector('button[onclick="signChallenge()"]').textContent = t.signChallenge || '2. Sign Challenge';
+            document.querySelector('button[onclick="registerNode()"]').textContent = t.register || '3. Register Node';
+
+            // Update challenge and signature labels
+            document.querySelector('label[for="challenge"]').textContent = 'Challenge:';
+            document.querySelector('label[for="signature"]').textContent = t.signature || 'Signature:';
+
+            // Update request/response section
+            document.querySelector('.info-section h3:first-of-type').textContent = t.requestInfo || 'Request Info';
+            document.querySelector('.info-section h3:last-of-type').textContent = t.responseInfo || 'Response Info';
 
             // Update language selector
             document.getElementById('languageSelect').value = currentLang;
