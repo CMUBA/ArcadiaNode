@@ -1,270 +1,311 @@
-# Arcadia
+# Arcadia Node
 
-## System Architecture
+Arcadia Node is a blockchain-based distributed service node system that provides registration, discovery, and management capabilities for basic and extended services.
 
-```mermaid
-graph TD
-    subgraph Client Layer
-        A[Game Client]
-    end
+[中文文档](README_CN.md)
 
-    subgraph Service Layer
-        subgraph Auth Service Cluster
-            C1[Auth Service Primary]
-            C2[Auth Service Backup]
-        end
+## Features
 
-        subgraph Game Service
-            D1[Game Basic Service]
-            D2[Game Compute Service]
-        end
+- Node Registration and Verification
+- Service Registration and Discovery
+- User Authentication Management
+- Blockchain Interaction
+- Extensible Service Architecture
+- Health Check Mechanism
 
-        subgraph City Service Cluster
-            M1[City Server 1]
-            M2[City Server 2]
-            subgraph Map Services
-                MP1[Map Service 1]
-                MP2[Map Service 2]
-            end
-        end
+## Quick Start
 
-        E[Chain Service]
-    end
+### Requirements
 
-    subgraph Chain Layer
-        F[Chain Adapter]
-        G[Different Blockchains]
-    end
+- Node.js >= 16
+- pnpm >= 8.0
+- Supported OS: Linux, macOS, Windows
 
-    %% Client Layer connections
-    A --> C1
-    A --> D2
+### Installation Steps
 
-    %% Auth Service connections
-    C1 -.->|Failover| C2
-    C2 -.->|Monitor| C1
-
-    %% Game Service connections
-    D1 --> E
-    D2 --> D1
-    D2 --> M1
-    D2 --> M2
-
-    %% City Service connections
-    M1 --> MP1
-    M1 --> MP2
-    M2 --> MP1
-    M2 --> MP2
-
-    %% Chain Layer connections
-    E --> F
-    F --> G
-
-    %% Service Discovery and Recovery
-    C1 -.->|Health Check| D1
-    C1 -.->|Health Check| D2
-    D1 -.->|Health Check| M1
-    D1 -.->|Health Check| M2
-
-    classDef primary fill:#f96,stroke:#333,stroke-width:2px
-    classDef backup fill:#69f,stroke:#333,stroke-width:2px
-    classDef compute fill:#9f6,stroke:#333,stroke-width:2px
-    
-    class C1 primary
-    class C2 backup
-    class D2 compute
+1. Clone the repository
+```bash
+git clone https://github.com/cmuba/arcadia-node.git
+cd arcadia-node
 ```
 
-## Service Components
-
-1. **节点注册/节点验证组件**：依赖链上合约注册和节点提供 API。
-2. **服务注册/服务发现组件**：依赖节点运行此服务。
-3. **用户注册/登录组件**：处理用户的注册和认证。
-4. **链交互组件**：负责与区块链的交互。
-
-### 可选服务组件
-
-- 至少运行一个可选的业务组件
-- **游戏服务组件**：处理游戏逻辑和数据。
-- **内容评论组件**：管理用户评论。
-- **物品交易组件**：处理物品的买卖。
-- **资产发行组件**：管理数字资产的发行。
-- **更多组件**：根据需求添加。
-
-### 架构设计
-
-- **API 服务**：所有服务组件通过 API 提供对外服务。
-- **服务组件间通信**：主要通过 API 通信，部分采用进程内通信。
-- **服务发现**：通过服务发现组件获取依赖服务。
-- **节点**：运行服务组件的服务器，每个节点可选择运行相关组件。
-
-## Service Discovery and Recovery
-
-### Health Check Protocol
-1. Each service registers with Auth Service
-2. Regular heartbeat signals
-3. Service state monitoring
-4. Automatic failover triggers
-
-### Service Recovery Process
-1. Detection: Auth Service detects node failure
-2. Election: Backup nodes participate in election
-3. Promotion: Selected node becomes primary
-4. State Recovery: Load state from blockchain
-5. Service Resumption: New node takes over
-
-### Permissionless Node Participation
-1. Node Registration
-   - Generate keypair
-   - Register on chain
-   - Obtain node address
-   - Join service network
-
-2. Role Assignment
-   - Capability declaration
-   - State synchronization
-   - Service integration
-
-3. Monitoring and Validation
-   - Performance monitoring
-   - State validation
-   - Reputation tracking
-
-4. Graceful Exit
-   - State handover
-   - Network notification
-   - Chain record update
-
-## API 设计
-
-### 1. 节点 API
-
-#### 1.1 节点注册
-```
-POST /api/v1/node/register
-Headers:
-  - x-node-address
-  - x-node-sign
-Body:
-  - publicKey: string
-  - ip: string
-  - port: number
+2. Install dependencies
+```bash
+pnpm install
 ```
 
-#### 1.2 节点认证
-```
-POST /api/v1/node/auth
-Headers:
-  - x-node-address
-  - x-node-sign
-Body:
-  - timestamp: number
+3. Configure environment variables
+```bash
+cp .env.example .env
+# Edit the .env file to set necessary environment variables
 ```
 
-### 2. 用户 API
+4. Start the service
+```bash
+# Development mode
+pnpm dev
 
-#### 2.1 用户认证
-```
-POST /api/v1/user/auth
-Headers:
-  - x-chain-id
-  - x-wallet-address
-  - x-user-sign
-Body:
-  - challenge: string
+# Production mode
+pnpm start
 ```
 
-#### 2.2 创建英雄
+5. Access the service
+- Open browser and visit: http://localhost:3000
+- View service list and API documentation
+- Use built-in API testing tool for interface testing
+
+### Directory Structure
+
 ```
-POST /api/v1/hero/create
-Headers:
-  - x-chain-id
-  - x-wallet-address
-  - x-user-sign
-  - Authorization: Bearer <token>
-Body:
-  - nftId: string
-  - name: string
-  - class: string
-  - race: string
-```
-
-#### 2.3 加载英雄数据
-```
-GET /api/v1/hero/load
-Headers:
-  - x-chain-id
-  - x-wallet-address
-  - Authorization: Bearer <token>
-```
-
-#### 2.4 保存英雄数据
-```
-POST /api/v1/hero/save
-Headers:
-  - x-chain-id
-  - x-wallet-address
-  - x-user-sign
-  - Authorization: Bearer <token>
-Body:
-  - heroData: HeroData
-```
-
-### 3. 错误处理
-
-#### 3.1 错误码设计
-- 1000-1999: 系统错误
-- 2000-2999: 认证错误
-- 3000-3999: 业务错误
-- 4000-4999: 链交互错误
-
-#### 3.2 错误响应格式
-```typescript
-interface ErrorResponse {
-    code: number;
-    message: string;
-    details?: any;
-}
-```
-
-## 开发规范
-
-### 1. 代码规范
-- 使用 TypeScript
-- 遵循 ESLint 规则
-- 使用 Prettier 格式化
-- 编写单元测试
-
-### 2. 文档规范
-- API 文档使用 OpenAPI 3.0
-- 代码注释遵循 JSDoc
-- 更新 CHANGELOG
-- 维护 README
-
-### 3. 部署规范
-- 使用 Docker 容器化
-- CI/CD自动化部署
-- 环境配置分离
-- 日志规范化 _MODULE_PUBLISHER_ACCOUNT_PRIVATE_KEY=
-
-
-
-## 目录结构
 root/
-├── node_modules/        # 所有依赖
-├── .env                # 环境变量
-├── .env.example        # 环境变量示例
-├── app.js             # 主入口文件
-├── package.json       # 项目配置
+├── node_modules/        # All dependencies
+├── data/               # Service configuration data
+│   └── service_list.json # Service list configuration
+├── docs/               # Project documentation
+│   └── design.md       # System design document
+├── .env                # Environment variables
+├── .env.example        # Environment variables example
+├── app.js             # Main entry file
+├── package.json       # Project configuration
 │
-├── server/            # 基础服务
-│   ├── node/         # 节点服务
-│   ├── service/      # 服务发现
-│   ├── user/         # 用户服务
-│   └── chain/        # 链服务
+├── server/            # Basic services
+│   ├── node/         # Node service
+│   ├── service/      # Service discovery
+│   ├── user/         # User service
+│   ├── chain/        # Chain service
+│   └── health/       # Health check
 │
-└── game/             # 扩展服务
-    ├── gamex/        # 游戏服务
-    ├── comment/      # 评论服务
-    ├── item/         # 物品服务
-    └── asset/        # 资产服务
+└── serverx/          # Extended services
+    ├── gamex/        # Game service
+    ├── comment/      # Comment service
+    ├── item/         # Item service
+    └── asset/        # Asset service
+```
+
+## Development Guide
+
+For detailed development documentation, please refer to [docs/design.md](docs/design.md).
+
+## License
+
+MIT
+
+
+----
+└─[$] ls                                                                                                                                                                                         [19:21:31]
+broadcast      cache          clean-build.sh deploy.js      env.example    foundry.toml   lib            out            remappings.txt script         src            test
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/contract/optimism] - [10210]
+└─[$] git status                                                                                                                                                                                 [20:43:26]
+On branch jhf-dev
+Your branch is up to date with 'origin/jhf-dev'.
+
+nothing to commit, working tree clean
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/contract/optimism] - [10211]
+└─[$] git checkout 4e189e0e6a38c88b73e217fb7e5aa91c3d858e4e                                                                                                                                      [20:43:28]
+Note: switching to '4e189e0e6a38c88b73e217fb7e5aa91c3d858e4e'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at 4e189e0 add new node ok
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/contract/optimism] - [10212]
+└─[$] git checkout jhf-dev                                                                                                                                                                       [20:43:43]
+Previous HEAD position was 4e189e0 add new node ok
+Switched to branch 'jhf-dev'
+Your branch is up to date with 'origin/jhf-dev'.
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/contract/optimism] - [10213]
+└─[$] ls                                                                                                                                                                                         [20:45:41]
+broadcast      cache          clean-build.sh deploy.js      env.example    foundry.toml   lib            out            remappings.txt script         src            test
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/contract/optimism] - [10240]
+└─[$] cd ..                                                                                                                                                                                      [22:46:45]
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/contract] - [10241]
+└─[$] pwd                                                                                                                                                                                        [22:46:50]
+/Users/jason/dev/Community/move/ArcadiaNode/contract
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/contract] - [10242]
+└─[$] cd ..                                                                                                                                                                                      [22:46:51]
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode] - [10243]
+└─[$] cd server                                                                                                                                                                                  [22:46:53]
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/server] - [10244]
+└─[$] ls                                                                                                                                                                                         [22:46:56]
+chain          env.js         health         index.js       node           node_modules   package.json   pnpm-lock.yaml public         service        start.sh       user
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/server] - [10245]
+└─[$] ./start.sh                                                                                                                                                                                 [22:46:58]
+Server running on http://localhost:3017
+Available routes:
+- GET  /
+- GET  /api/v1/node/get-challenge
+- POST /api/v1/node/register
+^C
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/server] - [10246]
+└─[$] ./start.sh                                                                                                                                                                                 [22:51:33]
+Server running on http://localhost:3017
+Available routes:
+- GET  /
+- GET  /api/v1/node/get-challenge
+- POST /api/v1/node/register
+Challenge verification: {
+  receivedChallenge: '63f5e9b1671d0953ca9d979ead38787b5abd2d8962342a89405d45a35287e1ae',
+  storedChallenges: [
+    '63f5e9b1671d0953ca9d979ead38787b5abd2d8962342a89405d45a35287e1ae'
+  ],
+  challengeData: { expires: 1738425436, used: false },
+  currentTime: 1738425141
+}
+Verifying signature for challenge: 63f5e9b1671d0953ca9d979ead38787b5abd2d8962342a89405d45a35287e1ae
+Signature: 0x8832515607cbfd08cbdf7f516917a076c99eaf88a6f2dbfe0b3b40a73bac473e25650997949da59cf6cd68396c6354142f7f269affbce876434023e06604ac161c
+Node address: 0xec8692fCe349016d0fdA7A4E0E962e19952B47Dd
+Message hash: 0x56cb906bb4711f5ee5854a15b4f43c31737fc861a398c847ef4a49b4686a1625
+Recovered address: 0xec8692fCe349016d0fdA7A4E0E962e19952B47Dd
+Signature verified successfully
+Initializing provider with RPC URL: https://opt-sepolia.g.alchemy.com/v2/GyzNf_EiQiun2BgYRnXLmgWFZNpLVF1J
+Creating contract instance at address: 0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4
+Contract call params: {
+  nodeAddress: '0xec8692fCe349016d0fdA7A4E0E962e19952B47Dd',
+  nodeUrl: 'node.cmuba.org',
+  apiIndexes: '[1,2,3,4,5,6,7,8,9,10,11,12,13]',
+  challenge: '0xa3a30919858b407ad00faef70603ddcc72895cf4316a4108d05b1b09b211d622',
+  signature: '0x8832515607cbfd08cbdf7f516917a076c99eaf88a6f2dbfe0b3b40a73bac473e25650997949da59cf6cd68396c6354142f7f269affbce876434023e06604ac161c'
+}
+Calling registerNode function...
+Registration process failed: Error: execution reverted: "Invalid signature" (action="estimateGas", data="0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000", reason="Invalid signature", transaction={ "data": "0x1cd8c9d1000000000000000000000000ec8692fce349016d0fda7a4e0e962e19952b47dd00000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0a3a30919858b407ad00faef70603ddcc72895cf4316a4108d05b1b09b211d6220000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000000e6e6f64652e636d7562612e6f7267000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f5b312c322c332c342c352c362c372c382c392c31302c31312c31322c31335d0000000000000000000000000000000000000000000000000000000000000000418832515607cbfd08cbdf7f516917a076c99eaf88a6f2dbfe0b3b40a73bac473e25650997949da59cf6cd68396c6354142f7f269affbce876434023e06604ac161c00000000000000000000000000000000000000000000000000000000000000", "from": "0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA", "to": "0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4" }, invocation=null, revert={ "args": [ "Invalid signature" ], "name": "Error", "signature": "Error(string)" }, code=CALL_EXCEPTION, version=6.13.5)
+    at makeError (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/utils/errors.js:129:21)
+    at getBuiltinCallException (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/abi/abi-coder.js:105:37)
+    at AbiCoder.getBuiltinCallException (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/abi/abi-coder.js:206:16)
+    at JsonRpcProvider.getRpcError (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/providers/provider-jsonrpc.js:676:43)
+    at /Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/providers/provider-jsonrpc.js:302:45
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'CALL_EXCEPTION',
+  action: 'estimateGas',
+  data: '0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000',
+  reason: 'Invalid signature',
+  transaction: {
+    to: '0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4',
+    data: '0x1cd8c9d1000000000000000000000000ec8692fce349016d0fda7a4e0e962e19952b47dd00000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0a3a30919858b407ad00faef70603ddcc72895cf4316a4108d05b1b09b211d6220000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000000e6e6f64652e636d7562612e6f7267000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f5b312c322c332c342c352c362c372c382c392c31302c31312c31322c31335d0000000000000000000000000000000000000000000000000000000000000000418832515607cbfd08cbdf7f516917a076c99eaf88a6f2dbfe0b3b40a73bac473e25650997949da59cf6cd68396c6354142f7f269affbce876434023e06604ac161c00000000000000000000000000000000000000000000000000000000000000',
+    from: '0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA'
+  },
+  invocation: null,
+  revert: {
+    signature: 'Error(string)',
+    name: 'Error',
+    args: [ 'Invalid signature' ]
+  },
+  shortMessage: 'execution reverted: "Invalid signature"',
+  info: {
+    error: {
+      code: 3,
+      message: 'execution reverted: Invalid signature',
+      data: '0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000'
+    },
+    payload: {
+      method: 'eth_estimateGas',
+      params: [Array],
+      id: 3,
+      jsonrpc: '2.0'
+    }
+  }
+}
+Error details: {
+  message: 'execution reverted: "Invalid signature" (action="estimateGas", data="0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000", reason="Invalid signature", transaction={ "data": "0x1cd8c9d1000000000000000000000000ec8692fce349016d0fda7a4e0e962e19952b47dd00000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0a3a30919858b407ad00faef70603ddcc72895cf4316a4108d05b1b09b211d6220000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000000e6e6f64652e636d7562612e6f7267000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f5b312c322c332c342c352c362c372c382c392c31302c31312c31322c31335d0000000000000000000000000000000000000000000000000000000000000000418832515607cbfd08cbdf7f516917a076c99eaf88a6f2dbfe0b3b40a73bac473e25650997949da59cf6cd68396c6354142f7f269affbce876434023e06604ac161c00000000000000000000000000000000000000000000000000000000000000", "from": "0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA", "to": "0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4" }, invocation=null, revert={ "args": [ "Invalid signature" ], "name": "Error", "signature": "Error(string)" }, code=CALL_EXCEPTION, version=6.13.5)',
+  stack: 'Error: execution reverted: "Invalid signature" (action="estimateGas", data="0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000", reason="Invalid signature", transaction={ "data": "0x1cd8c9d1000000000000000000000000ec8692fce349016d0fda7a4e0e962e19952b47dd00000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0a3a30919858b407ad00faef70603ddcc72895cf4316a4108d05b1b09b211d6220000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000000e6e6f64652e636d7562612e6f7267000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f5b312c322c332c342c352c362c372c382c392c31302c31312c31322c31335d0000000000000000000000000000000000000000000000000000000000000000418832515607cbfd08cbdf7f516917a076c99eaf88a6f2dbfe0b3b40a73bac473e25650997949da59cf6cd68396c6354142f7f269affbce876434023e06604ac161c00000000000000000000000000000000000000000000000000000000000000", "from": "0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA", "to": "0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4" }, invocation=null, revert={ "args": [ "Invalid signature" ], "name": "Error", "signature": "Error(string)" }, code=CALL_EXCEPTION, version=6.13.5)\n' +
+    '    at makeError (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/utils/errors.js:129:21)\n' +
+    '    at getBuiltinCallException (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/abi/abi-coder.js:105:37)\n' +
+    '    at AbiCoder.getBuiltinCallException (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/abi/abi-coder.js:206:16)\n' +
+    '    at JsonRpcProvider.getRpcError (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/providers/provider-jsonrpc.js:676:43)\n' +
+    '    at /Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/providers/provider-jsonrpc.js:302:45\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)',
+  code: 'CALL_EXCEPTION',
+  reason: 'Invalid signature'
+}
+^C
+┌─[jason@HuifengjiaodeMacBook-Pro-3] - [~/dev/Community/move/ArcadiaNode/server] - [10246]
+└─[$] ./start.sh                                                                                                                                                                                 [23:11:49]
+Server running on http://localhost:3017
+Available routes:
+- GET  /
+- GET  /api/v1/node/get-challenge
+- POST /api/v1/node/register
+Challenge verification: {
+  receivedChallenge: '8f2621882d43eeec41ab9cfb3717fbb71d1a5728ef1eee905ba03df06e89aa73',
+  storedChallenges: [
+    '8f2621882d43eeec41ab9cfb3717fbb71d1a5728ef1eee905ba03df06e89aa73'
+  ],
+  challengeData: { expires: 1738426699, used: false },
+  currentTime: 1738426403
+}
+Verifying signature for challenge: 8f2621882d43eeec41ab9cfb3717fbb71d1a5728ef1eee905ba03df06e89aa73
+Signature: 0x90a0ac80f211294e603a3f176c7104a4314cbd8d434e33a5f99e5afecaf8345e17b25a0ac77de46d61caeaa316f68cc40c3903324e378fa4c78172b6579255a11b
+Node address: 0x3A654C6f98aF67c50B85D1EFD85C5Cd6256569A8
+Recovered address: 0x3A654C6f98aF67c50B85D1EFD85C5Cd6256569A8
+Signature verified successfully
+Initializing provider with RPC URL: https://opt-sepolia.g.alchemy.com/v2/GyzNf_EiQiun2BgYRnXLmgWFZNpLVF1J
+Creating contract instance at address: 0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4
+Contract call params: {
+  nodeAddress: '0x3A654C6f98aF67c50B85D1EFD85C5Cd6256569A8',
+  nodeUrl: 'node.cmuba.org',
+  apiIndexes: '[1,2,3,4,5,6,7,8,9,10,11,12,13]',
+  challenge: '0xd066ddb47d434a1df85f49d362c10ca712748e0f9419b56ca162f6e7335bd13e',
+  signature: '0x90a0ac80f211294e603a3f176c7104a4314cbd8d434e33a5f99e5afecaf8345e17b25a0ac77de46d61caeaa316f68cc40c3903324e378fa4c78172b6579255a11b'
+}
+Calling registerNode function...
+Registration process failed: Error: execution reverted: "Invalid signature" (action="estimateGas", data="0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000", reason="Invalid signature", transaction={ "data": "0x1cd8c9d10000000000000000000000003a654c6f98af67c50b85d1efd85c5cd6256569a800000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0d066ddb47d434a1df85f49d362c10ca712748e0f9419b56ca162f6e7335bd13e0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000000e6e6f64652e636d7562612e6f7267000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f5b312c322c332c342c352c362c372c382c392c31302c31312c31322c31335d00000000000000000000000000000000000000000000000000000000000000004190a0ac80f211294e603a3f176c7104a4314cbd8d434e33a5f99e5afecaf8345e17b25a0ac77de46d61caeaa316f68cc40c3903324e378fa4c78172b6579255a11b00000000000000000000000000000000000000000000000000000000000000", "from": "0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA", "to": "0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4" }, invocation=null, revert={ "args": [ "Invalid signature" ], "name": "Error", "signature": "Error(string)" }, code=CALL_EXCEPTION, version=6.13.5)
+    at makeError (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/utils/errors.js:129:21)
+    at getBuiltinCallException (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/abi/abi-coder.js:105:37)
+    at AbiCoder.getBuiltinCallException (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/abi/abi-coder.js:206:16)
+    at JsonRpcProvider.getRpcError (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/providers/provider-jsonrpc.js:676:43)
+    at /Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/providers/provider-jsonrpc.js:302:45
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'CALL_EXCEPTION',
+  action: 'estimateGas',
+  data: '0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000',
+  reason: 'Invalid signature',
+  transaction: {
+    to: '0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4',
+    data: '0x1cd8c9d10000000000000000000000003a654c6f98af67c50b85d1efd85c5cd6256569a800000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0d066ddb47d434a1df85f49d362c10ca712748e0f9419b56ca162f6e7335bd13e0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000000e6e6f64652e636d7562612e6f7267000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f5b312c322c332c342c352c362c372c382c392c31302c31312c31322c31335d00000000000000000000000000000000000000000000000000000000000000004190a0ac80f211294e603a3f176c7104a4314cbd8d434e33a5f99e5afecaf8345e17b25a0ac77de46d61caeaa316f68cc40c3903324e378fa4c78172b6579255a11b00000000000000000000000000000000000000000000000000000000000000',
+    from: '0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA'
+  },
+  invocation: null,
+  revert: {
+    signature: 'Error(string)',
+    name: 'Error',
+    args: [ 'Invalid signature' ]
+  },
+  shortMessage: 'execution reverted: "Invalid signature"',
+  info: {
+    error: {
+      code: 3,
+      message: 'execution reverted: Invalid signature',
+      data: '0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000'
+    },
+    payload: {
+      method: 'eth_estimateGas',
+      params: [Array],
+      id: 3,
+      jsonrpc: '2.0'
+    }
+  }
+}
+Error details: {
+  message: 'execution reverted: "Invalid signature" (action="estimateGas", data="0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000", reason="Invalid signature", transaction={ "data": "0x1cd8c9d10000000000000000000000003a654c6f98af67c50b85d1efd85c5cd6256569a800000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0d066ddb47d434a1df85f49d362c10ca712748e0f9419b56ca162f6e7335bd13e0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000000e6e6f64652e636d7562612e6f7267000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f5b312c322c332c342c352c362c372c382c392c31302c31312c31322c31335d00000000000000000000000000000000000000000000000000000000000000004190a0ac80f211294e603a3f176c7104a4314cbd8d434e33a5f99e5afecaf8345e17b25a0ac77de46d61caeaa316f68cc40c3903324e378fa4c78172b6579255a11b00000000000000000000000000000000000000000000000000000000000000", "from": "0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA", "to": "0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4" }, invocation=null, revert={ "args": [ "Invalid signature" ], "name": "Error", "signature": "Error(string)" }, code=CALL_EXCEPTION, version=6.13.5)',
+  stack: 'Error: execution reverted: "Invalid signature" (action="estimateGas", data="0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011496e76616c6964207369676e6174757265000000000000000000000000000000", reason="Invalid signature", transaction={ "data": "0x1cd8c9d10000000000000000000000003a654c6f98af67c50b85d1efd85c5cd6256569a800000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0d066ddb47d434a1df85f49d362c10ca712748e0f9419b56ca162f6e7335bd13e0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000000e6e6f64652e636d7562612e6f7267000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f5b312c322c332c342c352c362c372c382c392c31302c31312c31322c31335d00000000000000000000000000000000000000000000000000000000000000004190a0ac80f211294e603a3f176c7104a4314cbd8d434e33a5f99e5afecaf8345e17b25a0ac77de46d61caeaa316f68cc40c3903324e378fa4c78172b6579255a11b00000000000000000000000000000000000000000000000000000000000000", "from": "0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA", "to": "0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4" }, invocation=null, revert={ "args": [ "Invalid signature" ], "name": "Error", "signature": "Error(string)" }, code=CALL_EXCEPTION, version=6.13.5)\n' +
+    '    at makeError (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/utils/errors.js:129:21)\n' +
+    '    at getBuiltinCallException (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/abi/abi-coder.js:105:37)\n' +
+    '    at AbiCoder.getBuiltinCallException (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/abi/abi-coder.js:206:16)\n' +
+    '    at JsonRpcProvider.getRpcError (/Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/providers/provider-jsonrpc.js:676:43)\n' +
+    '    at /Users/jason/Dev/Community/move/ArcadiaNode/server/node_modules/.pnpm/ethers@6.13.5/node_modules/ethers/lib.commonjs/providers/provider-jsonrpc.js:302:45\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)',
+  code: 'CALL_EXCEPTION',
+  reason: 'Invalid signature'
+}
+00000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0d066ddb47d434a1df85f49d362c10ca712748e0f9419b56ca162f6e7335bd13e0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000000e6e6f64652e636d7562612e6f7267000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f5b312c322c332c342c352c362c372c382c392c31302c31312c31322c31335d00000000000000000000000000000000000000000000000000000000000000004190a0ac80f211294e603a3f176c7104a4314cbd8d434e33a5f99e5afecaf8345e17b25a0ac77de46d61caeaa316f68cc40c3903324e378fa4c78172b6579255a11b00000000000000000000000000000000000000000000000000000000000000", "from": "0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA", "to": "0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4" }, invocation=null, revert={ "args": [ "Invalid signature" ], "name": "Error", "signature": "Error(string)" }, code=CALL_EXCEPTION, version=6.13.5)\n' +

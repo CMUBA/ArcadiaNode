@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>链交互 - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <style>
+        .hero-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #fff;
+        }
+        .hero-card h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>英雄数据管理</h1>
+            <a href="/" class="back-link">返回首页</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 创建英雄 -->
+        <div class="card">
+            <h2>创建英雄</h2>
+            <div class="form-group">
+                <label for="userId">用户ID：</label>
+                <input type="text" id="userId" class="form-control" placeholder="输入用户ID">
+            </div>
+            <div class="form-group">
+                <label for="heroName">英雄名称：</label>
+                <input type="text" id="heroName" class="form-control" placeholder="输入英雄名称">
+            </div>
+            <div class="form-group">
+                <label for="heroClass">英雄职业：</label>
+                <select id="heroClass" class="form-control">
+                    <option value="warrior">战士</option>
+                    <option value="mage">法师</option>
+                    <option value="archer">弓箭手</option>
+                </select>
+            </div>
+            <button class="btn" onclick="createHero()">创建英雄</button>
+            <div id="createResult" class="result"></div>
+        </div>
+
+        <!-- 加载英雄数据 -->
+        <div class="card">
+            <h2>加载英雄</h2>
+            <div class="form-group">
+                <label for="loadUserId">用户ID：</label>
+                <input type="text" id="loadUserId" class="form-control" placeholder="输入用户ID">
+            </div>
+            <div class="form-group">
+                <label for="heroId">英雄ID：</label>
+                <input type="text" id="heroId" class="form-control" placeholder="输入英雄ID">
+            </div>
+            <button class="btn" onclick="loadHero()">加载英雄</button>
+            <div id="loadResult" class="result"></div>
+        </div>
+
+        <!-- 保存英雄数据 -->
+        <div class="card">
+            <h2>保存英雄数据</h2>
+            <div class="form-group">
+                <label for="saveUserId">用户ID：</label>
+                <input type="text" id="saveUserId" class="form-control" placeholder="输入用户ID">
+            </div>
+            <div class="form-group">
+                <label for="saveHeroId">英雄ID：</label>
+                <input type="text" id="saveHeroId" class="form-control" placeholder="输入英雄ID">
+            </div>
+            <div class="form-group">
+                <label for="heroData">英雄数据：</label>
+                <textarea id="heroData" class="form-control" rows="5" placeholder="输入英雄数据（JSON格式）"></textarea>
+            </div>
+            <button class="btn" onclick="saveHero()">保存英雄</button>
+            <div id="saveResult" class="result"></div>
+        </div>
+
+        <!-- 英雄列表 -->
+        <div class="card">
+            <h2>英雄列表</h2>
+            <div id="heroList">
+                <!-- 英雄卡片将在这里动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 默认参数
+        const defaultParams = {
+            chain_hero_create: { userId: '1', name: 'Hero1' },
+            chain_hero_load: { userId: '1', heroId: '1' },
+            chain_hero_save: { userId: '1', heroId: '1', data: {} }
+        };
+
+        // 创建英雄
+        async function createHero() {
+            try {
+                const params = {
+                    userId: document.getElementById('userId').value,
+                    name: document.getElementById('heroName').value,
+                    class: document.getElementById('heroClass').value
+                };
+
+                const response = await fetch('/api/v1/chain/hero/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+                const data = await response.json();
+                document.getElementById('createResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.code === 0) {
+                    // 创建成功，清空表单
+                    document.getElementById('heroName').value = '';
+                    updateHeroList();
+                }
+            } catch (error) {
+                document.getElementById('createResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 加载英雄
+        async function loadHero() {
+            try {
+                const params = {
+                    userId: document.getElementById('loadUserId').value,
+                    heroId: document.getElementById('heroId').value
+                };
+
+                const response = await fetch('/api/v1/chain/hero/load', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+                const data = await response.json();
+                document.getElementById('loadResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.code === 0 && data.data) {
+                    // 加载成功，填充保存表单
+                    document.getElementById('saveUserId').value = params.userId;
+                    document.getElementById('saveHeroId').value = params.heroId;
+                    document.getElementById('heroData').value = JSON.stringify(data.data, null, 2);
+                }
+            } catch (error) {
+                document.getElementById('loadResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 保存英雄
+        async function saveHero() {
+            try {
+                const params = {
+                    userId: document.getElementById('saveUserId').value,
+                    heroId: document.getElementById('saveHeroId').value,
+                    data: JSON.parse(document.getElementById('heroData').value)
+                };
+
+                const response = await fetch('/api/v1/chain/hero/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+                const data = await response.json();
+                document.getElementById('saveResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.code === 0) {
+                    updateHeroList();
+                }
+            } catch (error) {
+                document.getElementById('saveResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 更新英雄列表
+        function updateHeroList(heroes = []) {
+            const container = document.getElementById('heroList');
+            container.innerHTML = heroes.map(hero => `
+                <div class="hero-card">
+                    <h3>${hero.name} <span class="badge badge-primary">${hero.class}</span></h3>
+                    <div>ID: ${hero.heroId}</div>
+                    <div>所有者: ${hero.userId}</div>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">等级</div>
+                            <div class="stat-value">${hero.data.level || 1}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">经验</div>
+                            <div class="stat-value">${hero.data.exp || 0}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">生命值</div>
+                            <div class="stat-value">${hero.data.hp || 100}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="loadHero('${hero.userId}', '${hero.heroId}')">加载</button>
+                    </div>
+                </div>
+            `).join('') || '<p>暂无英雄数据</p>';
+        }
+
+        // 页面加载时填充默认值
+        window.onload = function() {
+            document.getElementById('userId').value = defaultParams.chain_hero_create.userId;
+            document.getElementById('loadUserId').value = defaultParams.chain_hero_load.userId;
+            document.getElementById('heroId').value = defaultParams.chain_hero_load.heroId;
+            updateHeroList();
+        };
+    </script>
+</body>
+</html> 

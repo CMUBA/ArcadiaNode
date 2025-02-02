@@ -1,0 +1,54 @@
+const express = require('express');
+const cors = require('cors');
+const nodeRouter = require('./node/index.js');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.SERVER_PORT || 3017;
+const CLIENT_PORT = process.env.CLIENT_PORT || 3008;
+
+// 中间件
+app.use(cors({
+    origin: [
+        `http://localhost:${CLIENT_PORT}`,
+        `http://localhost:${PORT}`
+    ],
+    credentials: true
+}));
+app.use(express.json());
+
+// 基础路由
+app.get('/', (req, res) => {
+    res.send('Arcadia Server Providing Basic Services.');
+});
+
+// API 路由
+app.use('/api/v1/node', nodeRouter);
+
+// 错误处理中间件
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({
+        code: 1001,
+        message: 'Internal Server Error',
+        details: err.message
+    });
+});
+
+// 404 处理
+app.use((req, res) => {
+    res.status(404).json({
+        code: 1404,
+        message: 'Not Found',
+        details: `Cannot ${req.method} ${req.url}`
+    });
+});
+
+// 启动服务器
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log('Available routes:');
+    console.log('- GET  /');
+    console.log('- GET  /api/v1/node/get-challenge');
+    console.log('- POST /api/v1/node/register');
+}); 

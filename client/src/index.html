@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcadia Node - 服务导航</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            line-height: 1.4;
+            background-color: #f5f7fa;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
+        }
+        .header {
+            background-color: #fff;
+            padding: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #2c3e50;
+            text-align: center;
+        }
+        .service-groups {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .service-group {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .service-group:hover {
+            transform: translateY(-5px);
+        }
+        .service-group h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e3f2fd;
+        }
+        .service-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .service-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .service-item:last-child {
+            border-bottom: none;
+        }
+        .service-link {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-decoration: none;
+            color: #34495e;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .service-link:hover {
+            background-color: #f8f9fa;
+        }
+        .service-index {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .type-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        .type-badge.basic {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        .type-badge.extend {
+            background-color: #f3e5f5;
+            color: #7b1fa2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Arcadia Node - 服务导航</h1>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="service-groups">
+            <!-- 节点管理 -->
+            <div class="service-group">
+                <h2>节点管理</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/node-register.html" class="service-link">
+                            节点注册
+                            <span class="service-index">1-3</span>
+                        </a>
+                    </li>
+                    <li class="service-item">
+                        <a href="/pages/node-health.html" class="service-link">
+                            健康检测
+                            <span class="service-index">4-5</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 服务管理 -->
+            <div class="service-group">
+                <h2>服务管理</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/service-manage.html" class="service-link">
+                            服务注册与发现
+                            <span class="service-index">6-8</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 用户管理 -->
+            <div class="service-group">
+                <h2>用户管理</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/user-manage.html" class="service-link">
+                            用户注册与登录
+                            <span class="service-index">9-10</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 链交互 -->
+            <div class="service-group">
+                <h2>链交互</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/chain-interact.html" class="service-link">
+                            英雄数据管理
+                            <span class="service-index">11-13</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 从 service_list.json 加载服务列表
+        fetch('/data/service_list.json')
+            .then(response => response.json())
+            .then(data => {
+                // 可以在这里添加动态更新服务列表的逻辑
+                console.log('Services loaded:', data);
+            })
+            .catch(error => console.error('Error loading services:', error));
+    </script>
+</body>
+</html>

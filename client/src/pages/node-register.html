@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>节点注册 - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <script type="module">
+        import { ethers } from 'ethers';
+        import api from '../utils/api.js';
+        import config from '../config/index.js';
+
+        // 定义所有函数
+        const generateNewKeypair = async () => {
+            try {
+                // 生成新的随机钱包 (ethers v6)
+                const wallet = ethers.Wallet.createRandom();
+                
+                // 显示新节点信息
+                document.getElementById('newNodeAddress').value = wallet.address;
+                document.getElementById('newNodePrivateKey').value = wallet.privateKey;
+                
+                // 清空之前的结果
+                document.getElementById('challenge').value = '';
+                document.getElementById('signature').value = '';
+                document.getElementById('challengeResult').textContent = '';
+                document.getElementById('signResult').textContent = '';
+                document.getElementById('registerResult').textContent = '';
+                document.getElementById('nodeEns').value = '';
+
+                return wallet;
+            } catch (error) {
+                console.error('生成密钥对失败:', error);
+                throw error;
+            }
+        };
+
+        const getChallenge = async () => {
+            try {
+                const response = await api.node.getChallenge();
+                const data = await response.json();
+                
+                if (data.code === 0 && data.data && data.data.challenge) {
+                    document.getElementById('challenge').value = data.data.challenge;
+                    document.getElementById('challengeResult').textContent = '获取 Challenge 成功';
+                } else {
+                    document.getElementById('challengeResult').textContent = '获取 Challenge 失败: ' + (data.message || '未知错误');
+                }
+            } catch (error) {
+                document.getElementById('challengeResult').textContent = 'Error: ' + error.message;
+            }
+        };
+
+        const signChallenge = async () => {
+            try {
+                const challenge = document.getElementById('challenge').value;
+                if (!challenge) {
+                    throw new Error('请先获取 Challenge');
+                }
+
+                const privateKey = document.getElementById('newNodePrivateKey').value;
+                if (!privateKey) {
+                    throw new Error('请先生成新节点密钥对');
+                }
+
+                // 使用私钥创建钱包实例 (ethers v6)
+                const wallet = new ethers.Wallet(privateKey);
+                
+                // 1. 获取challenge字节
+                const challengeBytes = ethers.getBytes(challenge);
+                
+                // 2. 构造前缀（与合约完全一致）
+                const prefix = "\x19Ethereum Signed Message:\n32";
+                const prefixBytes = ethers.toUtf8Bytes(prefix);
+                
+                // 3. 连接前缀和challenge（模拟abi.encodePacked）
+                const prefixedMessage = new Uint8Array(prefixBytes.length + challengeBytes.length);
+                prefixedMessage.set(prefixBytes);
+                prefixedMessage.set(challengeBytes, prefixBytes.length);
+                
+                // 4. 计算哈希
+                const messageHash = ethers.keccak256(prefixedMessage);
+                
+                // 5. 对哈希进行签名（不使用signMessage，因为它会再次添加前缀）
+                const signature = await wallet.signingKey.sign(messageHash);
+                const signatureHex = ethers.hexlify(ethers.concat([signature.r, signature.s, signature.yParity ? "0x1c" : "0x1b"]));
+                
+                // 调试输出
+                console.log('Challenge:', challenge);
+                console.log('Challenge Bytes:', ethers.hexlify(challengeBytes));
+                console.log('Prefix:', prefix);
+                console.log('Prefixed Message:', ethers.hexlify(prefixedMessage));
+                console.log('Message Hash:', messageHash);
+                console.log('Signature:', signatureHex);
+                
+                // 验证签名（调试用）
+                const recoveredAddress = ethers.recoverAddress(messageHash, signatureHex);
+                console.log('Recovered Address:', recoveredAddress);
+                console.log('Wallet Address:', wallet.address);
+                console.log('Addresses Match:', recoveredAddress.toLowerCase() === wallet.address.toLowerCase());
+                
+                document.getElementById('signature').value = signatureHex;
+                document.getElementById('signResult').textContent = '签名成功';
+            } catch (error) {
+                console.error('签名失败:', error);
+                document.getElementById('signResult').textContent = 'Error: ' + error.message;
+            }
+        };
+
+        const registerNode = async () => {
+            try {
+                // 首先检查是否有 challenge
+                const challenge = document.getElementById('challenge').value;
+                const signature = document.getElementById('signature').value;
+                
+                if (!challenge || !signature) {
+                    throw new Error('请先获取并签名 Challenge');
+                }
+
+                const nodeAddress = document.getElementById('newNodeAddress').value;
+                const nodeEndpoint = document.getElementById('nodeEndpoint').value;
+                const nodeApis = document.getElementById('nodeApis').value;
+                const nodeEns = document.getElementById('nodeEns').value;
+
+                if (!nodeAddress || !nodeEndpoint || !nodeApis) {
+                    throw new Error('请填写所有必要信息');
+                }
+
+                // 构建请求数据
+                const requestData = {
+                    node_address: nodeAddress,
+                    node_url: nodeEndpoint,
+                    api_url: `${nodeEndpoint}/api/v1`,
+                    node_ens: nodeEns || '',
+                    node_ip: '',
+                    node_service_list: nodeApis,
+                    challenge,
+                    signature
+                };
+
+                console.log('Sending registration request:', requestData);
+
+                // 显示请求信息
+                document.getElementById('requestResponseCard').style.display = 'block';
+                document.getElementById('requestInfo').textContent = JSON.stringify(requestData, null, 2);
+
+                // 发送注册请求
+                const response = await api.node.register(requestData);
+                const responseData = await response.json();
+
+                // 显示响应信息
+                document.getElementById('responseInfo').textContent = JSON.stringify(responseData, null, 2);
+
+                // 更新注册结果显示
+                const registerResult = document.getElementById('registerResult');
+                if (response.ok && responseData.code === 0) {
+                    registerResult.innerHTML = `
+                        <div class="success-message">
+                            注册成功！<br>
+                            节点地址: ${nodeAddress}<br>
+                            请保存新节点私钥：${document.getElementById('newNodePrivateKey').value}
+                        </div>
+                    `;
+
+                    // 保存新注册的地址到本地存储
+                    const recentAddresses = JSON.parse(localStorage.getItem('recentAddresses') || '[]');
+                    if (!recentAddresses.includes(nodeAddress)) {
+                        recentAddresses.push(nodeAddress);
+                        localStorage.setItem('recentAddresses', JSON.stringify(recentAddresses));
+                    }
+
+                    // 添加交易链接
+                    const txHash = responseData.tx_hash;
+                    registerResult.innerHTML += `
+                        <div class="transaction-info">
+                            <p>交易哈希: ${txHash}</p>
+                            <p>查看交易: <a href="https://sepolia-optimism.etherscan.io/tx/${txHash}" target="_blank">Etherscan</a></p>
+                        </div>
+                    `;
+                } else {
+                    registerResult.innerHTML = `
+                        <div class="error-message">
+                            注册失败：${responseData.message || '未知错误'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('注册节点失败：', error);
+                document.getElementById('registerResult').innerHTML = `
+                    <div class="error-message">
+                        注册失败：${error.message}
+                    </div>
+                `;
+                document.getElementById('responseInfo').textContent = `Error: ${error.message}`;
+            }
+        };
+
+        const transferTokens = async () => {
+            try {
+                const nodeAddress = document.getElementById('newNodeAddress').value;
+                if (!nodeAddress) {
+                    throw new Error('请先生成新节点密钥对');
+                }
+
+                // 检查是否安装了 MetaMask
+                if (!window.ethereum) {
+                    throw new Error('请安装 MetaMask 钱包');
+                }
+
+                // 请求用户连接钱包
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('请先连接 MetaMask 钱包');
+                }
+
+                // 创建 provider 和 signer
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+
+                // 创建代币合约实例
+                const tokenAbi = [
+                    "function transfer(address to, uint256 amount) public returns (bool)",
+                    "function balanceOf(address account) public view returns (uint256)",
+                    "function decimals() public view returns (uint8)"
+                ];
+                const tokenContract = new ethers.Contract(config.TOKEN_CONTRACT_ADDRESS, tokenAbi, signer);
+
+                // 转账 1000 代币
+                const decimals = await tokenContract.decimals();
+                const amount = ethers.parseUnits("1000", decimals);
+
+                // 显示转账信息
+                document.getElementById('transferResult').textContent = '请在 MetaMask 中确认转账...';
+
+                // 执行转账
+                const tx = await tokenContract.transfer(nodeAddress, amount);
+                console.log('Transfer transaction:', tx.hash);
+
+                // 等待交易确认
+                const receipt = await tx.wait();
+                console.log('Transfer confirmed:', receipt);
+
+                // 检查新地址的余额
+                const balance = await tokenContract.balanceOf(nodeAddress);
+                const formattedBalance = ethers.formatUnits(balance, decimals);
+
+                document.getElementById('transferResult').innerHTML = `
+                    <div class="success-message">
+                        转账成功！<br>
+                        交易哈希: ${tx.hash}<br>
+                        当前余额: ${formattedBalance} MUSH<br>
+                        <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank">在区块浏览器中查看</a>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('转账失败:', error);
+                document.getElementById('transferResult').innerHTML = `
+                    <div class="error-message">
+                        转账失败: ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        const approveTokens = async () => {
+            try {
+                const nodeAddress = document.getElementById('newNodeAddress').value;
+                const privateKey = document.getElementById('newNodePrivateKey').value;
+                if (!nodeAddress || !privateKey) {
+                    throw new Error('请先生成新节点密钥对');
+                }
+
+                if (!window.tokenContractAddress || !window.stakeManagerAddress) {
+                    throw new Error('合约地址未正确加载');
+                }
+
+                // 创建 provider 和钱包
+                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                const wallet = new ethers.Wallet(privateKey, provider);
+
+                // 创建代币合约实例
+                const tokenAbi = [
+                    "function approve(address spender, uint256 amount) public returns (bool)",
+                    "function allowance(address owner, address spender) public view returns (uint256)",
+                    "function decimals() public view returns (uint8)"
+                ];
+                const tokenContract = new ethers.Contract(window.tokenContractAddress, tokenAbi, wallet);
+
+                // 授权 1000 代币
+                const decimals = await tokenContract.decimals();
+                const amount = ethers.parseUnits("1000", decimals);
+
+                // 显示授权信息
+                document.getElementById('approveResult').textContent = '正在授权...';
+
+                // 执行授权
+                const tx = await tokenContract.approve(window.stakeManagerAddress, amount);
+                console.log('Approve transaction:', tx.hash);
+
+                // 等待交易确认
+                const receipt = await tx.wait();
+                console.log('Approve confirmed:', receipt);
+
+                // 检查授权额度
+                const allowance = await tokenContract.allowance(wallet.address, window.stakeManagerAddress);
+                const formattedAllowance = ethers.formatUnits(allowance, decimals);
+
+                document.getElementById('approveResult').innerHTML = `
+                    <div class="success-message">
+                        授权成功！<br>
+                        交易哈希: ${tx.hash}<br>
+                        授权额度: ${formattedAllowance} MUSH<br>
+                        <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank">在区块浏览器中查看</a>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('授权失败:', error);
+                document.getElementById('approveResult').innerHTML = `
+                    <div class="error-message">
+                        授权失败: ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        const stakeTokens = async () => {
+            try {
+                const nodeAddress = document.getElementById('newNodeAddress').value;
+                const privateKey = document.getElementById('newNodePrivateKey').value;
+                if (!nodeAddress || !privateKey) {
+                    throw new Error('请先生成新节点密钥对');
+                }
+
+                if (!window.stakeManagerAddress) {
+                    throw new Error('质押合约地址未正确加载');
+                }
+
+                // 创建 provider 和钱包
+                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                const wallet = new ethers.Wallet(privateKey, provider);
+
+                // 创建质押合约实例
+                const stakeAbi = [
+                    "function stake(uint256 amount) external",
+                    "function getStakeInfo(address user) external view returns (uint256 amount, uint256 startTime, bool isActive, bool canUnstake, uint256 remainingLockTime)"
+                ];
+                const stakeContract = new ethers.Contract(window.stakeManagerAddress, stakeAbi, wallet);
+
+                // 质押 1000 代币
+                const amount = ethers.parseUnits("1000", 18);
+
+                // 显示质押信息
+                document.getElementById('stakeResult').textContent = '正在质押...';
+
+                // 执行质押
+                const tx = await stakeContract.stake(amount);
+                console.log('Stake transaction:', tx.hash);
+
+                // 等待交易确认
+                const receipt = await tx.wait();
+                console.log('Stake confirmed:', receipt);
+
+                // 获取质押信息
+                const stakeInfo = await stakeContract.getStakeInfo(wallet.address);
+                const formattedAmount = ethers.formatUnits(stakeInfo[0], 18);
+                const startTime = new Date(Number(stakeInfo[1]) * 1000).toLocaleString();
+                const isActive = stakeInfo[2];
+                const canUnstake = stakeInfo[3];
+                const remainingLockTime = Math.ceil(Number(stakeInfo[4]) / (24 * 3600)); // 转换为天数
+
+                document.getElementById('stakeResult').innerHTML = `
+                    <div class="success-message">
+                        质押成功！<br>
+                        交易哈希: ${tx.hash}<br>
+                        质押金额: ${formattedAmount} MUSH<br>
+                        开始时间: ${startTime}<br>
+                        质押状态: ${isActive ? '活跃' : '未活跃'}<br>
+                        可解质押: ${canUnstake ? '是' : '否'}<br>
+                        剩余锁定时间: ${remainingLockTime} 天<br>
+                        <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank">在区块浏览器中查看</a>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('质押失败:', error);
+                document.getElementById('stakeResult').innerHTML = `
+                    <div class="error-message">
+                        质押失败: ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        // 添加转以太坊函数
+        const transferETH = async () => {
+            try {
+                const nodeAddress = document.getElementById('newNodeAddress').value;
+                if (!nodeAddress) {
+                    throw new Error('请先生成新节点密钥对');
+                }
+
+                // 检查是否安装了 MetaMask
+                if (!window.ethereum) {
+                    throw new Error('请安装 MetaMask 钱包');
+                }
+
+                // 请求用户连接钱包
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('请先连接 MetaMask 钱包');
+                }
+
+                // 创建 provider 和 signer
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+
+                // 转账 0.012 ETH
+                const amount = ethers.parseEther("0.012");
+
+                // 显示转账信息
+                document.getElementById('ethTransferResult').textContent = '请在 MetaMask 中确认转账...';
+
+                // 执行转账
+                const tx = await signer.sendTransaction({
+                    to: nodeAddress,
+                    value: amount
+                });
+                console.log('ETH Transfer transaction:', tx.hash);
+
+                // 等待交易确认
+                const receipt = await tx.wait();
+                console.log('ETH Transfer confirmed:', receipt);
+
+                document.getElementById('ethTransferResult').innerHTML = `
+                    <div class="success-message">
+                        ETH 转账成功！<br>
+                        交易哈希: ${tx.hash}<br>
+                        转账金额: 0.012 ETH<br>
+                        <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank">在区块浏览器中查看</a>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('ETH 转账失败:', error);
+                document.getElementById('ethTransferResult').innerHTML = `
+                    <div class="error-message">
+                        ETH 转账失败: ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        // 初始化页面
+        window.addEventListener('load', async () => {
+            try {
+                console.log('Config from import:', config);
+                
+                // 设置默认值
+                document.getElementById('nodeEndpoint').value = 'node.cmuba.org';
+                document.getElementById('nodeApis').value = '[1,2,3,4,5,6,7,8,9,10,11,12,13]';
+
+                // 设置合约地址
+                window.tokenContractAddress = config.TOKEN_CONTRACT_ADDRESS;
+                window.stakeManagerAddress = config.STAKE_MANAGER_ADDRESS;
+                window.nodeRegistryAddress = config.NODE_REGISTRY_ADDRESS;
+                
+                console.log('Using contract addresses:', {
+                    tokenContractAddress: window.tokenContractAddress,
+                    stakeManagerAddress: window.stakeManagerAddress,
+                    nodeRegistryAddress: window.nodeRegistryAddress
+                });
+
+                // 验证合约地址（现在应该总是有值，因为有默认值）
+                if (!window.tokenContractAddress || !window.stakeManagerAddress || !window.nodeRegistryAddress) {
+                    console.warn('Using default contract addresses');
+                }
+            } catch (error) {
+                console.error('Failed to initialize page:', error);
+                alert('初始化失败：' + error.message);
+            }
+        });
+
+        // 将函数暴露到全局作用域
+        window.generateNewKeypair = generateNewKeypair;
+        window.getChallenge = getChallenge;
+        window.signChallenge = signChallenge;
+        window.registerNode = registerNode;
+        window.transferTokens = transferTokens;
+        window.transferETH = transferETH;
+        window.approveTokens = approveTokens;
+        window.stakeTokens = stakeTokens;
+    </script>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>节点注册</h1>
+            <a href="/" class="back-link">返回首页</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>新节点信息</h2>
+            <div class="form-group">
+                <label for="newNodeAddress">新节点地址：</label>
+                <input type="text" id="newNodeAddress" class="form-control" readonly>
+            </div>
+            <div class="form-group">
+                <label for="newNodePrivateKey">新节点私钥：</label>
+                <input type="text" id="newNodePrivateKey" class="form-control" readonly>
+                <small class="text-muted">请保存此私钥，它只会显示一次！</small>
+            </div>
+            <div class="form-group">
+                <label for="nodeEndpoint">节点 IP/域名：</label>
+                <input type="text" id="nodeEndpoint" class="form-control" placeholder="例如: https://example.com">
+            </div>
+            <div class="form-group">
+                <label for="nodeApis">API 索引：</label>
+                <input type="text" id="nodeApis" class="form-control" placeholder="例如: [1,2,3,4,5]">
+            </div>
+            <div class="form-group">
+                <label for="nodeEns">节点 ENS：</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="nodeEns" class="form-control" placeholder="TODO" readonly style="background-color: #f5f5f5;">
+                </div>
+            </div>
+            <table class="action-table">
+                <tr>
+                    <td><button class="btn" onclick="generateNewKeypair()">生成新密钥对</button></td>
+                    <td><button class="btn" onclick="transferETH()">转账 ETH</button></td>
+                    <td><button class="btn" onclick="transferTokens()">转账代币</button></td>
+                    <td><button class="btn" onclick="approveTokens()">授权代币</button></td>
+                    <td><button class="btn" onclick="stakeTokens()">质押代币</button></td>
+                </tr>
+                <tr>
+                    <td colspan="5">
+                        <div id="ethTransferResult" class="result"></div>
+                        <div id="transferResult" class="result"></div>
+                        <div id="approveResult" class="result"></div>
+                        <div id="stakeResult" class="result"></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>节点注册流程</h2>
+            <table class="action-table">
+                <tr>
+                    <td>
+                        <button class="btn" onclick="getChallenge()">1. 获取 Challenge</button>
+                        <div id="challengeResult" class="result"></div>
+                    </td>
+                    <td>
+                        <button class="btn" onclick="signChallenge()">2. 签名 Challenge</button>
+                        <div id="signResult" class="result"></div>
+                    </td>
+                    <td>
+                        <button class="btn" onclick="registerNode()">3. 注册节点</button>
+                        <div id="registerResult" class="result"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3">
+                        <div class="form-group">
+                            <label for="challenge">Challenge：</label>
+                            <input type="text" id="challenge" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="signature">签名：</label>
+                            <input type="text" id="signature" class="form-control" readonly>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 请求和响应信息显示区域 -->
+        <div class="card" id="requestResponseCard" style="display: none;">
+            <h2>请求和响应信息</h2>
+            <div class="info-section">
+                <h3>请求信息</h3>
+                <pre id="requestInfo" class="code-block"></pre>
+            </div>
+            <div class="info-section">
+                <h3>响应信息</h3>
+                <pre id="responseInfo" class="code-block"></pre>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* 添加新的样式 */
+        .info-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .info-section h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .code-block {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+            margin: 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success-message {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .error-message {
+            color: #f44336;
+            font-weight: bold;
+            max-width: 100%;
+            word-wrap: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+        }
+        .result {
+            margin-top: 8px;
+            max-width: 100%;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+        .action-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .action-table td {
+            padding: 8px;
+            vertical-align: top;
+        }
+        .action-table .btn {
+            width: 100%;
+            margin: 0;
+            white-space: nowrap;
+        }
+        .action-table .result {
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            max-width: 100%;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        .card {
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</body>
+</html> 

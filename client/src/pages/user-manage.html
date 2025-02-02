@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>用户管理</h1>
+            <a href="/" class="back-link">返回首页</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 用户注册 -->
+        <div class="card">
+            <h2>用户注册</h2>
+            <div class="form-group">
+                <label for="username">用户名：</label>
+                <input type="text" id="username" class="form-control" placeholder="输入用户名">
+            </div>
+            <div class="form-group">
+                <label for="password">密码：</label>
+                <input type="password" id="password" class="form-control" placeholder="输入密码">
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">确认密码：</label>
+                <input type="password" id="confirmPassword" class="form-control" placeholder="再次输入密码">
+            </div>
+            <button class="btn" onclick="registerUser()">注册</button>
+            <div id="registerResult" class="result"></div>
+        </div>
+
+        <!-- 用户登录 -->
+        <div class="card">
+            <h2>用户登录</h2>
+            <div class="form-group">
+                <label for="loginUsername">用户名：</label>
+                <input type="text" id="loginUsername" class="form-control" placeholder="输入用户名">
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">密码：</label>
+                <input type="password" id="loginPassword" class="form-control" placeholder="输入密码">
+            </div>
+            <button class="btn" onclick="loginUser()">登录</button>
+            <div id="loginResult" class="result"></div>
+        </div>
+
+        <!-- 用户列表 -->
+        <div class="card">
+            <h2>已注册用户</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>用户名</th>
+                        <th>注册时间</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userTable">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 默认参数
+        const defaultParams = {
+            user_register: { username: 'testuser', password: 'password123' },
+            user_login: { username: 'testuser', password: 'password123' }
+        };
+
+        // 用户注册
+        async function registerUser() {
+            try {
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                
+                if (password !== confirmPassword) {
+                    document.getElementById('registerResult').textContent = 'Error: 两次输入的密码不一致';
+                    return;
+                }
+
+                const params = {
+                    username: document.getElementById('username').value,
+                    password: password
+                };
+
+                const response = await fetch('/api/v1/user/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+                const data = await response.json();
+                document.getElementById('registerResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.code === 0) {
+                    // 注册成功，清空表单
+                    document.getElementById('username').value = '';
+                    document.getElementById('password').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                    updateUserTable();
+                }
+            } catch (error) {
+                document.getElementById('registerResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 用户登录
+        async function loginUser() {
+            try {
+                const params = {
+                    username: document.getElementById('loginUsername').value,
+                    password: document.getElementById('loginPassword').value
+                };
+
+                const response = await fetch('/api/v1/user/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+                const data = await response.json();
+                document.getElementById('loginResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.code === 0) {
+                    // 登录成功，清空密码框
+                    document.getElementById('loginPassword').value = '';
+                    // 可以在这里处理登录成功后的操作，比如保存token等
+                }
+            } catch (error) {
+                document.getElementById('loginResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 更新用户列表
+        function updateUserTable(users = []) {
+            const table = document.getElementById('userTable');
+            table.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.username}</td>
+                    <td>${new Date(user.registeredAt).toLocaleString()}</td>
+                    <td><span class="badge badge-${user.status === 'active' ? 'primary' : 'secondary'}">${user.status}</span></td>
+                    <td>
+                        <button class="btn btn-secondary" onclick="resetPassword('${user.username}')">重置密码</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 重置密码
+        async function resetPassword(username) {
+            // 这里可以实现重置密码的功能
+            alert('重置密码功能待实现');
+        }
+
+        // 页面加载时填充默认值
+        window.onload = function() {
+            document.getElementById('loginUsername').value = defaultParams.user_login.username;
+        };
+    </script>
+</body>
+</html> 
