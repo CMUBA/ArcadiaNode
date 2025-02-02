@@ -33,6 +33,21 @@ NODE_REGISTRY_ADDRESS=0xE1A3B41be95Ff379DBDFd194680d26b5d8786462
 
 history node registry: '0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4'
 
+```
+
+cd contract/optimism
+./script/deploy-token.sh optimism sepolia
+edit contract/optimism/.env, add TOKEN_CONTRACT_ADDRESS
+--------------------------------
+./script/deploy-stake-manager.sh optimism sepolia
+edit contract/optimism/.env, add STAKE_MANAGER_ADDRESS
+--------------------------------
+./script/deploy-registry.sh optimism sepolia
+edit contract/optimism/.env, add NODE_REGISTRY_ADDRESS
+--------------------------------
+
+```
+
 
 ### Prerequisites
 
