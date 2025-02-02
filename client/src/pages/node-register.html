@@ -393,6 +393,67 @@
             }
         };
 
+        // 添加转以太坊函数
+        const transferETH = async () => {
+            try {
+                const nodeAddress = document.getElementById('newNodeAddress').value;
+                if (!nodeAddress) {
+                    throw new Error('请先生成新节点密钥对');
+                }
+
+                // 检查是否安装了 MetaMask
+                if (!window.ethereum) {
+                    throw new Error('请安装 MetaMask 钱包');
+                }
+
+                // 请求用户连接钱包
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('请先连接 MetaMask 钱包');
+                }
+
+                // 创建 provider 和 signer
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+
+                // 转账 0.012 ETH
+                const amount = ethers.parseEther("0.012");
+
+                // 显示转账信息
+                document.getElementById('ethTransferResult').textContent = '请在 MetaMask 中确认转账...';
+
+                // 执行转账
+                const tx = await signer.sendTransaction({
+                    to: nodeAddress,
+                    value: amount
+                });
+                console.log('ETH Transfer transaction:', tx.hash);
+
+                // 等待交易确认
+                const receipt = await tx.wait();
+                console.log('ETH Transfer confirmed:', receipt);
+
+                document.getElementById('ethTransferResult').innerHTML = `
+                    <div class="success-message">
+                        ETH 转账成功！<br>
+                        交易哈希: ${tx.hash}<br>
+                        转账金额: 0.012 ETH<br>
+                        <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank">在区块浏览器中查看</a>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('ETH 转账失败:', error);
+                document.getElementById('ethTransferResult').innerHTML = `
+                    <div class="error-message">
+                        ETH 转账失败: ${error.message}
+                    </div>
+                `;
+            }
+        };
+
         // 初始化页面
         window.addEventListener('load', async () => {
             try {
@@ -429,6 +490,7 @@
         window.signChallenge = signChallenge;
         window.registerNode = registerNode;
         window.transferTokens = transferTokens;
+        window.transferETH = transferETH;
         window.approveTokens = approveTokens;
         window.stakeTokens = stakeTokens;
     </script>
@@ -470,12 +532,14 @@
             <table class="action-table">
                 <tr>
                     <td><button class="btn" onclick="generateNewKeypair()">生成新密钥对</button></td>
+                    <td><button class="btn" onclick="transferETH()">转账 ETH</button></td>
                     <td><button class="btn" onclick="transferTokens()">转账代币</button></td>
                     <td><button class="btn" onclick="approveTokens()">授权代币</button></td>
                     <td><button class="btn" onclick="stakeTokens()">质押代币</button></td>
                 </tr>
                 <tr>
-                    <td colspan="4">
+                    <td colspan="5">
+                        <div id="ethTransferResult" class="result"></div>
                         <div id="transferResult" class="result"></div>
                         <div id="approveResult" class="result"></div>
                         <div id="stakeResult" class="result"></div>
@@ -561,6 +625,16 @@
         .error-message {
             color: #f44336;
             font-weight: bold;
+            max-width: 100%;
+            word-wrap: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+        }
+        .result {
+            margin-top: 8px;
+            max-width: 100%;
+            word-wrap: break-word;
+            white-space: normal;
         }
         .action-table {
             width: 100%;
@@ -578,6 +652,12 @@
         }
         .action-table .result {
             margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            max-width: 100%;
+            word-wrap: break-word;
+            white-space: normal;
         }
         .form-group {
             margin-bottom: 10px;
