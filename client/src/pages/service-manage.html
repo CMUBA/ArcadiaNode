@@ -123,7 +123,7 @@
                 serviceListData = await response.json();
 
                 // 初始化合约
-                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                const provider = new ethers.JsonRpcProvider(config.OPTIMISM_TESTNET_RPC_URL || 'https://sepolia.optimism.io');
                 const nodeRegistryAbi = (await (await fetch('/abi/NodeRegistry.json')).json()).abi;
                 const contract = new ethers.Contract(config.NODE_REGISTRY_ADDRESS, nodeRegistryAbi, provider);
 
