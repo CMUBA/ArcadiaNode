@@ -21,11 +21,11 @@ app.use(express.json());
 app.use(express.static(join(__dirname, '../public')));
 
 // 页面路由
-Object.entries(routes).forEach(([path, config]) => {
+for (const [path, config] of Object.entries(routes)) {
     app.get(path, (req, res) => {
         res.sendFile(join(__dirname, config.page));
     });
-});
+}
 
 // 404 处理
 app.use((req, res) => {

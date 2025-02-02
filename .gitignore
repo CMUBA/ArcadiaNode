@@ -1,3 +1,68 @@
+# Dependencies
+node_modules/
+*/node_modules/
+*/*/node_modules/
+docs/tmp.md
+
+# Environment
+.env
+*/.env
+*/*/.env
+
+# Build outputs
+*/dist/
+*/*/dist/
+client/dist/
+server/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Contract artifacts
+contract/**/out/
+contract/**/cache/
+contract/**/.env
+
+# Data directory
+data/*
+!data/.gitkeep
+
+# Development files
+*.local
+*.local.*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
 contract/optimism/lib/*
 contract/optimism/lib/forge-std/*
 node_modules
@@ -5,7 +70,6 @@ history.md
 node_modules
 .husky
 
-.env
 .env.optimism-testnet
 .env.optimism-mainnet
 

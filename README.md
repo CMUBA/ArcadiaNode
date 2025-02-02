@@ -1,92 +1,109 @@
 # Arcadia Node
 
-Arcadia Node is a blockchain-based distributed service node system that provides registration, discovery, and management capabilities for basic and extended services.
-
-[中文文档](README_CN.md)
+A decentralized node management system for the Arcadia network.
 
 ## Features
 
-- Node Registration and Verification
-- Service Registration and Discovery
-- User Authentication Management
-- Blockchain Interaction
-- Extensible Service Architecture
-- Health Check Mechanism
+Node Registration and Verification
+Service Registration and Discovery
+User Authentication Management
+Blockchain Interaction
+Extensible Service Architecture
+Health Check Mechanism
 
-## Quick Start
+## Project Structure
 
-### Requirements
+```
+arcadia-node/
+├── client/           # Frontend application
+├── server/           # Backend server
+│   └── plugins/      # Extended API services
+├── contract/         # Smart contracts
+├── data/            # Data storage
+└── docs/            # Documentation
+```
 
-- Node.js >= 16
-- pnpm >= 8.0
-- Supported OS: Linux, macOS, Windows
+## Development
 
-### Installation Steps
+### Optimism sepolia test contract
 
-1. Clone the repository
+TOKEN_CONTRACT_ADDRESS=0xBda48255DA1ed61a209641144Dd24696926aF3F0
+STAKE_MANAGER_ADDRESS=0xf7081161f19FB6246c1931aABd4fbe890DbdE8c4
+NODE_REGISTRY_ADDRESS=0xE1A3B41be95Ff379DBDFd194680d26b5d8786462
+
+history node registry: '0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4'
+
+```
+
+cd contract/optimism
+./script/deploy-token.sh optimism sepolia
+edit contract/optimism/.env, add TOKEN_CONTRACT_ADDRESS
+--------------------------------
+./script/deploy-stake-manager.sh optimism sepolia
+edit contract/optimism/.env, add STAKE_MANAGER_ADDRESS
+--------------------------------
+./script/deploy-registry.sh optimism sepolia
+edit contract/optimism/.env, add NODE_REGISTRY_ADDRESS
+--------------------------------
+
+```
+
+
+### Prerequisites
+
+- Node.js 18+
+- pnpm
+- Foundry (for smart contracts)
+
+### Setup
+
+1. Clone the repository:
 ```bash
-git clone https://github.com/cmuba/arcadia-node.git
+git clone https://github.com/your-org/arcadia-node.git
 cd arcadia-node
 ```
 
-2. Install dependencies
+2. Install dependencies:
 ```bash
-pnpm install
+# Install client dependencies
+cd client && pnpm install
+
+# Install server dependencies
+cd ../server && pnpm install
 ```
 
-3. Configure environment variables
+3. Configure environment:
 ```bash
+# Configure client
+cd client
 cp .env.example .env
-# Edit the .env file to set necessary environment variables
+
+# Configure server
+cd ../server
+cp .env.example .env
 ```
 
-4. Start the service
+### Development
+
+Start all services:
 ```bash
-# Development mode
-pnpm dev
-
-# Production mode
-pnpm start
+./dev.sh start
 ```
 
-5. Access the service
-- Open browser and visit: http://localhost:3000
-- View service list and API documentation
-- Use built-in API testing tool for interface testing
-
-### Directory Structure
-
-```
-root/
-├── node_modules/        # All dependencies
-├── data/               # Service configuration data
-│   └── service_list.json # Service list configuration
-├── docs/               # Project documentation
-│   └── design.md       # System design document
-├── .env                # Environment variables
-├── .env.example        # Environment variables example
-├── app.js             # Main entry file
-├── package.json       # Project configuration
-│
-├── server/            # Basic services
-│   ├── node/         # Node service
-│   ├── service/      # Service discovery
-│   ├── user/         # User service
-│   ├── chain/        # Chain service
-│   └── health/       # Health check
-│
-└── serverx/          # Extended services
-    ├── gamex/        # Game service
-    ├── comment/      # Comment service
-    ├── item/         # Item service
-    └── asset/        # Asset service
+Stop all services:
+```bash
+./dev.sh stop
 ```
 
-## Development Guide
+### Project Components
 
-For detailed development documentation, please refer to [docs/design.md](docs/design.md).
+- **Client**: Vue.js based frontend application
+- **Server**: Node.js backend server with plugin system
+- **Contracts**: Solidity smart contracts for node management
+- **Data**: Persistent data storage
+- **Docs**: Project documentation
 
 ## License
 
-MIT
+[MIT License](LICENSE)
 

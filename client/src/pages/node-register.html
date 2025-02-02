@@ -30,7 +30,7 @@
 
                 return wallet;
             } catch (error) {
-                console.error('生成密钥对失败:', error);
+                console.error('生成密钥对失败：', error);
                 throw error;
             }
         };
@@ -44,7 +44,7 @@
                     document.getElementById('challenge').value = data.data.challenge;
                     document.getElementById('challengeResult').textContent = '获取 Challenge 成功';
                 } else {
-                    document.getElementById('challengeResult').textContent = '获取 Challenge 失败: ' + (data.message || '未知错误');
+                    document.getElementById('challengeResult').textContent = '获取 Challenge 失败：' + (data.message || '未知错误');
                 }
             } catch (error) {
                 document.getElementById('challengeResult').textContent = 'Error: ' + error.message;
@@ -66,14 +66,14 @@
                 // 使用私钥创建钱包实例 (ethers v6)
                 const wallet = new ethers.Wallet(privateKey);
                 
-                // 1. 获取challenge字节
+                // 1. 获取 challenge 字节
                 const challengeBytes = ethers.getBytes(challenge);
                 
                 // 2. 构造前缀（与合约完全一致）
                 const prefix = "\x19Ethereum Signed Message:\n32";
                 const prefixBytes = ethers.toUtf8Bytes(prefix);
                 
-                // 3. 连接前缀和challenge（模拟abi.encodePacked）
+                // 3. 连接前缀和 challenge（模拟 abi.encodePacked）
                 const prefixedMessage = new Uint8Array(prefixBytes.length + challengeBytes.length);
                 prefixedMessage.set(prefixBytes);
                 prefixedMessage.set(challengeBytes, prefixBytes.length);
@@ -81,7 +81,7 @@
                 // 4. 计算哈希
                 const messageHash = ethers.keccak256(prefixedMessage);
                 
-                // 5. 对哈希进行签名（不使用signMessage，因为它会再次添加前缀）
+                // 5. 对哈希进行签名（不使用 signMessage，因为它会再次添加前缀）
                 const signature = await wallet.signingKey.sign(messageHash);
                 const signatureHex = ethers.hexlify(ethers.concat([signature.r, signature.s, signature.yParity ? "0x1c" : "0x1b"]));
                 
@@ -102,7 +102,7 @@
                 document.getElementById('signature').value = signatureHex;
                 document.getElementById('signResult').textContent = '签名成功';
             } catch (error) {
-                console.error('签名失败:', error);
+                console.error('签名失败：', error);
                 document.getElementById('signResult').textContent = 'Error: ' + error.message;
             }
         };
@@ -158,10 +158,10 @@
                     registerResult.innerHTML = `
                         <div class="success-message">
                             注册成功！<br>
-                            节点地址: ${nodeAddress}<br>
-                            节点ID: ${responseData.data.nodeId}<br>
-                            注册合约: ${responseData.data.registry_address}<br>
-                            交易哈希: ${txHash}<br>
+                            节点地址：${nodeAddress}<br>
+                            节点 ID: ${responseData.data.nodeId}<br>
+                            注册合约：${responseData.data.registry_address}<br>
+                            交易哈希：${txHash}<br>
                             <a href="https://sepolia-optimism.etherscan.io/tx/${txHash}" target="_blank">在区块浏览器中查看</a>
                         </div>
                     `;
@@ -245,16 +245,16 @@
                 document.getElementById('transferResult').innerHTML = `
                     <div class="success-message">
                         转账成功！<br>
-                        交易哈希: ${tx.hash}<br>
-                        当前余额: ${formattedBalance} MUSH<br>
+                        交易哈希：${tx.hash}<br>
+                        当前余额：${formattedBalance} MUSH<br>
                         <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank">在区块浏览器中查看</a>
                     </div>
                 `;
             } catch (error) {
-                console.error('转账失败:', error);
+                console.error('转账失败：', error);
                 document.getElementById('transferResult').innerHTML = `
                     <div class="error-message">
-                        转账失败: ${error.message}
+                        转账失败：${error.message}
                     </div>
                 `;
             }
@@ -306,16 +306,16 @@
                 document.getElementById('approveResult').innerHTML = `
                     <div class="success-message">
                         授权成功！<br>
-                        交易哈希: ${tx.hash}<br>
-                        授权额度: ${formattedAllowance} MUSH<br>
+                        交易哈希：${tx.hash}<br>
+                        授权额度：${formattedAllowance} MUSH<br>
                         <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank">在区块浏览器中查看</a>
                     </div>
                 `;
             } catch (error) {
-                console.error('授权失败:', error);
+                console.error('授权失败：', error);
                 document.getElementById('approveResult').innerHTML = `
                     <div class="error-message">
-                        授权失败: ${error.message}
+                        授权失败：${error.message}
                     </div>
                 `;
             }
@@ -369,20 +369,20 @@
                 document.getElementById('stakeResult').innerHTML = `
                     <div class="success-message">
                         质押成功！<br>
-                        交易哈希: ${tx.hash}<br>
-                        质押金额: ${formattedAmount} MUSH<br>
-                        开始时间: ${startTime}<br>
-                        质押状态: ${isActive ? '活跃' : '未活跃'}<br>
-                        可解质押: ${canUnstake ? '是' : '否'}<br>
-                        剩余锁定时间: ${remainingLockTime} 天<br>
+                        交易哈希：${tx.hash}<br>
+                        质押金额：${formattedAmount} MUSH<br>
+                        开始时间：${startTime}<br>
+                        质押状态：${isActive ? '活跃' : '未活跃'}<br>
+                        可解质押：${canUnstake ? '是' : '否'}<br>
+                        剩余锁定时间：${remainingLockTime} 天<br>
                         <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank">在区块浏览器中查看</a>
                     </div>
                 `;
             } catch (error) {
-                console.error('质押失败:', error);
+                console.error('质押失败：', error);
                 document.getElementById('stakeResult').innerHTML = `
                     <div class="error-message">
-                        质押失败: ${error.message}
+                        质押失败：${error.message}
                     </div>
                 `;
             }
@@ -434,16 +434,16 @@
                 document.getElementById('ethTransferResult').innerHTML = `
                     <div class="success-message">
                         ETH 转账成功！<br>
-                        交易哈希: ${tx.hash}<br>
-                        转账金额: 0.012 ETH<br>
+                        交易哈希：${tx.hash}<br>
+                        转账金额：0.012 ETH<br>
                         <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank">在区块浏览器中查看</a>
                     </div>
                 `;
             } catch (error) {
-                console.error('ETH 转账失败:', error);
+                console.error('ETH 转账失败：', error);
                 document.getElementById('ethTransferResult').innerHTML = `
                     <div class="error-message">
-                        ETH 转账失败: ${error.message}
+                        ETH 转账失败：${error.message}
                     </div>
                 `;
             }
@@ -492,9 +492,12 @@
 </head>
 <body>
     <div class="header">
-        <div class="container">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
             <h1>节点注册</h1>
-            <a href="/" class="back-link">返回首页</a>
+            <div style="display: flex; gap: 1rem;">
+                <a href="node-registry-info.html" class="back-link">View Registered Nodes</a>
+                <a href="/" class="back-link">返回首页</a>
+            </div>
         </div>
     </div>
 
