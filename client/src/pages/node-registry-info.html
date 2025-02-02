@@ -110,168 +110,87 @@
         </div>
     </div>
 
-    <script>
-        let provider;
-        let contract;
-        const nodeRegistryAbi = [
-            "function getNodeInfo(address nodeAddress) view returns (string ipOrDomain, string apiIndexes, uint256 registeredAt)",
-            "function isRegistered(address nodeAddress) view returns (bool)",
-            "function validateStake(address nodeAddress) view returns (bool)"
-        ];
+    <script type="module">
+        import { ethers } from 'ethers';
+        import config from '../config/index.js';
 
         async function initContract() {
             try {
-                // 获取合约地址
-                const response = await fetch('/api/v1/env/get', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        key: 'NODE_REGISTRY_ADDRESS'
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch contract address');
-                }
-
-                const data = await response.json();
-                if (data.code !== 0 || !data.value) {
-                    throw new Error('Invalid response format or missing contract address');
-                }
-
-                const contractAddress = data.value;
-                document.getElementById('contractAddress').textContent = contractAddress;
-
-                // 初始化 provider 和合约
-                provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
-                contract = new ethers.Contract(contractAddress, nodeRegistryAbi, provider);
+                // Get contract address from config
+                const nodeRegistryAddress = config.NODE_REGISTRY_ADDRESS;
+                document.getElementById('contractAddress').textContent = nodeRegistryAddress;
                 
-                document.getElementById('status').textContent = '已连接';
+                // Get ABI from public/abi
+                const response = await fetch('/abi/NodeRegistry.json');
+                const abiJson = await response.json();
+                const abi = abiJson.abi; // Forge 生成的 JSON 文件中 ABI 在 abi 字段
                 
-                // 加载初始数据
-                await refreshNodeList();
+                // Connect to provider
+                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                document.getElementById('status').textContent = 'Connected';
+                
+                // Create contract instance
+                const contract = new ethers.Contract(nodeRegistryAddress, abi, provider);
+                
+                // Get registered nodes
+                const nodeCount = await contract.nodeCount();
+                const nodes = [];
+                
+                for (let i = 0; i < nodeCount; i++) {
+                    const nodeAddress = await contract.nodes(i);
+                    const nodeInfo = await contract.getNodeInfo(nodeAddress);
+                    nodes.push({
+                        address: nodeAddress,
+                        url: nodeInfo.nodeUrl,
+                        apiUrl: nodeInfo.apiUrl,
+                        ens: nodeInfo.nodeEns,
+                        services: nodeInfo.serviceList
+                    });
+                }
+                
+                // Display nodes
+                displayNodes(nodes);
             } catch (error) {
-                console.error('初始化失败：', error);
-                document.getElementById('status').textContent = '连接失败: ' + error.message;
+                console.error('Failed to initialize contract:', error);
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+                document.getElementById('nodeList').innerHTML = `<div class="error">Loading failed: ${error.message}</div>`;
             }
         }
 
-        async function checkNodeAddress() {
-            const address = document.getElementById('nodeAddress').value;
-            if (!ethers.isAddress(address)) {
-                alert('请输入有效的地址');
+        function displayNodes(nodes) {
+            const nodeList = document.getElementById('nodeList');
+            if (nodes.length === 0) {
+                nodeList.innerHTML = '<div class="no-nodes">No registered nodes found</div>';
                 return;
             }
-
-            try {
-                const isRegistered = await contract.isRegistered(address);
-                if (!isRegistered) {
-                    alert('该地址未注册为节点');
-                    return;
-                }
-
-                const [ipOrDomain, apiIndexes, registeredAt] = await contract.getNodeInfo(address);
-                const hasValidStake = await contract.validateStake(address);
-
-                const searchResult = document.createElement('div');
-                searchResult.className = 'node-item';
-                searchResult.innerHTML = `
-                    <div class="node-header">
-                        <h3>查询结果</h3>
+            
+            nodeList.innerHTML = nodes.map(node => `
+                <div class="node-item">
+                    <div class="node-detail">
+                        <span class="label">Address:</span>
+                        <span class="value">${node.address}</span>
                     </div>
-                    <div class="node-details">
-                        <div class="node-detail">
-                            <span class="label">地址：</span>
-                            <span class="value">${address}</span>
-                        </div>
-                        <div class="node-detail">
-                            <span class="label">域名/IP：</span>
-                            <span class="value">${ipOrDomain}</span>
-                        </div>
-                        <div class="node-detail">
-                            <span class="label">API 索引：</span>
-                            <span class="value">${apiIndexes}</span>
-                        </div>
-                        <div class="node-detail">
-                            <span class="label">注册时间：</span>
-                            <span class="value">${new Date(Number(registeredAt) * 1000).toLocaleString()}</span>
-                        </div>
-                        <div class="node-detail">
-                            <span class="label">质押状态：</span>
-                            <span class="value" style="color: ${hasValidStake ? '#4CAF50' : '#f44336'}">${hasValidStake ? '有效' : '无效'}</span>
-                        </div>
+                    <div class="node-detail">
+                        <span class="label">Node URL:</span>
+                        <span class="value">${node.url}</span>
                     </div>
-                `;
-
-                const nodeList = document.getElementById('nodeList');
-                nodeList.innerHTML = '';
-                nodeList.appendChild(searchResult);
-            } catch (error) {
-                console.error('查询节点信息失败：', error);
-                alert('查询失败：' + error.message);
-            }
+                    <div class="node-detail">
+                        <span class="label">API URL:</span>
+                        <span class="value">${node.apiUrl}</span>
+                    </div>
+                    <div class="node-detail">
+                        <span class="label">ENS:</span>
+                        <span class="value">${node.ens || 'N/A'}</span>
+                    </div>
+                    <div class="node-detail">
+                        <span class="label">Services:</span>
+                        <span class="value">${node.services.join(', ')}</span>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        async function refreshNodeList() {
-            try {
-                // 获取所有已注册的节点地址
-                const nodeList = document.getElementById('nodeList');
-                nodeList.innerHTML = '';
-
-                // 从本地存储获取最近的地址
-                const recentAddresses = JSON.parse(localStorage.getItem('recentAddresses') || '[]');
-                
-                for (const address of recentAddresses) {
-                    const isRegistered = await contract.isRegistered(address);
-                    if (!isRegistered) continue;
-
-                    const [ipOrDomain, apiIndexes, registeredAt] = await contract.getNodeInfo(address);
-                    const hasValidStake = await contract.validateStake(address);
-
-                    const nodeItem = document.createElement('div');
-                    nodeItem.className = 'node-item';
-                    nodeItem.innerHTML = `
-                        <div class="node-header">
-                            <h3>节点信息</h3>
-                        </div>
-                        <div class="node-details">
-                            <div class="node-detail">
-                                <span class="label">地址：</span>
-                                <span class="value">${address}</span>
-                            </div>
-                            <div class="node-detail">
-                                <span class="label">域名/IP：</span>
-                                <span class="value">${ipOrDomain}</span>
-                            </div>
-                            <div class="node-detail">
-                                <span class="label">API 索引：</span>
-                                <span class="value">${apiIndexes}</span>
-                            </div>
-                            <div class="node-detail">
-                                <span class="label">注册时间：</span>
-                                <span class="value">${new Date(Number(registeredAt) * 1000).toLocaleString()}</span>
-                            </div>
-                            <div class="node-detail">
-                                <span class="label">质押状态：</span>
-                                <span class="value" style="color: ${hasValidStake ? '#4CAF50' : '#f44336'}">${hasValidStake ? '有效' : '无效'}</span>
-                            </div>
-                        </div>
-                    `;
-                    nodeList.appendChild(nodeItem);
-                }
-
-                if (nodeList.children.length === 0) {
-                    nodeList.innerHTML = '<div class="no-nodes">暂无注册节点</div>';
-                }
-            } catch (error) {
-                console.error('刷新节点列表失败：', error);
-                document.getElementById('nodeList').innerHTML = `<div class="error">加载失败：${error.message}</div>`;
-            }
-        }
-
-        // 页面加载时初始化
+        // Initialize on page load
         window.addEventListener('load', initContract);
     </script>
 </body>
