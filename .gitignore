@@ -1,7 +1,7 @@
 contract/optimism/lib/*
 contract/optimism/lib/forge-std/*
 node_modules
-
+history.md
 node_modules
 .husky
 
