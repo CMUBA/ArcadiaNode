@@ -48,6 +48,14 @@
             background: #e8f5e9;
             color: #2e7d32;
         }
+        .green-text {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .contract-address {
+            color: #1976d2;
+            font-family: monospace;
+        }
     </style>
     <script type="module">
         import { ethers } from 'ethers';
@@ -56,23 +64,28 @@
         async function initContract() {
             try {
                 const nodeRegistryAddress = config.NODE_REGISTRY_ADDRESS;
-                document.getElementById('contractAddress').textContent = nodeRegistryAddress;
+                document.getElementById('contractAddress').innerHTML = 
+                    `<span class="contract-address">${nodeRegistryAddress}</span>`;
                 
                 const response = await fetch('/abi/NodeRegistry.json');
                 const abiJson = await response.json();
                 const abi = abiJson.abi;
                 
                 const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
-                document.getElementById('status').textContent = 'Connected';
+                document.getElementById('status').innerHTML = 
+                    'Status: <span class="green-text">Connected</span>';
                 
                 const contract = new ethers.Contract(nodeRegistryAddress, abi, provider);
                 
                 const minStakeAmount = await contract.MIN_STAKE_AMOUNT();
-                document.getElementById('minStakeAmount').textContent = 
-                    `${ethers.formatUnits(minStakeAmount, 18)} tokens`;
+                document.getElementById('minStakeAmount').innerHTML = 
+                    `<span class="green-text">${ethers.formatUnits(minStakeAmount, 18)}</span> tokens`;
                 
-                // 获取节点总数
+                // 获取并显示节点总数
                 const nodeCount = await contract.getRegisteredNodesCount();
+                document.getElementById('nodeCount').innerHTML = 
+                    `<span class="green-text">${nodeCount}</span>`;
+                
                 const nodes = [];
                 
                 // 分页获取节点信息，每次获取 10 个
@@ -193,6 +206,7 @@
             <p>Contract Address: <span id="contractAddress">Loading...</span></p>
             <p>Status: <span id="status">Connecting...</span></p>
             <p>Minimum Stake Amount: <span id="minStakeAmount">Loading...</span></p>
+            <p>Total Nodes: <span id="nodeCount">Loading...</span></p>
         </div>
         
         <div class="search-section">
