@@ -16,18 +16,35 @@ contract NodeRegistryScript is Script {
         string memory apiIndexes = vm.envString("NODE_APIS");
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         
+        // 开始部署
         vm.startBroadcast(deployerPrivateKey);
-
-        // 部署合约
+        
+        // 部署 NodeRegistry
         registry = new NodeRegistry(
             stakeManagerAddress,
             ipOrDomain,
             apiIndexes
         );
         
-        console.log("NodeRegistry deployed at:", address(registry));
-        console.log("Using stake manager at:", stakeManagerAddress);
-
         vm.stopBroadcast();
+        
+        // 输出详细的部署信息
+        console.log("Deployment Info:");
+        console.log("----------------");
+        console.log("NodeRegistry deployed to:", address(registry));
+        console.log("Stake Manager:", stakeManagerAddress);
+        console.log("Deployer:", vm.addr(deployerPrivateKey));
+        console.log("IP/Domain:", ipOrDomain);
+        console.log("API Indexes:", apiIndexes);
+        console.log("Block number:", block.number);
+        console.log("Block timestamp:", block.timestamp);
+        
+        // 验证部署结果
+        try registry.stakeManager() returns (address configuredStakeManager) {
+            require(configuredStakeManager == stakeManagerAddress, "Stake manager address mismatch");
+            console.log("[OK] Deployment verified");
+        } catch {
+            console.log("[ERROR] Deployment verification failed");
+        }
     }
 } 

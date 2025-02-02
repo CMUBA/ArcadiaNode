@@ -27,6 +27,9 @@ contract NodeRegistry is ReentrancyGuard {
     // 存储节点信息
     mapping(address => NodeInfo) public nodes;
 
+    // 添加节点地址数组来追踪所有注册的节点
+    address[] public registeredNodes;
+
     // 事件
     event NodeRegistered(
         address indexed nodeAddress,
@@ -52,6 +55,9 @@ contract NodeRegistry is ReentrancyGuard {
             apiIndexes: _apiIndexes,
             registeredAt: block.timestamp
         });
+
+        // 添加部署者到节点数组
+        registeredNodes.push(msg.sender);
 
         emit NodeRegistered(msg.sender, msg.sender, _ipOrDomain, _apiIndexes);
     }
@@ -107,6 +113,9 @@ contract NodeRegistry is ReentrancyGuard {
             apiIndexes: apiIndexes,
             registeredAt: block.timestamp
         });
+        
+        // 添加到节点数组
+        registeredNodes.push(nodeAddress);
 
         emit NodeRegistered(nodeAddress, msg.sender, ipOrDomain, apiIndexes);
     }
@@ -132,5 +141,45 @@ contract NodeRegistry is ReentrancyGuard {
     // 检查节点是否已注册
     function isRegistered(address nodeAddress) external view returns (bool) {
         return nodes[nodeAddress].registeredAt > 0;
+    }
+
+    // 获取已注册节点数量
+    function getRegisteredNodesCount() external view returns (uint256) {
+        return registeredNodes.length;
+    }
+    
+    // 批量获取节点信息，支持分页
+    function getNodesInfo(uint256 start, uint256 limit) 
+        external 
+        view 
+        returns (
+            address[] memory addresses,
+            string[] memory ipOrDomains,
+            string[] memory apiIndexesList,
+            uint256[] memory registeredAts
+        ) 
+    {
+        uint256 end = start + limit;
+        if (end > registeredNodes.length) {
+            end = registeredNodes.length;
+        }
+        uint256 resultCount = end - start;
+        
+        addresses = new address[](resultCount);
+        ipOrDomains = new string[](resultCount);
+        apiIndexesList = new string[](resultCount);
+        registeredAts = new uint256[](resultCount);
+        
+        for (uint256 i = 0; i < resultCount; i++) {
+            address nodeAddress = registeredNodes[start + i];
+            NodeInfo memory info = nodes[nodeAddress];
+            
+            addresses[i] = nodeAddress;
+            ipOrDomains[i] = info.ipOrDomain;
+            apiIndexesList[i] = info.apiIndexes;
+            registeredAts[i] = info.registeredAt;
+        }
+        
+        return (addresses, ipOrDomains, apiIndexesList, registeredAts);
     }
 } 

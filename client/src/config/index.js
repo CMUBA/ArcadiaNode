@@ -5,7 +5,7 @@ console.log('All env variables:', import.meta.env);
 const contractAddresses = window.__CONTRACT_ADDRESSES__ || {
     TOKEN_CONTRACT_ADDRESS: '0xBda48255DA1ed61a209641144Dd24696926aF3F0',
     STAKE_MANAGER_ADDRESS: '0xf7081161f19FB6246c1931aABd4fbe890DbdE8c4',
-    NODE_REGISTRY_ADDRESS: '0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4'
+    NODE_REGISTRY_ADDRESS: '0xE1A3B41be95Ff379DBDFd194680d26b5d8786462'
 };
 
 console.log('Contract addresses from define:', contractAddresses);
@@ -21,12 +21,13 @@ const config = {
     SERVER_PORT: import.meta.env.VITE_SERVER_PORT || 3017,
     SERVERX_PORT: import.meta.env.VITE_SERVERX_PORT || 3018,
     API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3017',
+    API_PREFIX: import.meta.env.VITE_API_PREFIX || '/api/v1',
 
     // 区块链配置（安全：只包含公开信息）
     OPTIMISM_TESTNET_RPC_URL: import.meta.env.VITE_OPTIMISM_TESTNET_RPC_URL || 'https://opt-sepolia.g.alchemy.com/v2/GyzNf_EiQiun2BgYRnXLmgWFZNpLVF1J',
     TOKEN_CONTRACT_ADDRESS: import.meta.env.VITE_TOKEN_CONTRACT_ADDRESS || '0xBda48255DA1ed61a209641144Dd24696926aF3F0',
     STAKE_MANAGER_ADDRESS: import.meta.env.VITE_STAKE_MANAGER_ADDRESS || '0xf7081161f19FB6246c1931aABd4fbe890DbdE8c4',
-    NODE_REGISTRY_ADDRESS: import.meta.env.VITE_NODE_REGISTRY_ADDRESS || '0x7E623E5C2598C04209F217ce0ee92B88bE7F03c4'
+    NODE_REGISTRY_ADDRESS: import.meta.env.VITE_NODE_REGISTRY_ADDRESS || '0xE1A3B41be95Ff379DBDFd194680d26b5d8786462'
 };
 
 // 添加调试日志（只记录公开信息）

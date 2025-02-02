@@ -5,6 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Node Registry Info - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
+    <style>
+        .node-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+        .node-item {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .node-detail {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .node-detail:last-child {
+            border-bottom: none;
+        }
+        .node-detail .label {
+            color: #666;
+            font-size: 0.9em;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .node-detail .value {
+            color: #333;
+            word-break: break-all;
+            font-family: monospace;
+        }
+        .node-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-top: 8px;
+        }
+        .status-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
     <script type="module">
         import { ethers } from 'ethers';
         import config from '../config/index.js';
@@ -27,18 +71,22 @@
                 document.getElementById('minStakeAmount').textContent = 
                     `${ethers.formatUnits(minStakeAmount, 18)} tokens`;
                 
-                const recentAddresses = JSON.parse(localStorage.getItem('recentAddresses') || '[]');
+                // 获取节点总数
+                const nodeCount = await contract.getRegisteredNodesCount();
                 const nodes = [];
                 
-                for (const address of recentAddresses) {
-                    const isRegistered = await contract.isRegistered(address);
-                    if (isRegistered) {
-                        const nodeInfo = await contract.getNodeInfo(address);
+                // 分页获取节点信息，每次获取 10 个
+                const pageSize = 10;
+                for (let start = 0; start < nodeCount; start += pageSize) {
+                    const [addresses, ipOrDomains, apiIndexes, registeredAts] = 
+                        await contract.getNodesInfo(start, pageSize);
+                    
+                    for (let i = 0; i < addresses.length; i++) {
                         nodes.push({
-                            address: address,
-                            ipOrDomain: nodeInfo[0],
-                            apiIndexes: nodeInfo[1],
-                            registeredAt: new Date(Number(nodeInfo[2]) * 1000).toLocaleString()
+                            address: addresses[i],
+                            ipOrDomain: ipOrDomains[i],
+                            apiIndexes: apiIndexes[i],
+                            registeredAt: new Date(Number(registeredAts[i]) * 1000).toLocaleString()
                         });
                     }
                 }
@@ -97,25 +145,35 @@
             const nodesHtml = nodes.map(node => `
                 <div class="node-item">
                     <div class="node-detail">
-                        <span class="label">Address:</span>
+                        <span class="label">Node Address</span>
                         <span class="value">${node.address}</span>
                     </div>
                     <div class="node-detail">
-                        <span class="label">IP/Domain:</span>
+                        <span class="label">IP/Domain</span>
                         <span class="value">${node.ipOrDomain}</span>
                     </div>
                     <div class="node-detail">
-                        <span class="label">API Indexes:</span>
-                        <span class="value">${node.apiIndexes}</span>
+                        <span class="label">API Services</span>
+                        <span class="value">${formatApiIndexes(node.apiIndexes)}</span>
                     </div>
                     <div class="node-detail">
-                        <span class="label">Registered At:</span>
+                        <span class="label">Registration Time</span>
                         <span class="value">${node.registeredAt}</span>
                     </div>
+                    <span class="node-status status-active">Active</span>
                 </div>
             `).join('');
             
             nodeList.innerHTML = nodesHtml;
+        }
+
+        function formatApiIndexes(apiIndexes) {
+            try {
+                const indexes = JSON.parse(apiIndexes);
+                return Array.isArray(indexes) ? indexes.join(', ') : apiIndexes;
+            } catch {
+                return apiIndexes;
+            }
         }
 
         window.addEventListener('load', initContract);
@@ -125,7 +183,7 @@
     <div class="header">
         <div class="container">
             <h1>Node Registry Information</h1>
-            <a href="/node-register.html" class="back-link">Register New Node</a>
+            <a href="/pages/node-register.html" class="back-link">Register New Node</a>
             <a href="/" class="back-link">Back to Home</a>
         </div>
     </div>
