@@ -154,11 +154,15 @@
                 // 更新注册结果显示
                 const registerResult = document.getElementById('registerResult');
                 if (response.ok && responseData.code === 0) {
+                    const txHash = responseData.data.tx_hash; // 从响应数据中获取交易哈希
                     registerResult.innerHTML = `
                         <div class="success-message">
                             注册成功！<br>
                             节点地址: ${nodeAddress}<br>
-                            请保存新节点私钥：${document.getElementById('newNodePrivateKey').value}
+                            节点ID: ${responseData.data.nodeId}<br>
+                            注册合约: ${responseData.data.registry_address}<br>
+                            交易哈希: ${txHash}<br>
+                            <a href="https://sepolia-optimism.etherscan.io/tx/${txHash}" target="_blank">在区块浏览器中查看</a>
                         </div>
                     `;
 
@@ -168,15 +172,6 @@
                         recentAddresses.push(nodeAddress);
                         localStorage.setItem('recentAddresses', JSON.stringify(recentAddresses));
                     }
-
-                    // 添加交易链接
-                    const txHash = responseData.tx_hash;
-                    registerResult.innerHTML += `
-                        <div class="transaction-info">
-                            <p>交易哈希: ${txHash}</p>
-                            <p>查看交易: <a href="https://sepolia-optimism.etherscan.io/tx/${txHash}" target="_blank">Etherscan</a></p>
-                        </div>
-                    `;
                 } else {
                     registerResult.innerHTML = `
                         <div class="error-message">
@@ -508,12 +503,12 @@
             <h2>新节点信息</h2>
             <div class="form-group">
                 <label for="newNodeAddress">新节点地址：</label>
-                <input type="text" id="newNodeAddress" class="form-control" readonly>
+                <input type="text" id="newNodeAddress" class="form-control" placeholder="输入或通过生成按钮创建新地址">
             </div>
             <div class="form-group">
                 <label for="newNodePrivateKey">新节点私钥：</label>
-                <input type="text" id="newNodePrivateKey" class="form-control" readonly>
-                <small class="text-muted">请保存此私钥，它只会显示一次！</small>
+                <input type="text" id="newNodePrivateKey" class="form-control" placeholder="输入或通过生成按钮创建新私钥">
+                <small class="text-muted">请妥善保管私钥！</small>
             </div>
             <div class="form-group">
                 <label for="nodeEndpoint">节点 IP/域名：</label>
