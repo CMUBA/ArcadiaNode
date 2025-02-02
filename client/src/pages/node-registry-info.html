@@ -60,6 +60,54 @@
     <script type="module">
         import { ethers } from 'ethers';
         import config from '../config/index.js';
+        import enLang from '../config/i18n/en.js';
+        import zhLang from '../config/i18n/zh.js';
+        import thLang from '../config/i18n/th.js';
+
+        const translations = {
+            en: enLang,
+            zh: zhLang,
+            th: thLang
+        };
+
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function updateContent() {
+            const t = translations[currentLang];
+            
+            // Update page title and headers
+            document.title = t.nodeRegistryInfoTitle;
+            document.querySelector('h1').textContent = t.nodeRegistryInfoTitle;
+            document.querySelector('a[href="/"]').textContent = t.backToHome;
+            document.querySelector('a[href="/pages/node-register.html"]').textContent = t.registerNewNode;
+
+            // Update info section
+            document.querySelector('.info-section p:nth-child(1)').innerHTML = 
+                `${t.contractAddress}: <span id="contractAddress">${document.getElementById('contractAddress').innerHTML}</span>`;
+            document.querySelector('.info-section p:nth-child(2)').innerHTML = 
+                `${t.status}: <span id="status">${document.getElementById('status').innerHTML}</span>`;
+            document.querySelector('.info-section p:nth-child(3)').innerHTML = 
+                `${t.minStakeAmount}: <span id="minStakeAmount">${document.getElementById('minStakeAmount').innerHTML}</span>`;
+            document.querySelector('.info-section p:nth-child(4)').innerHTML = 
+                `${t.totalNodes}: <span id="nodeCount">${document.getElementById('nodeCount').innerHTML}</span>`;
+
+            // Update search section
+            document.querySelector('.search-section h2').textContent = t.queryNodeInfo;
+            document.querySelector('#nodeAddress').placeholder = t.enterNodeAddress;
+            document.querySelector('.search-form button').textContent = t.query;
+
+            // Update node list section
+            document.querySelector('.node-list-section h2').textContent = t.registeredNodes;
+
+            // Update language selector
+            document.getElementById('languageSelect').value = currentLang;
+        }
+
+        window.changeLanguage = function(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            updateContent();
+        };
 
         async function initContract() {
             try {
@@ -71,7 +119,7 @@
                 const abiJson = await response.json();
                 const abi = abiJson.abi;
                 
-                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                const provider = new ethers.JsonRpcProvider(config.OPTIMISM_TESTNET_RPC_URL || 'https://sepolia.optimism.io');
                 document.getElementById('status').innerHTML = 
                     'Status: <span class="green-text">Connected</span>';
                 
@@ -105,6 +153,7 @@
                 }
                 
                 displayNodes(nodes);
+                updateContent();
             } catch (error) {
                 console.error('Failed to initialize contract:', error);
                 document.getElementById('status').textContent = 'Error: ' + error.message;
@@ -120,7 +169,7 @@
                     throw new Error('Invalid address format');
                 }
 
-                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                const provider = new ethers.JsonRpcProvider(config.OPTIMISM_TESTNET_RPC_URL || 'https://sepolia.optimism.io');
                 const contract = new ethers.Contract(
                     config.NODE_REGISTRY_ADDRESS,
                     (await (await fetch('/abi/NodeRegistry.json')).json()).abi,
@@ -195,9 +244,20 @@
 <body>
     <div class="header">
         <div class="container">
-            <h1>Node Registry Information</h1>
-            <a href="/pages/node-register.html" class="back-link">Register New Node</a>
-            <a href="/" class="back-link">Back to Home</a>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1>Node Registry Information</h1>
+                <div style="display: flex; gap: 1rem;">
+                    <div class="language-selector">
+                        <select id="languageSelect" onchange="changeLanguage(this.value)">
+                            <option value="en">English</option>
+                            <option value="zh">中文</option>
+                            <option value="th">ไทย</option>
+                        </select>
+                    </div>
+                    <a href="/pages/node-register.html" class="back-link">Register New Node</a>
+                    <a href="/" class="back-link">Back to Home</a>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -9,6 +9,77 @@
         import { ethers } from 'ethers';
         import api from '../utils/api.js';
         import config from '../config/index.js';
+        import enLang from '../config/i18n/en.js';
+        import zhLang from '../config/i18n/zh.js';
+        import thLang from '../config/i18n/th.js';
+
+        const translations = {
+            en: enLang,
+            zh: zhLang,
+            th: thLang
+        };
+
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function updateContent() {
+            const t = translations[currentLang];
+            
+            // Update page title and headers
+            document.title = t.nodeRegisterTitle;
+            document.querySelector('h1').textContent = t.nodeRegisterTitle;
+            document.querySelector('a[href="/"]').textContent = t.backToHome;
+            document.querySelector('a[href="node-registry-info.html"]').textContent = t.registeredNodes;
+
+            // Update card titles
+            document.querySelector('.card h2:first-of-type').textContent = t.newNodeInfo || 'New Node Information';
+            document.querySelector('.card:nth-of-type(2) h2').textContent = t.registrationProcess || 'Registration Process';
+            document.querySelector('#requestResponseCard h2').textContent = t.requestResponseInfo || 'Request and Response Info';
+
+            // Update form labels and placeholders
+            document.querySelector('label[for="newNodeAddress"]').textContent = t.nodeAddress + ':';
+            document.querySelector('#newNodeAddress').placeholder = t.enterOrGenerateAddress || 'Enter or generate new address';
+            
+            document.querySelector('label[for="newNodePrivateKey"]').textContent = t.nodePrivateKey || 'Node Private Key:';
+            document.querySelector('#newNodePrivateKey').placeholder = t.enterOrGenerateKey || 'Enter or generate new private key';
+            document.querySelector('.text-muted').textContent = t.privateKeyWarning || 'Please keep your private key safe!';
+            
+            document.querySelector('label[for="nodeEndpoint"]').textContent = t.ipOrDomain + ':';
+            document.querySelector('#nodeEndpoint').placeholder = t.ipDomainExample || 'Example: https://example.com';
+            
+            document.querySelector('label[for="nodeApis"]').textContent = t.apiServices + ':';
+            document.querySelector('#nodeApis').placeholder = t.apiExample || 'Example: [1,2,3,4,5]';
+            
+            document.querySelector('label[for="nodeEns"]').textContent = 'ENS:';
+
+            // Update buttons
+            document.querySelector('button[onclick="generateNewKeypair()"]').textContent = t.generateNewKeypair || 'Generate New Keypair';
+            document.querySelector('button[onclick="transferETH()"]').textContent = t.transferETH || 'Transfer ETH';
+            document.querySelector('button[onclick="transferTokens()"]').textContent = t.transferTokens || 'Transfer Tokens';
+            document.querySelector('button[onclick="approveTokens()"]').textContent = t.approveTokens || 'Approve Tokens';
+            document.querySelector('button[onclick="stakeTokens()"]').textContent = t.stakeTokens || 'Stake Tokens';
+
+            // Update registration process buttons
+            document.querySelector('button[onclick="getChallenge()"]').textContent = t.getChallenge || '1. Get Challenge';
+            document.querySelector('button[onclick="signChallenge()"]').textContent = t.signChallenge || '2. Sign Challenge';
+            document.querySelector('button[onclick="registerNode()"]').textContent = t.register || '3. Register Node';
+
+            // Update challenge and signature labels
+            document.querySelector('label[for="challenge"]').textContent = 'Challenge:';
+            document.querySelector('label[for="signature"]').textContent = t.signature || 'Signature:';
+
+            // Update request/response section
+            document.querySelector('.info-section h3:first-of-type').textContent = t.requestInfo || 'Request Info';
+            document.querySelector('.info-section h3:last-of-type').textContent = t.responseInfo || 'Response Info';
+
+            // Update language selector
+            document.getElementById('languageSelect').value = currentLang;
+        }
+
+        window.changeLanguage = function(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            updateContent();
+        };
 
         // 定义所有函数
         const generateNewKeypair = async () => {
@@ -273,7 +344,7 @@
                 }
 
                 // 创建 provider 和钱包
-                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                const provider = new ethers.JsonRpcProvider(config.OPTIMISM_TESTNET_RPC_URL || 'https://sepolia.optimism.io');
                 const wallet = new ethers.Wallet(privateKey, provider);
 
                 // 创建代币合约实例
@@ -334,7 +405,7 @@
                 }
 
                 // 创建 provider 和钱包
-                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                const provider = new ethers.JsonRpcProvider(config.OPTIMISM_TESTNET_RPC_URL || 'https://sepolia.optimism.io');
                 const wallet = new ethers.Wallet(privateKey, provider);
 
                 // 创建质押合约实例
@@ -463,16 +534,23 @@
                 window.stakeManagerAddress = config.STAKE_MANAGER_ADDRESS;
                 window.nodeRegistryAddress = config.NODE_REGISTRY_ADDRESS;
                 
+                // 使用配置的 RPC URL
+                window.provider = new ethers.JsonRpcProvider(config.OPTIMISM_TESTNET_RPC_URL || 'https://sepolia.optimism.io');
+                
                 console.log('Using contract addresses:', {
                     tokenContractAddress: window.tokenContractAddress,
                     stakeManagerAddress: window.stakeManagerAddress,
-                    nodeRegistryAddress: window.nodeRegistryAddress
+                    nodeRegistryAddress: window.nodeRegistryAddress,
+                    rpcUrl: config.OPTIMISM_TESTNET_RPC_URL
                 });
 
                 // 验证合约地址（现在应该总是有值，因为有默认值）
                 if (!window.tokenContractAddress || !window.stakeManagerAddress || !window.nodeRegistryAddress) {
                     console.warn('Using default contract addresses');
                 }
+
+                // 更新页面文本
+                updateContent();
             } catch (error) {
                 console.error('Failed to initialize page:', error);
                 alert('初始化失败：' + error.message);
@@ -495,6 +573,13 @@
         <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
             <h1>节点注册</h1>
             <div style="display: flex; gap: 1rem;">
+                <div class="language-selector">
+                    <select id="languageSelect" onchange="changeLanguage(this.value)">
+                        <option value="en">English</option>
+                        <option value="zh">中文</option>
+                        <option value="th">ไทย</option>
+                    </select>
+                </div>
                 <a href="node-registry-info.html" class="back-link">View Registered Nodes</a>
                 <a href="/" class="back-link">返回首页</a>
             </div>
