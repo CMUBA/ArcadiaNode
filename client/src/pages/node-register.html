@@ -202,13 +202,23 @@
                     throw new Error('请先生成新节点密钥对');
                 }
 
-                if (!config.NODE_PRIVATE_KEY) {
-                    throw new Error('NODE_PRIVATE_KEY not found in configuration');
+                // 检查是否安装了 MetaMask
+                if (!window.ethereum) {
+                    throw new Error('请安装 MetaMask 钱包');
                 }
 
-                // 创建 provider 和钱包
-                const provider = new ethers.JsonRpcProvider(config.OPTIMISM_TESTNET_RPC_URL);
-                const wallet = new ethers.Wallet(config.NODE_PRIVATE_KEY, provider);
+                // 请求用户连接钱包
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('请先连接 MetaMask 钱包');
+                }
+
+                // 创建 provider 和 signer
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
 
                 // 创建代币合约实例
                 const tokenAbi = [
@@ -216,14 +226,14 @@
                     "function balanceOf(address account) public view returns (uint256)",
                     "function decimals() public view returns (uint8)"
                 ];
-                const tokenContract = new ethers.Contract(window.tokenContractAddress, tokenAbi, wallet);
+                const tokenContract = new ethers.Contract(config.TOKEN_CONTRACT_ADDRESS, tokenAbi, signer);
 
                 // 转账 1000 代币
                 const decimals = await tokenContract.decimals();
                 const amount = ethers.parseUnits("1000", decimals);
 
                 // 显示转账信息
-                document.getElementById('transferResult').textContent = '正在转账...';
+                document.getElementById('transferResult').textContent = '请在 MetaMask 中确认转账...';
 
                 // 执行转账
                 const tx = await tokenContract.transfer(nodeAddress, amount);
