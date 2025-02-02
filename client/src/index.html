@@ -211,6 +211,31 @@
                     </li>
                 </ul>
             </div>
+
+            <!-- Q&A Section -->
+            <div class="service-group">
+                <h2 id="qaTitle">Q&A</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/qa.html" class="service-link">
+                            <span id="qa1Title">What is ArcadiaNode?</span>
+                        </a>
+                    </li>
+                    <li class="service-item">
+                        <a href="/pages/qa.html" class="service-link">
+                            <span id="qa2Title">How to become a service provider?</span>
+                        </a>
+                    </li>
+                    <li class="service-item">
+                        <a href="/pages/qa.html" class="service-link">
+                            <span id="qa3Title">What types of services can I provide?</span>
+                        </a>
+                    </li>
+                </ul>
+                <div class="text-right mt-4">
+                    <a href="/pages/qa.html" class="text-blue-600 hover:text-blue-800" id="viewAllQA">View All Questions</a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -254,6 +279,16 @@
             document.getElementById('serviceDiscovery').textContent = t.serviceDiscovery;
             document.getElementById('userAuth').textContent = t.userAuth;
             document.getElementById('heroDataManagement').textContent = t.heroDataManagement;
+            
+            // Update Q&A content
+            document.getElementById('qaTitle').textContent = t.qa.title;
+            document.getElementById('qa1Title').textContent = t.qa.questions[0].title;
+            document.getElementById('qa1Content').textContent = t.qa.questions[0].content;
+            document.getElementById('qa2Title').textContent = t.qa.questions[1].title;
+            document.getElementById('qa2Content').textContent = t.qa.questions[1].content;
+            document.getElementById('qa3Title').textContent = t.qa.questions[2].title;
+            document.getElementById('qa3Content').textContent = t.qa.questions[2].content;
+            document.getElementById('viewAllQA').textContent = t.qa.viewAll;
             
             // Update language selector
             document.getElementById('languageSelect').value = currentLang;
