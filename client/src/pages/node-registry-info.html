@@ -3,159 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>节点注册合约信息 - Arcadia Node</title>
+    <title>Node Registry Info - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
-    <script src="/js/ethers.umd.min.js"></script>
-    <style>
-        .node-list {
-            margin-top: 20px;
-        }
-        .node-item {
-            background: #f5f5f5;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        .node-item h3 {
-            margin: 0 0 10px 0;
-            color: #333;
-        }
-        .node-detail {
-            display: grid;
-            grid-template-columns: 120px 1fr;
-            gap: 10px;
-            margin-bottom: 5px;
-        }
-        .node-detail .label {
-            font-weight: bold;
-            color: #666;
-        }
-        .node-detail .value {
-            word-break: break-all;
-        }
-        .refresh-btn {
-            margin-bottom: 20px;
-        }
-        .search-section {
-            margin: 20px 0;
-            padding: 20px;
-            background: #f5f5f5;
-            border-radius: 8px;
-        }
-        .search-form {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .search-form input {
-            flex: 1;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .search-form button {
-            padding: 8px 16px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .search-form button:hover {
-            background: #45a049;
-        }
-        .error {
-            color: #f44336;
-            padding: 10px;
-            margin: 10px 0;
-            background: #ffebee;
-            border-radius: 4px;
-        }
-        .no-nodes {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="container">
-            <h1>节点注册合约信息</h1>
-            <a href="/index.html" class="back-link">返回首页</a>
-        </div>
-    </div>
-
-    <div class="container">
-        <h1>节点注册信息</h1>
-        <div class="info-section">
-            <p>合约地址：<span id="contractAddress">加载中...</span></p>
-            <p>状态：<span id="status">正在连接...</span></p>
-        </div>
-        
-        <div class="search-section">
-            <h2>查询节点信息</h2>
-            <div class="search-form">
-                <input type="text" id="nodeAddress" placeholder="输入节点地址" />
-                <button onclick="checkNodeAddress()">查询</button>
-            </div>
-        </div>
-
-        <div class="node-list-section">
-            <h2>已注册节点列表</h2>
-            <button onclick="refreshNodeList()">刷新节点列表</button>
-            <div id="nodeList" class="node-list"></div>
-        </div>
-    </div>
-
     <script type="module">
         import { ethers } from 'ethers';
         import config from '../config/index.js';
 
         async function initContract() {
             try {
-                // Get contract address from config
                 const nodeRegistryAddress = config.NODE_REGISTRY_ADDRESS;
                 document.getElementById('contractAddress').textContent = nodeRegistryAddress;
                 
-                // Get ABI from public/abi
                 const response = await fetch('/abi/NodeRegistry.json');
                 const abiJson = await response.json();
-                const abi = abiJson.abi; // Forge 生成的 JSON 文件中 ABI 在 abi 字段
+                const abi = abiJson.abi;
                 
-                // Connect to provider
                 const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
                 document.getElementById('status').textContent = 'Connected';
                 
-                // Create contract instance
                 const contract = new ethers.Contract(nodeRegistryAddress, abi, provider);
                 
-                // Get registered nodes
-                const nodeCount = await contract.nodeCount();
+                const minStakeAmount = await contract.MIN_STAKE_AMOUNT();
+                document.getElementById('minStakeAmount').textContent = 
+                    `${ethers.formatUnits(minStakeAmount, 18)} tokens`;
+                
+                const recentAddresses = JSON.parse(localStorage.getItem('recentAddresses') || '[]');
                 const nodes = [];
                 
-                for (let i = 0; i < nodeCount; i++) {
-                    const nodeAddress = await contract.nodes(i);
-                    const nodeInfo = await contract.getNodeInfo(nodeAddress);
-                    nodes.push({
-                        address: nodeAddress,
-                        url: nodeInfo.nodeUrl,
-                        apiUrl: nodeInfo.apiUrl,
-                        ens: nodeInfo.nodeEns,
-                        services: nodeInfo.serviceList
-                    });
+                for (const address of recentAddresses) {
+                    const isRegistered = await contract.isRegistered(address);
+                    if (isRegistered) {
+                        const nodeInfo = await contract.getNodeInfo(address);
+                        nodes.push({
+                            address: address,
+                            ipOrDomain: nodeInfo[0],
+                            apiIndexes: nodeInfo[1],
+                            registeredAt: new Date(Number(nodeInfo[2]) * 1000).toLocaleString()
+                        });
+                    }
                 }
                 
-                // Display nodes
                 displayNodes(nodes);
             } catch (error) {
                 console.error('Failed to initialize contract:', error);
                 document.getElementById('status').textContent = 'Error: ' + error.message;
-                document.getElementById('nodeList').innerHTML = `<div class="error">Loading failed: ${error.message}</div>`;
+                document.getElementById('nodeList').innerHTML = 
+                    `<div class="error">Loading failed: ${error.message}</div>`;
             }
         }
+
+        window.checkNodeAddress = async () => {
+            try {
+                const nodeAddress = document.getElementById('nodeAddress').value;
+                if (!ethers.isAddress(nodeAddress)) {
+                    throw new Error('Invalid address format');
+                }
+
+                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                const contract = new ethers.Contract(
+                    config.NODE_REGISTRY_ADDRESS,
+                    (await (await fetch('/abi/NodeRegistry.json')).json()).abi,
+                    provider
+                );
+
+                const isRegistered = await contract.isRegistered(nodeAddress);
+                if (!isRegistered) {
+                    document.getElementById('nodeList').innerHTML = 
+                        `<div class="error">Address ${nodeAddress} is not registered</div>`;
+                    return;
+                }
+
+                const nodeInfo = await contract.getNodeInfo(nodeAddress);
+                displayNodes([{
+                    address: nodeAddress,
+                    ipOrDomain: nodeInfo[0],
+                    apiIndexes: nodeInfo[1],
+                    registeredAt: new Date(Number(nodeInfo[2]) * 1000).toLocaleString()
+                }]);
+            } catch (error) {
+                console.error('Query failed:', error);
+                document.getElementById('nodeList').innerHTML = 
+                    `<div class="error">Query failed: ${error.message}</div>`;
+            }
+        };
 
         function displayNodes(nodes) {
             const nodeList = document.getElementById('nodeList');
@@ -164,34 +94,61 @@
                 return;
             }
             
-            nodeList.innerHTML = nodes.map(node => `
+            const nodesHtml = nodes.map(node => `
                 <div class="node-item">
                     <div class="node-detail">
                         <span class="label">Address:</span>
                         <span class="value">${node.address}</span>
                     </div>
                     <div class="node-detail">
-                        <span class="label">Node URL:</span>
-                        <span class="value">${node.url}</span>
+                        <span class="label">IP/Domain:</span>
+                        <span class="value">${node.ipOrDomain}</span>
                     </div>
                     <div class="node-detail">
-                        <span class="label">API URL:</span>
-                        <span class="value">${node.apiUrl}</span>
+                        <span class="label">API Indexes:</span>
+                        <span class="value">${node.apiIndexes}</span>
                     </div>
                     <div class="node-detail">
-                        <span class="label">ENS:</span>
-                        <span class="value">${node.ens || 'N/A'}</span>
-                    </div>
-                    <div class="node-detail">
-                        <span class="label">Services:</span>
-                        <span class="value">${node.services.join(', ')}</span>
+                        <span class="label">Registered At:</span>
+                        <span class="value">${node.registeredAt}</span>
                     </div>
                 </div>
             `).join('');
+            
+            nodeList.innerHTML = nodesHtml;
         }
 
-        // Initialize on page load
         window.addEventListener('load', initContract);
     </script>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Node Registry Information</h1>
+            <a href="/node-register.html" class="back-link">Register New Node</a>
+            <a href="/" class="back-link">Back to Home</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="info-section">
+            <p>Contract Address: <span id="contractAddress">Loading...</span></p>
+            <p>Status: <span id="status">Connecting...</span></p>
+            <p>Minimum Stake Amount: <span id="minStakeAmount">Loading...</span></p>
+        </div>
+        
+        <div class="search-section">
+            <h2>Query Node Info</h2>
+            <div class="search-form">
+                <input type="text" id="nodeAddress" placeholder="Enter node address" />
+                <button onclick="checkNodeAddress()">Query</button>
+            </div>
+        </div>
+
+        <div class="node-list-section">
+            <h2>Registered Nodes</h2>
+            <div id="nodeList" class="node-list"></div>
+        </div>
+    </div>
 </body>
-</html> 
+</html>
