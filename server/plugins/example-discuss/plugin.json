@@ -1,0 +1,35 @@
+{
+  "name": "discuss",
+  "version": "1.0.0",
+  "description": "A decentralized discussion forum plugin",
+  "main": "dist/index.js",
+  "dependencies": {
+    "ipfs-http-client": "^56.0.0",
+    "@arcadia/core": "^1.0.0"
+  },
+  "api": {
+    "prefix": "/api/v1/discuss",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/topics",
+        "description": "List all topics"
+      },
+      {
+        "method": "POST",
+        "path": "/topics",
+        "description": "Create new topic"
+      },
+      {
+        "method": "GET",
+        "path": "/topics/:id",
+        "description": "Get topic details"
+      },
+      {
+        "method": "GET",
+        "path": "/topics/:id/comments",
+        "description": "List comments for a topic"
+      }
+    ]
+  }
+} 
