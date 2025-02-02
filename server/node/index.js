@@ -23,7 +23,7 @@ router.get('/get-challenge', (req, res) => {
             challengeLength: ethers.getBytes(challenge).length
         });
         
-        // 设置5分钟过期时间
+        // set expires time
         const expires = Math.floor(Date.now() / 1000) + 300;
         
         // 存储挑战字符串
