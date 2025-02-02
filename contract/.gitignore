@@ -15,5 +15,7 @@ optimism/lib/openzeppelin-contracts/*.*
 # Docs
 docs/
 
+optimism/.env.optimism-sepolia
+
 # Dotenv file
 .env
