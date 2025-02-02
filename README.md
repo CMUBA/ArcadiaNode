@@ -2,14 +2,22 @@
 
 A decentralized node management system for the Arcadia network.
 
+## Features
+
+Node Registration and Verification
+Service Registration and Discovery
+User Authentication Management
+Blockchain Interaction
+Extensible Service Architecture
+Health Check Mechanism
+
 ## Project Structure
 
 ```
 arcadia-node/
 ├── client/           # Frontend application
 ├── server/           # Backend server
-│   └── plugins/      # Server plugins
-│       └── serverx/  # Extended API services
+│   └── plugins/      # Extended API services
 ├── contract/         # Smart contracts
 ├── data/            # Data storage
 └── docs/            # Documentation

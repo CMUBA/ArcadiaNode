@@ -1,1 +1,2 @@
-node index.js
+# node index.js
+pnpm dev

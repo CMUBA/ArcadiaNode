@@ -208,6 +208,16 @@ Body:
   - timestamp: number
 ```
 
+##### 节点查看
+```
+GET /api/v1/node/get
+Headers:
+  - x-node-address
+```
+
+
+
+
 ### 2. 用户 API
 
 #### 2.1 用户认证
