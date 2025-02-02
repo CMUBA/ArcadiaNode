@@ -1,0 +1,95 @@
+{
+    "services": [
+        {
+            "index": 1,
+            "name": "Node Registration",
+            "url": "/api/v1/node/register",
+            "description": "Register a new node in the network",
+            "type": "basic"
+        },
+        {
+            "index": 2,
+            "name": "Node Status",
+            "url": "/api/v1/node/status",
+            "description": "Check node status and health",
+            "type": "basic"
+        },
+        {
+            "index": 3,
+            "name": "Service Registration",
+            "url": "/api/v1/service/register",
+            "description": "Register a new service",
+            "type": "basic"
+        },
+        {
+            "index": 4,
+            "name": "Service Discovery",
+            "url": "/api/v1/service/discover",
+            "description": "Discover available services",
+            "type": "basic"
+        },
+        {
+            "index": 5,
+            "name": "User Management",
+            "url": "/api/v1/user/manage",
+            "description": "User registration and authentication",
+            "type": "basic"
+        },
+        {
+            "index": 6,
+            "name": "Hero Data Management",
+            "url": "/api/v1/hero/manage",
+            "description": "Manage hero data and attributes",
+            "type": "extend"
+        },
+        {
+            "index": 7,
+            "name": "Contract Interaction",
+            "url": "/api/v1/contract/interact",
+            "description": "Interact with blockchain contracts",
+            "type": "extend"
+        },
+        {
+            "index": 8,
+            "name": "Data Synchronization",
+            "url": "/api/v1/data/sync",
+            "description": "Synchronize data across nodes",
+            "type": "extend"
+        },
+        {
+            "index": 9,
+            "name": "Event Monitoring",
+            "url": "/api/v1/event/monitor",
+            "description": "Monitor blockchain events",
+            "type": "extend"
+        },
+        {
+            "index": 10,
+            "name": "Performance Metrics",
+            "url": "/api/v1/metrics",
+            "description": "Node performance monitoring",
+            "type": "extend"
+        },
+        {
+            "index": 11,
+            "name": "Security Management",
+            "url": "/api/v1/security/manage",
+            "description": "Security settings and controls",
+            "type": "extend"
+        },
+        {
+            "index": 12,
+            "name": "API Documentation",
+            "url": "/api/v1/docs",
+            "description": "API documentation and examples",
+            "type": "basic"
+        },
+        {
+            "index": 13,
+            "name": "System Configuration",
+            "url": "/api/v1/system/config",
+            "description": "System configuration management",
+            "type": "extend"
+        }
+    ]
+} 

@@ -3,178 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>服务管理 - Arcadia Node</title>
+    <title>Service Management - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
+    <style>
+        .node-selector {
+            margin-bottom: 20px;
+        }
+        .node-selector select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-top: 5px;
+        }
+        .services-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .services-table th,
+        .services-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .services-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .service-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .service-type.basic {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        .service-type.extend {
+            background-color: #f3e5f5;
+            color: #7b1fa2;
+        }
+        .language-selector {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+        }
+        .language-selector select {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
 </head>
 <body>
     <div class="header">
         <div class="container">
-            <h1>服务管理</h1>
-            <a href="/" class="back-link">返回首页</a>
+            <div class="language-selector">
+                <select id="languageSelect" onchange="changeLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                    <option value="th">ไทย</option>
+                </select>
+            </div>
+            <h1 id="pageTitle">Service Management</h1>
+            <a href="/" class="back-link" id="backToHome">Back to Home</a>
         </div>
     </div>
 
     <div class="container">
-        <!-- 服务注册 -->
-        <div class="card">
-            <h2>服务注册</h2>
-            <div class="form-group">
-                <label for="serviceId">服务ID：</label>
-                <input type="text" id="serviceId" class="form-control" placeholder="输入服务ID">
-            </div>
-            <div class="form-group">
-                <label for="nodeId">节点ID：</label>
-                <input type="text" id="nodeId" class="form-control" placeholder="输入节点ID">
-            </div>
-            <div class="form-group">
-                <label for="serviceType">服务类型：</label>
-                <select id="serviceType" class="form-control">
-                    <option value="basic">基础服务</option>
-                    <option value="extend">扩展服务</option>
-                </select>
-            </div>
-            <button class="btn" onclick="registerService()">注册服务</button>
-            <div id="registerResult" class="result"></div>
+        <div class="node-selector">
+            <label for="nodeSelect" id="selectNodeLabel">Select Node</label>
+            <select id="nodeSelect" onchange="loadNodeServices()">
+                <option value="" id="loading">Loading...</option>
+            </select>
         </div>
 
-        <!-- 服务发现 -->
-        <div class="card">
-            <h2>服务发现</h2>
-            <div class="form-group">
-                <label for="discoveryType">服务类型：</label>
-                <select id="discoveryType" class="form-control">
-                    <option value="basic">基础服务</option>
-                    <option value="extend">扩展服务</option>
-                </select>
-            </div>
-            <button class="btn" onclick="discoverServices()">查找服务</button>
-            <div id="discoveryResult" class="result"></div>
-        </div>
-
-        <!-- 服务移除 -->
-        <div class="card">
-            <h2>服务移除</h2>
-            <div class="form-group">
-                <label for="removeServiceId">服务ID：</label>
-                <input type="text" id="removeServiceId" class="form-control" placeholder="输入要移除的服务ID">
-            </div>
-            <button class="btn" onclick="removeService()">移除服务</button>
-            <div id="removeResult" class="result"></div>
-        </div>
-
-        <!-- 服务列表 -->
-        <div class="card">
-            <h2>已注册服务</h2>
-            <table>
+        <div id="servicesContainer">
+            <table class="services-table">
                 <thead>
                     <tr>
-                        <th>服务ID</th>
-                        <th>节点ID</th>
-                        <th>类型</th>
-                        <th>状态</th>
-                        <th>操作</th>
+                        <th id="serviceIndexHeader">Service Index</th>
+                        <th id="serviceNameHeader">Service Name</th>
+                        <th id="serviceUrlHeader">Service URL</th>
+                        <th id="serviceDescHeader">Description</th>
+                        <th id="serviceTypeHeader">Type</th>
                     </tr>
                 </thead>
-                <tbody id="serviceTable">
+                <tbody id="servicesList">
+                    <tr>
+                        <td colspan="5" id="loadingServices">Loading...</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <script>
-        // 默认参数
-        const defaultParams = {
-            service_register: { serviceId: 'test-service-1', nodeId: 'test-node-1', type: 'basic' },
-            service_list: { type: 'basic' },
-            service_remove: { serviceId: 'test-service-1' }
+    <script type="module">
+        import { ethers } from 'ethers';
+        import config from '../config/index.js';
+        import enLang from '../config/i18n/en.js';
+        import zhLang from '../config/i18n/zh.js';
+        import thLang from '../config/i18n/th.js';
+
+        const translations = {
+            en: enLang,
+            zh: zhLang,
+            th: thLang
         };
 
-        // 注册服务
-        async function registerService() {
-            try {
-                const params = {
-                    serviceId: document.getElementById('serviceId').value,
-                    nodeId: document.getElementById('nodeId').value,
-                    type: document.getElementById('serviceType').value
-                };
+        let currentLang = localStorage.getItem('language') || 'en';
+        let serviceListData = null;
 
-                const response = await fetch('/api/v1/service/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(params)
-                });
-                const data = await response.json();
-                document.getElementById('registerResult').textContent = JSON.stringify(data, null, 2);
-                updateServiceTable();
+        async function initPage() {
+            try {
+                // 加载服务列表数据
+                const response = await fetch('/data/service_list.json');
+                serviceListData = await response.json();
+
+                // 初始化合约
+                const provider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+                const nodeRegistryAbi = (await (await fetch('/abi/NodeRegistry.json')).json()).abi;
+                const contract = new ethers.Contract(config.NODE_REGISTRY_ADDRESS, nodeRegistryAbi, provider);
+
+                // 获取注册节点数量
+                const nodeCount = await contract.getRegisteredNodesCount();
+                
+                // 获取所有节点信息
+                const nodes = [];
+                const pageSize = 10;
+                for (let start = 0; start < nodeCount; start += pageSize) {
+                    const [addresses, ipOrDomains, apiIndexes] = await contract.getNodesInfo(start, pageSize);
+                    for (let i = 0; i < addresses.length; i++) {
+                        nodes.push({
+                            address: addresses[i],
+                            ipOrDomain: ipOrDomains[i],
+                            apiIndexes: apiIndexes[i]
+                        });
+                    }
+                }
+
+                // 更新节点选择器
+                updateNodeSelector(nodes);
+                
+                // 更新页面文本
+                updateContent();
             } catch (error) {
-                document.getElementById('registerResult').textContent = 'Error: ' + error.message;
+                console.error('Failed to initialize page:', error);
             }
         }
 
-        // 服务发现
-        async function discoverServices() {
-            try {
-                const type = document.getElementById('discoveryType').value;
-                const response = await fetch('/api/v1/service/list', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ type })
-                });
-                const data = await response.json();
-                document.getElementById('discoveryResult').textContent = JSON.stringify(data, null, 2);
-                updateServiceTable(data.services);
-            } catch (error) {
-                document.getElementById('discoveryResult').textContent = 'Error: ' + error.message;
-            }
+        function updateNodeSelector(nodes) {
+            const nodeSelect = document.getElementById('nodeSelect');
+            nodeSelect.innerHTML = nodes.map(node => 
+                `<option value="${node.address}" data-ip="${node.ipOrDomain}" data-services="${node.apiIndexes}">
+                    ${node.address} (${node.ipOrDomain})
+                </option>`
+            ).join('');
         }
 
-        // 移除服务
-        async function removeService() {
-            try {
-                const serviceId = document.getElementById('removeServiceId').value;
-                const response = await fetch('/api/v1/service/remove', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ serviceId })
-                });
-                const data = await response.json();
-                document.getElementById('removeResult').textContent = JSON.stringify(data, null, 2);
-                updateServiceTable();
-            } catch (error) {
-                document.getElementById('removeResult').textContent = 'Error: ' + error.message;
-            }
-        }
+        window.loadNodeServices = function() {
+            const nodeSelect = document.getElementById('nodeSelect');
+            const selectedOption = nodeSelect.options[nodeSelect.selectedIndex];
+            if (!selectedOption.value) return;
 
-        // 更新服务列表
-        function updateServiceTable(services = []) {
-            const table = document.getElementById('serviceTable');
-            table.innerHTML = services.map(service => `
+            const ipOrDomain = selectedOption.dataset.ip;
+            let apiServices = [];
+            try {
+                apiServices = JSON.parse(selectedOption.dataset.services);
+            } catch (e) {
+                console.error('Failed to parse API services:', e);
+                return;
+            }
+
+            // 匹配服务列表并显示
+            const matchedServices = serviceListData.services.filter(service => 
+                apiServices.includes(service.index)
+            ).map(service => ({
+                ...service,
+                url: `http://${ipOrDomain}${service.url}`
+            }));
+
+            displayServices(matchedServices);
+        };
+
+        function displayServices(services) {
+            const t = translations[currentLang];
+            const tbody = document.getElementById('servicesList');
+            
+            if (services.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5">${t.noServices}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = services.map(service => `
                 <tr>
-                    <td>${service.serviceId}</td>
-                    <td>${service.nodeId}</td>
-                    <td><span class="badge badge-${service.type === 'basic' ? 'primary' : 'secondary'}">${service.type}</span></td>
-                    <td>${service.status || 'active'}</td>
+                    <td>${service.index}</td>
+                    <td>${service.name}</td>
+                    <td>${service.url}</td>
+                    <td>${service.description}</td>
                     <td>
-                        <button class="btn btn-secondary" onclick="removeService('${service.serviceId}')">移除</button>
+                        <span class="service-type ${service.type}">
+                            ${t[service.type]}
+                        </span>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // 页面加载时填充默认值
-        window.onload = function() {
-            document.getElementById('serviceId').value = defaultParams.service_register.serviceId;
-            document.getElementById('nodeId').value = defaultParams.service_register.nodeId;
-            document.getElementById('serviceType').value = defaultParams.service_register.type;
-            document.getElementById('removeServiceId').value = defaultParams.service_remove.serviceId;
-            discoverServices();
+        window.changeLanguage = function(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            updateContent();
         };
+
+        function updateContent() {
+            const t = translations[currentLang];
+            
+            // Update page title and headers
+            document.getElementById('pageTitle').textContent = t.serviceManageTitle;
+            document.getElementById('backToHome').textContent = t.backToHome;
+            document.getElementById('selectNodeLabel').textContent = t.selectNode;
+            document.getElementById('serviceIndexHeader').textContent = t.serviceIndex;
+            document.getElementById('serviceNameHeader').textContent = t.serviceName;
+            document.getElementById('serviceUrlHeader').textContent = t.serviceUrl;
+            document.getElementById('serviceDescHeader').textContent = t.serviceDescription;
+            document.getElementById('serviceTypeHeader').textContent = t.serviceType;
+            
+            // Update loading text
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.textContent = t.loading;
+            }
+            
+            // Update language selector
+            document.getElementById('languageSelect').value = currentLang;
+
+            // Refresh services display if any are shown
+            if (document.getElementById('nodeSelect').value) {
+                loadNodeServices();
+            }
+        }
+
+        // Initialize page
+        window.addEventListener('load', initPage);
     </script>
 </body>
 </html> 

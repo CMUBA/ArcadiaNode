@@ -16,5 +16,37 @@ export default {
         nodeRegistry: 'สัญญาลงทะเบียนโหนด'
     },
     language: 'ภาษา',
-    registeredNodes: 'โหนดที่ลงทะเบียนแล้ว'
+    registeredNodes: 'โหนดที่ลงทะเบียนแล้ว',
+    // Node Register Page
+    nodeRegisterTitle: 'การลงทะเบียนโหนด',
+    registerNewNode: 'ลงทะเบียนโหนดใหม่',
+    backToHome: 'กลับสู่หน้าหลัก',
+    nodeAddress: 'ที่อยู่โหนด',
+    ipOrDomain: 'IP/โดเมน',
+    apiServices: 'บริการ API',
+    register: 'ลงทะเบียน',
+    // Node Registry Info Page
+    nodeRegistryInfoTitle: 'ข้อมูลการลงทะเบียนโหนด',
+    queryNodeInfo: 'ค้นหาข้อมูลโหนด',
+    enterNodeAddress: 'ป้อนที่อยู่โหนด',
+    query: 'ค้นหา',
+    contractAddress: 'ที่อยู่สัญญา',
+    status: 'สถานะ',
+    minStakeAmount: 'จำนวนเงินวางเดิมพันขั้นต่ำ',
+    totalNodes: 'จำนวนโหนดทั้งหมด',
+    registrationTime: 'เวลาลงทะเบียน',
+    active: 'ใช้งาน',
+    // Service Management Page
+    serviceManageTitle: 'การจัดการบริการ',
+    selectNode: 'เลือกโหนด',
+    serviceIndex: 'ดัชนีบริการ',
+    serviceName: 'ชื่อบริการ',
+    serviceUrl: 'URL บริการ',
+    serviceDescription: 'คำอธิบาย',
+    serviceType: 'ประเภท',
+    loading: 'กำลังโหลด...',
+    noServices: 'ไม่มีบริการที่ใช้งานได้',
+    basic: 'พื้นฐาน',
+    extend: 'ขยาย',
+    availableServices: 'บริการที่มี'
 }; 

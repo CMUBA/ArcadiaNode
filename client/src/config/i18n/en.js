@@ -16,5 +16,36 @@ export default {
         nodeRegistry: 'Node Registry Contract'
     },
     language: 'Language',
-    registeredNodes: 'Registered Nodes'
+    registeredNodes: 'Registered Nodes',
+    // Node Register Page
+    nodeRegisterTitle: 'Node Registration',
+    registerNewNode: 'Register New Node',
+    backToHome: 'Back to Home',
+    nodeAddress: 'Node Address',
+    ipOrDomain: 'IP/Domain',
+    apiServices: 'API Services',
+    register: 'Register',
+    // Node Registry Info Page
+    nodeRegistryInfoTitle: 'Node Registry Information',
+    queryNodeInfo: 'Query Node Info',
+    enterNodeAddress: 'Enter node address',
+    query: 'Query',
+    contractAddress: 'Contract Address',
+    status: 'Status',
+    minStakeAmount: 'Minimum Stake Amount',
+    totalNodes: 'Total Nodes',
+    registrationTime: 'Registration Time',
+    active: 'Active',
+    // Service Management Page
+    serviceManageTitle: 'Service Management',
+    selectNode: 'Select Node',
+    serviceIndex: 'Service Index',
+    serviceName: 'Service Name',
+    serviceUrl: 'Service URL',
+    serviceDescription: 'Description',
+    serviceType: 'Type',
+    loading: 'Loading...',
+    noServices: 'No services available',
+    basic: 'Basic',
+    extend: 'Extended'
 }; 
