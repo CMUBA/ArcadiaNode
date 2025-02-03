@@ -131,8 +131,26 @@ app.use(cors({
 app.use(express.json());
 
 // 基础路由
-app.get('/', (req, res) => {
-    res.send('Arcadia Server Providing Basic Services.');
+app.get('/', async (req, res) => {
+    try {
+        const plugins = await pluginManager.getAllPlugins();
+        const serverInfo = {
+            name: 'Arcadia Node Server',
+            version: '1.0.0',
+            uptime: process.uptime(),
+            plugins: plugins.map(plugin => ({
+                name: plugin.name,
+                status: plugin.health.status,
+                details: plugin.health
+            }))
+        };
+        res.json(serverInfo);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to get server info',
+            details: error.message
+        });
+    }
 });
 
 // API 路由

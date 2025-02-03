@@ -1,0 +1,12 @@
+{
+  "loading": "Loading",
+  "discuss": {
+    "title": "Discussion Forum",
+    "createPost": "Create New Post",
+    "submit": "Submit Post",
+    "tagsPlaceholder": "Enter tags separated by commas",
+    "content": "Content",
+    "category": "Category",
+    "tags": "Tags"
+  }
+} 
