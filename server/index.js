@@ -1,258 +1,203 @@
-const { create } = require('ipfs-http-client');
 const express = require('express');
-const fs = require('node:fs/promises');
+const cors = require('cors');
+const nodeRouter = require('./node/index.js');
 const path = require('node:path');
+const fs = require('node:fs/promises');
+require('dotenv').config();
 
-class DiscussPlugin {
-  constructor(config) {
-    this.config = config;
-    this.router = express.Router();
-    this.dataDir = path.join(process.cwd(), 'data', 'discuss');
-    this.indexFile = path.join(this.dataDir, 'post-index.json');
-    
-    // 使用 QuickNode IPFS
-    const apiKey = process.env.IPFS_QUICKNODE_API_KEY;
-    if (!apiKey) {
-      throw new Error('IPFS_QUICKNODE_API_KEY is required');
+// 插件管理器
+class PluginManager {
+    constructor() {
+        this.plugins = new Map();
+        this.pluginsConfig = null;
     }
 
-    this.ipfsConfig = {
-      baseURL: config.ipfs.api,
-      headers: {
-        'x-api-key': apiKey
-      }
-    };
-
-    this.setupRoutes();
-  }
-
-  async uploadToIPFS(content) {
-    const response = await fetch(`${this.ipfsConfig.baseURL}/pinning/pinJson`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.ipfsConfig.headers
-      },
-      body: JSON.stringify(content)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to upload to IPFS: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    return result.cid;
-  }
-
-  async getFromIPFS(cid) {
-    const response = await fetch(`${this.config.ipfs.gateway}/ipfs/${cid}`, {
-      headers: this.ipfsConfig.headers
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get from IPFS: ${response.statusText}`);
-    }
-
-    return response.json();
-  }
-
-  async init() {
-    // 确保数据目录存在
-    await fs.mkdir(this.dataDir, { recursive: true });
-    
-    // 初始化索引文件
-    try {
-      await fs.access(this.indexFile);
-    } catch {
-      await fs.writeFile(this.indexFile, JSON.stringify({
-        categories: [],
-        posts: [],
-        lastUpdate: Date.now()
-      }));
-    }
-  }
-
-  setupRoutes() {
-    // 获取所有帖子
-    this.router.get('/posts', async (req, res) => {
-      try {
-        const { category, tag } = req.query;
-        const posts = await this.getAllPosts();
-        
-        let filteredPosts = posts;
-        if (category) {
-          filteredPosts = filteredPosts.filter(post => post.category === category);
+    async loadPluginsConfig() {
+        try {
+            const configPath = path.join(__dirname, 'plugins', 'plugin.json');
+            const configData = await fs.readFile(configPath, 'utf8');
+            this.pluginsConfig = JSON.parse(configData);
+        } catch (error) {
+            console.error('Error loading plugins config:', error);
+            this.pluginsConfig = { plugins: [] };
         }
-        if (tag) {
-          filteredPosts = filteredPosts.filter(post => post.tags.includes(tag));
+    }
+
+    async initializePlugins() {
+        if (!this.pluginsConfig) {
+            await this.loadPluginsConfig();
         }
-        
-        res.json(filteredPosts);
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
 
-    // 获取所有分类
-    this.router.get('/categories', async (req, res) => {
-      try {
-        const index = await this.getIndex();
-        res.json(index.categories);
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-
-    // 创建新帖子
-    this.router.post('/posts', async (req, res) => {
-      try {
-        const { title, content, author, category, tags = [] } = req.body;
-        const post = {
-          title,
-          content,
-          author,
-          category,
-          tags,
-          timestamp: Date.now(),
-          comments: []
-        };
-        
-        // 将帖子内容上传到 IPFS
-        const cid = await this.uploadToIPFS(post);
-        
-        // 更新帖子列表
-        await this.addPostToIndex(cid, post);
-        
-        res.json({ 
-          success: true, 
-          cid,
-          post 
-        });
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-
-    // 获取特定帖子
-    this.router.get('/posts/:id', async (req, res) => {
-      try {
-        const { id } = req.params;
-        const post = await this.getFromIPFS(id);
-        res.json(post);
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-
-    // 添加评论
-    this.router.post('/posts/:id/comments', async (req, res) => {
-      try {
-        const { id } = req.params;
-        const { content, author } = req.body;
-        const comment = {
-          content,
-          author,
-          timestamp: Date.now()
-        };
-
-        const post = await this.getFromIPFS(id);
-        post.comments.push(comment);
-        
-        // 更新帖子内容
-        const newCid = await this.uploadToIPFS(post);
-        
-        // 更新索引中的 CID
-        await this.updatePostCid(id, newCid);
-        
-        res.json({ success: true, comment, newCid });
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-  }
-
-  async getIndex() {
-    const data = await fs.readFile(this.indexFile, 'utf-8');
-    return JSON.parse(data);
-  }
-
-  async saveIndex(index) {
-    await fs.writeFile(this.indexFile, JSON.stringify(index, null, 2));
-  }
-
-  async getAllPosts() {
-    const index = await this.getIndex();
-    return index.posts;
-  }
-
-  async addPostToIndex(cid, postSummary) {
-    const index = await this.getIndex();
-    
-    // 添加新分类（如果不存在）
-    if (postSummary.category && !index.categories.includes(postSummary.category)) {
-      index.categories.push(postSummary.category);
+        for (const pluginConfig of this.pluginsConfig.plugins) {
+            if (pluginConfig.enabled) {
+                try {
+                    const pluginPath = path.join(__dirname, 'plugins', pluginConfig.path);
+                    const plugin = require(pluginPath);
+                    const instance = plugin.createPlugin(pluginConfig.config);
+                    await instance.start();
+                    this.plugins.set(pluginConfig.name, instance);
+                    console.log(`Plugin ${pluginConfig.name} initialized successfully`);
+                } catch (error) {
+                    console.error(`Error initializing plugin ${pluginConfig.name}:`, error);
+                }
+            }
+        }
     }
-    
-    // 添加帖子摘要
-    index.posts.push({
-      cid,
-      title: postSummary.title,
-      author: postSummary.author,
-      category: postSummary.category,
-      tags: postSummary.tags,
-      timestamp: postSummary.timestamp
-    });
-    
-    index.lastUpdate = Date.now();
-    await this.saveIndex(index);
-  }
 
-  async updatePostCid(oldCid, newCid) {
-    const index = await this.getIndex();
-    const postIndex = index.posts.findIndex(p => p.cid === oldCid);
-    if (postIndex !== -1) {
-      index.posts[postIndex].cid = newCid;
-      await this.saveIndex(index);
+    getPlugin(name) {
+        return this.plugins.get(name);
     }
-  }
 
-  // 插件生命周期方法
-  async start() {
-    await this.init();
-    console.log('Discussion plugin started');
-  }
-
-  async stop() {
-    console.log('Discussion plugin stopped');
-  }
-
-  async healthCheck() {
-    try {
-      // 测试 IPFS 连接
-      const testContent = { test: 'health check' };
-      const cid = await this.uploadToIPFS(testContent);
-      const retrieved = await this.getFromIPFS(cid);
-      
-      const index = await this.getIndex();
-      return { 
-        status: 'healthy',
-        posts: index.posts.length,
-        categories: index.categories.length,
-        lastUpdate: index.lastUpdate,
-        ipfs: 'connected'
-      };
-    } catch (error) {
-      return { 
-        status: 'unhealthy', 
-        error: error.message,
-        ipfs: 'disconnected'
-      };
+    async getAllPlugins() {
+        const result = [];
+        for (const [name, plugin] of this.plugins) {
+            const health = await plugin.healthCheck();
+            result.push({ name, health });
+        }
+        return result;
     }
-  }
 }
 
-module.exports = {
-  createPlugin: function(config) {
-    return new DiscussPlugin(config);
-  }
-}; 
+// 创建插件管理器实例
+const pluginManager = new PluginManager();
+
+// 执行自检
+function checkServices() {
+    console.log('\n🔍 Arcadia Node Service Self-Check');
+    console.log('=====================================');
+    
+    // 检查环境变量
+    console.log('\n📌 Environment Variables:');
+    const envVars = {
+        'SERVER_PORT': process.env.SERVER_PORT || '3017 (default)',
+        'CLIENT_PORT': process.env.CLIENT_PORT || '3008 (default)',
+        'NODE_REGISTRY_ADDRESS': process.env.NODE_REGISTRY_ADDRESS || 'Not set',
+        'OPTIMISM_TESTNET_RPC_URL': process.env.OPTIMISM_TESTNET_RPC_URL ? 'Set' : 'Not set',
+        'NODE_PRIVATE_KEY': process.env.NODE_PRIVATE_KEY ? 'Set' : 'Not set'
+    };
+    
+    for (const [key, value] of Object.entries(envVars)) {
+        console.log(`  ${value === 'Not set' ? '❌' : '✅'} ${key}: ${value}`);
+    }
+
+    // 检查API端点
+    console.log('\n📌 Available API Endpoints:');
+    const endpoints = [
+        { method: 'GET', path: '/', desc: 'Service health check' },
+        { method: 'GET', path: '/api/v1/node/get-challenge', desc: 'Get challenge for node registration' },
+        { method: 'POST', path: '/api/v1/node/register', desc: 'Register new node' },
+        { method: 'GET', path: '/api/v1/plugins', desc: 'List all plugins' },
+        { method: 'POST', path: '/api/v1/plugins/:name/start', desc: 'Start a plugin' },
+        { method: 'POST', path: '/api/v1/plugins/:name/stop', desc: 'Stop a plugin' },
+        { method: 'GET', path: '/api/v1/plugins/:name/health', desc: 'Check plugin health' }
+    ];
+    
+    for (const ep of endpoints) {
+        console.log(`  ${ep.method.padEnd(6)} ${ep.path.padEnd(40)} ${ep.desc}`);
+    }
+
+    // 检查CORS配置
+    console.log('\n📌 CORS Configuration:');
+    const corsOrigins = [
+        `http://localhost:${process.env.CLIENT_PORT || 3008}`,
+        `http://localhost:${process.env.SERVER_PORT || 3017}`
+    ];
+    for (const origin of corsOrigins) {
+        console.log(`  ✅ Allowed Origin: ${origin}`);
+    }
+
+    console.log('\n📌 Service Status:');
+    console.log(`  ✅ Server running on http://localhost:${process.env.SERVER_PORT || 3017}`);
+    console.log(`  ✅ Client expected on http://localhost:${process.env.CLIENT_PORT || 3008}`);
+    
+    console.log('\n=====================================\n');
+}
+
+// 执行自检
+checkServices();
+
+const app = express();
+const PORT = process.env.SERVER_PORT || 3017;
+const CLIENT_PORT = process.env.CLIENT_PORT || 3008;
+
+// 中间件
+app.use(cors({
+    origin: [
+        `http://localhost:${CLIENT_PORT}`,
+        `http://localhost:${PORT}`
+    ],
+    credentials: true
+}));
+app.use(express.json());
+
+// 基础路由
+app.get('/', (req, res) => {
+    res.send('Arcadia Server Providing Basic Services.');
+});
+
+// API 路由
+app.use('/api/v1/node', nodeRouter);
+
+// 插件路由
+app.get('/api/v1/plugins', async (req, res, next) => {
+    try {
+        const plugins = await pluginManager.getAllPlugins();
+        res.json(plugins);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// 插件特定路由
+app.use('/api/v1/discuss', (req, res, next) => {
+    const discussPlugin = pluginManager.getPlugin('discuss');
+    if (!discussPlugin) {
+        return res.status(404).json({ error: 'Discuss plugin not found' });
+    }
+    discussPlugin.router(req, res, next);
+});
+
+// 错误处理中间件
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({
+        code: 1001,
+        message: 'Internal Server Error',
+        details: err.message
+    });
+});
+
+// 404 处理
+app.use((req, res) => {
+    res.status(404).json({
+        code: 1404,
+        message: 'Not Found',
+        details: `Cannot ${req.method} ${req.url}`
+    });
+});
+
+// 启动服务器
+async function startServer() {
+    try {
+        // 初始化插件
+        await pluginManager.initializePlugins();
+        
+        // 启动服务器
+        app.listen(PORT, () => {
+            console.log('\n🚀 Server is now running and ready for requests!');
+            console.log('Available routes:');
+            console.log('- GET  /');
+            console.log('- GET  /api/v1/node/get-challenge');
+            console.log('- POST /api/v1/node/register');
+            console.log('- GET  /api/v1/plugins');
+            console.log('- GET  /api/v1/discuss/posts');
+            console.log('- POST /api/v1/discuss/posts');
+        });
+    } catch (error) {
+        console.error('Error starting server:', error);
+        process.exit(1);
+    }
+}
+
+// 启动服务器
+startServer(); 

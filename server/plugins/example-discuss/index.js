@@ -1,4 +1,3 @@
-const { create } = require('ipfs-http-client/dist/src/index.js');
 const express = require('express');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -19,7 +18,8 @@ class DiscussPlugin {
     this.ipfsConfig = {
       baseURL: config.ipfs.api,
       headers: {
-        'x-api-key': apiKey
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json'
       }
     };
 
@@ -252,7 +252,5 @@ class DiscussPlugin {
 }
 
 module.exports = {
-  createPlugin: function(config) {
-    return new DiscussPlugin(config);
-  }
+  createPlugin: config => new DiscussPlugin(config)
 }; 
