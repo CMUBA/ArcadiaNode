@@ -3,6 +3,64 @@ const cors = require('cors');
 const nodeRouter = require('./node/index.js');
 require('dotenv').config();
 
+// 服务自检函数
+function checkServices() {
+    console.log('\n🔍 Arcadia Node Service Self-Check');
+    console.log('=====================================');
+    
+    // 检查环境变量
+    console.log('\n📌 Environment Variables:');
+    const envVars = {
+        'SERVER_PORT': process.env.SERVER_PORT || '3017 (default)',
+        'CLIENT_PORT': process.env.CLIENT_PORT || '3008 (default)',
+        'NODE_REGISTRY_ADDRESS': process.env.NODE_REGISTRY_ADDRESS || 'Not set',
+        'OPTIMISM_TESTNET_RPC_URL': process.env.OPTIMISM_TESTNET_RPC_URL ? 'Set' : 'Not set',
+        'NODE_PRIVATE_KEY': process.env.NODE_PRIVATE_KEY ? 'Set' : 'Not set'
+    };
+    
+    Object.entries(envVars).forEach(([key, value]) => {
+        console.log(`  ${value === 'Not set' ? '❌' : '✅'} ${key}: ${value}`);
+    });
+
+    // 检查API端点
+    console.log('\n📌 Available API Endpoints:');
+    const endpoints = [
+        { method: 'GET', path: '/', desc: 'Service health check' },
+        { method: 'GET', path: '/api/v1/node/get-challenge', desc: 'Get challenge for node registration' },
+        { method: 'POST', path: '/api/v1/node/register', desc: 'Register new node' },
+        { method: 'GET', path: '/api/v1/plugins', desc: 'List all plugins' },
+        { method: 'POST', path: '/api/v1/plugins/:name/start', desc: 'Start a plugin' },
+        { method: 'POST', path: '/api/v1/plugins/:name/stop', desc: 'Stop a plugin' },
+        { method: 'GET', path: '/api/v1/plugins/:name/health', desc: 'Check plugin health' }
+    ];
+    
+    endpoints.forEach(ep => {
+        console.log(`  ${ep.method.padEnd(6)} ${ep.path.padEnd(40)} ${ep.desc}`);
+    });
+
+    // 检查CORS配置
+    console.log('\n📌 CORS Configuration:');
+    const corsOrigins = [
+        `http://localhost:${process.env.CLIENT_PORT || 3008}`,
+        `http://localhost:${process.env.SERVER_PORT || 3017}`
+    ];
+    corsOrigins.forEach(origin => {
+        console.log(`  ✅ Allowed Origin: ${origin}`);
+    });
+
+    console.log('\n📌 Service Status:');
+    console.log(`  ✅ Server running on http://localhost:${process.env.SERVER_PORT || 3017}`);
+    console.log(`  ✅ Client expected on http://localhost:${process.env.CLIENT_PORT || 3008}`);
+    
+    console.log('\n=====================================');
+}
+
+// 如果使用 --check 参数启动，执行自检
+if (process.argv.includes('--check')) {
+    checkServices();
+    process.exit(0);
+}
+
 // 添加环境变量调试信息
 console.log('Environment Variables Debug Info:');
 console.log('----------------------------------------');

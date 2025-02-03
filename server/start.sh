@@ -1,2 +1,2 @@
 # node index.js
-pnpm dev
+pnpm dev --check
