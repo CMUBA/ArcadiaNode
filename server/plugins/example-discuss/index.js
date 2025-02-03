@@ -1,4 +1,4 @@
-const { create } = require('ipfs-http-client');
+const { create } = require('ipfs-http-client/dist/src/index.js');
 const express = require('express');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -117,7 +117,7 @@ class DiscussPlugin {
           comments: []
         };
         
-        // 将帖子内容上传到 IPFS
+        // 将帖子内容上传到IPFS
         const cid = await this.uploadToIPFS(post);
         
         // 更新帖子列表
@@ -161,7 +161,7 @@ class DiscussPlugin {
         // 更新帖子内容
         const newCid = await this.uploadToIPFS(post);
         
-        // 更新索引中的 CID
+        // 更新索引中的CID
         await this.updatePostCid(id, newCid);
         
         res.json({ success: true, comment, newCid });

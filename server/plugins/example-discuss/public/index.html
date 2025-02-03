@@ -1,7 +1,7 @@
-const { create } = require('ipfs-http-client');
-const express = require('express');
-const fs = require('node:fs/promises');
-const path = require('node:path');
+import { create } from 'ipfs-http-client';
+import express from 'express';
+import fs from 'fs/promises';
+import path from 'path';
 
 class DiscussPlugin {
   constructor(config) {
@@ -10,50 +10,18 @@ class DiscussPlugin {
     this.dataDir = path.join(process.cwd(), 'data', 'discuss');
     this.indexFile = path.join(this.dataDir, 'post-index.json');
     
-    // 使用 QuickNode IPFS
-    const apiKey = process.env.IPFS_QUICKNODE_API_KEY;
-    if (!apiKey) {
-      throw new Error('IPFS_QUICKNODE_API_KEY is required');
-    }
-
-    this.ipfsConfig = {
-      baseURL: config.ipfs.api,
+    // 使用 Infura IPFS
+    const auth = 'Basic ' + Buffer.from(config.ipfs.project_id + ':' + config.ipfs.project_secret).toString('base64');
+    this.ipfs = create({
+      host: 'ipfs.infura.io',
+      port: 5001,
+      protocol: 'https',
       headers: {
-        'x-api-key': apiKey
+        authorization: auth
       }
-    };
+    });
 
     this.setupRoutes();
-  }
-
-  async uploadToIPFS(content) {
-    const response = await fetch(`${this.ipfsConfig.baseURL}/pinning/pinJson`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.ipfsConfig.headers
-      },
-      body: JSON.stringify(content)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to upload to IPFS: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    return result.cid;
-  }
-
-  async getFromIPFS(cid) {
-    const response = await fetch(`${this.config.ipfs.gateway}/ipfs/${cid}`, {
-      headers: this.ipfsConfig.headers
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get from IPFS: ${response.statusText}`);
-    }
-
-    return response.json();
   }
 
   async init() {
@@ -118,7 +86,8 @@ class DiscussPlugin {
         };
         
         // 将帖子内容上传到 IPFS
-        const cid = await this.uploadToIPFS(post);
+        const result = await this.ipfs.add(JSON.stringify(post));
+        const cid = result.path;
         
         // 更新帖子列表
         await this.addPostToIndex(cid, post);
@@ -137,7 +106,7 @@ class DiscussPlugin {
     this.router.get('/posts/:id', async (req, res) => {
       try {
         const { id } = req.params;
-        const post = await this.getFromIPFS(id);
+        const post = await this.getPost(id);
         res.json(post);
       } catch (error) {
         res.status(500).json({ error: error.message });
@@ -155,16 +124,8 @@ class DiscussPlugin {
           timestamp: Date.now()
         };
 
-        const post = await this.getFromIPFS(id);
-        post.comments.push(comment);
-        
-        // 更新帖子内容
-        const newCid = await this.uploadToIPFS(post);
-        
-        // 更新索引中的 CID
-        await this.updatePostCid(id, newCid);
-        
-        res.json({ success: true, comment, newCid });
+        await this.addComment(id, comment);
+        res.json({ success: true, comment });
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
@@ -183,6 +144,11 @@ class DiscussPlugin {
   async getAllPosts() {
     const index = await this.getIndex();
     return index.posts;
+  }
+
+  async getPost(cid) {
+    const data = await this.ipfs.cat(cid);
+    return JSON.parse(data.toString());
   }
 
   async addPostToIndex(cid, postSummary) {
@@ -207,13 +173,13 @@ class DiscussPlugin {
     await this.saveIndex(index);
   }
 
-  async updatePostCid(oldCid, newCid) {
-    const index = await this.getIndex();
-    const postIndex = index.posts.findIndex(p => p.cid === oldCid);
-    if (postIndex !== -1) {
-      index.posts[postIndex].cid = newCid;
-      await this.saveIndex(index);
-    }
+  async addComment(postCid, comment) {
+    const post = await this.getPost(postCid);
+    post.comments.push(comment);
+    
+    // 更新帖子内容
+    const result = await this.ipfs.add(JSON.stringify(post));
+    // TODO: 更新帖子引用
   }
 
   // 插件生命周期方法
@@ -228,31 +194,20 @@ class DiscussPlugin {
 
   async healthCheck() {
     try {
-      // 测试 IPFS 连接
-      const testContent = { test: 'health check' };
-      const cid = await this.uploadToIPFS(testContent);
-      const retrieved = await this.getFromIPFS(cid);
-      
+      await this.ipfs.version();
       const index = await this.getIndex();
       return { 
         status: 'healthy',
         posts: index.posts.length,
         categories: index.categories.length,
-        lastUpdate: index.lastUpdate,
-        ipfs: 'connected'
+        lastUpdate: index.lastUpdate
       };
     } catch (error) {
-      return { 
-        status: 'unhealthy', 
-        error: error.message,
-        ipfs: 'disconnected'
-      };
+      return { status: 'unhealthy', error: error.message };
     }
   }
 }
 
-module.exports = {
-  createPlugin: function(config) {
-    return new DiscussPlugin(config);
-  }
-}; 
+export function createPlugin(config) {
+  return new DiscussPlugin(config);
+} 

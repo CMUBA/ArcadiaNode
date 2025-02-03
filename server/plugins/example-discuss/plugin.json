@@ -1,35 +1,37 @@
 {
   "name": "discuss",
   "version": "1.0.0",
-  "description": "A decentralized discussion forum plugin",
-  "main": "dist/index.js",
-  "dependencies": {
-    "ipfs-http-client": "^56.0.0",
-    "@arcadia/core": "^1.0.0"
-  },
+  "description": "Decentralized discussion forum plugin",
+  "author": "Arcadia",
+  "license": "MIT",
+  "enabled": true,
   "api": {
     "prefix": "/api/v1/discuss",
     "endpoints": [
       {
         "method": "GET",
-        "path": "/topics",
-        "description": "List all topics"
+        "path": "/posts",
+        "description": "Get all posts"
       },
       {
         "method": "POST",
-        "path": "/topics",
-        "description": "Create new topic"
+        "path": "/posts",
+        "description": "Create a new post"
       },
       {
         "method": "GET",
-        "path": "/topics/:id",
-        "description": "Get topic details"
+        "path": "/posts/:id",
+        "description": "Get post by ID"
       },
       {
-        "method": "GET",
-        "path": "/topics/:id/comments",
-        "description": "List comments for a topic"
+        "method": "POST",
+        "path": "/posts/:id/comments",
+        "description": "Add comment to a post"
       }
     ]
+  },
+  "ipfs": {
+    "gateway": "https://ipfs.io",
+    "api": "http://localhost:5001"
   }
 } 
