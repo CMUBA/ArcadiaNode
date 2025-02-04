@@ -1,0 +1,33 @@
+/* 导航链接样式 */
+.nav-links {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+}
+
+.nav-links a {
+    color: #2c3e50;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.nav-links a:hover {
+    background-color: #f0f2f5;
+}
+
+/* 通用头部样式 */
+.header {
+    background-color: #fff;
+    padding: 14px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+} 

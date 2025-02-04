@@ -600,3 +600,377 @@ class PluginManager {
    - 提供 TypeScript 最佳实践
    - 编写插件开发教程
 
+----------
+
+## Chain service
+
+### 链服务的背景
+
+1. 不同业务，针对不同链，有不同合约依赖和服务
+2. 核心是通过 API 方式给上层应用提供基础服务
+3. 本次先支持 Etherum OP，Aptos 后续支持更多链
+4. 本次服务目标是 Game 业务的链数据服务
+5. 未来提供资产发行，资产流通 Swap，资产 stake 等管理服务
+
+### Game 业务链服务基础诉求
+
+1. Create hero：在脸上英雄合约创建新记录
+2. Load hero：从链上合约读取英雄数据
+3. Save hero：将英雄数据保存到链上合约
+4. more
+
+### Hero data structure
+游戏是众包运行，虽然协议会有开发自己游戏，因此合约是由社区开发和维护的，不是无主合约。
+合约发布者唯一可以操作的是新增 NFT 合约地址，则此合约地址下的 NFT 都可以注册英雄记录。
+此外，合约发布者不能删除、修改合约的任何数据。
+因此，新增英雄需要提供你购买的 NFT 合约地址和 NFTID（默认是 Ethereum EIP721）
+
+依赖链上数据表合约：
+1.依赖技能组合表，此表格默认是{Spring, Summer, Autumn, Winter}四种天赋，每个对应的五种技能的数据特征 //https://whimsical.com/attribute-7Wjz8qDJJzjQbcffNdpUSm
+2.依赖种族表，此表格默认是{Human, Elf, Dwarf, Orc, Undead}五种种族
+3.依赖职业表，此表格默认是{Warrior, Mage, Archer, Rogue, Priest}五种职业
+4.依赖属性表，此表格默认是{Agility, Attack, Health, Defense}四种属性
+5.依赖装备表，此表格默认是{Weapon, Armor, Accessory}三种装备，可以对应不同合约地址
+6.依赖物品表，此表格默认是{Item}一种物品，可以对应不同合约地址
+7.每日能量和积分限制：默认每日能量是 100，积分获得上限是 1000，而进入一个副本，消耗不同能量
+
+所有客户端会下载和缓存此数据结构，用来显示和计算英雄数据。
+
+#### 使用示例
+
+JSON 结构
+```
+{
+    "name": "Hero Name",
+    "race": "Human", // default is Human
+    "gender": "Male", // default is Male
+    "level": 1, // default is 1
+    "energy": 100, // default is 100 //进入一次游戏，会扣除一次能量，每次扣除30-100不等，不足则无法进入副本
+    "skills": ["Spring":{1,0,0,0,0}, "Summer":{0,1,0,0,0}, "Autumn":{0,0,1,0,0}, "Winter":{0,0,0,1,0}], // 英雄加点的表格或者技能数,例如春天有五个技能，加点在不同技能，有不同级别，每个级别有不同效果（不同的计算数据，存储在依赖表）
+    "equipment": ["Weapon 1", "Armor 1", "Accessory 1"], // default is [] //装备的表格，可以对应不同合约地址+NFTid,初期先不管
+}
+```
+
+## 合约设计
+
+### 元数据表：
+1. 依赖技能组合表，此表格默认是{Spring, Summer, Autumn, Winter}四种天赋，每个对应的五种技能的数据特征 //https://whimsical.com/attribute-7Wjz8qDJJzjQbcffNdpUSm
+表格和升级使用的积分参考：https://docs.google.com/spreadsheets/d/1MkFvPSKSyondS1gYzdeXYThyXUmEgJhBSjiTPWERlkk/edit?usp=sharing
+2. 依赖种族表，此表格默认是{Human, Elf, Dwarf, Orc, Undead}五种种族
+3. 依赖职业表，此表格默认是{Warrior, Mage, Archer, Rogue, Priest}五种职业
+4. 依赖属性表，此表格默认是{Agility, Attack, Health, Defense}四种属性
+5. 依赖装备表，此表格默认是{Weapon, Armor, Accessory}三种装备，可以对应不同合约地址
+6. 依赖物品表，此表格默认是{Item}一种物品，可以对应不同合约地址
+7. 每日能量和积分限制：默认每日能量是 100，积分获得上限是 1000，而进入一个副本，消耗不同能量
+
+Hero 合约：
+支持如下功能：
+依赖传入的 NFT 合约地址和 NFTID，来创建英雄记录
+数据包括基础的以太坊交易需要的地址，交易签名等
+
+0. 创建依赖数据
+   读取链上的依赖合约，缓存到本地，用来做各种业务校验和显示（链上依然会验证一次，但联系对比，失败则快速失败）
+   例如技能是{1,0,0,0,0}，则表示春天第一个技能一级，其他技能都是 0 级
+   目前包括：
+   - 技能组合表 //必须
+   - 种族表 //必须
+   - 职业表 //必须
+   - 属性表 //
+   - 装备表 //
+   - 物品表 //
+   - 每日能量和积分限制 //必须
+   - 支持 NFT 合约地址列表 //必须
+
+### 创建英雄
+   hero 数据
+  ```
+  {
+    "hero":{
+      "name": "Hero Name", //用户输入
+      "race": 1, //用户界面选择
+      "gender": 1, //用户界面选择
+      "level": 1, //新用户强制 1 级，不可修改
+      "energy": 100, //用户界面显示，不可修改
+      "skills": [{1,0,0,0,0}, {0,1,0,0,0}, {0,0,1,0,0}, {0,0,0,1,0}], //这个要随机生成一个天赋么？ 
+      "equipment": []
+    },
+    "hash": "hash" //本地使用私钥对 hero 数据 hash 后进行签名,初始化是空
+  }
+  ```
+
+### 读取英雄
+   根据登录账户绑定的 wallet address 读取英雄数据，默认根据网络选择来选择网络（不同网络选择，有不同 wallet address）
+   1.读取英雄 wallet address 名下的 NFT，和本地缓存的允许注册的 NFT 合约地址对比，如果匹配，则读取 NFT 合约地址+NFTID 对应的英雄数据
+   2.如果本地缓存的允许注册的 NFT 合约地址没有匹配，则提示需要购买 NFT；
+   3.本地会根据缓存的支持的 NFT 合约 (collection) 数据，来读取合约（collection 地址）的介绍，显示给用户
+   4.NFT 合约地址+NFTID 是读取以太坊合约的入口参数，读取 Aptos 合约的入口参数是单独的 NFT 地址（也可能需要 collection 地址）
+   5.显示 Hero 数据，多语言显示，包括：
+   - 英雄名称
+   - 英雄种族
+   - 英雄性别
+   - 英雄等级
+   - 英雄能量
+   - 英雄技能
+   - 英雄装备
+
+
+### 保存英雄
+
+   1. 保存机制目前是自动机制，但需要指纹授权，一次有效期 3 小时，只针对英雄合约数据（测试阶段使用手动保存）TODO
+   2. 手动保存，随时可以点击游戏内的保存，来调用后台 api 进行保存
+   3. 保存是两步进行：先获取 challenge，client 端进行签名再和 hero 数据一起发回 server
+   4. server 验证 challenge，然后验证 hero 数据，然后进行保存
+   5. 包括：
+   - 英雄名称，可以修改（单独通过某个页面修改，然后缓存）
+   - 英雄等级（可以通过积分升级）
+   - 英雄技能（可以通过积分升级）
+   - 英雄装备（新装备购买或者材料合成）
+   - 数据结构参考上面的结构，另外提供一个 hash，是链上 hero 数据进行 hash 的结果
+   - 是中心化 server 对数据校验的基础，此 hash+server 端 challenge，然后再 hash，在保存时提供
+ - 所以保存 hero 需要携带 node 的签名
+
+### 保存的安全校验
+
+1.初始化
+hero 合约部署初始化默认新增一个 NFT 合约，接受此 NFT 合约的注册，则部署合约时要提供这个地址作为必须参数
+2.异常检测
+增加频率限制和异常检测机制，在 server 端，针对每个用户地址，增加频率限制，如果超过则不允许保存
+server 端对数据进行合理性校验：例如每日只能玩三次，玩一次记录一次，超过则不允许保存
+每局游戏积分有上限，超过则不允许保存，等等
+3.双签名
+针对链游的保存，设计了一个安全保存机制，目的是防止外挂，防止黑客作弊
+
+   1. 如果黑客绕过服务器，直接（盗取）私钥操作，则合约端同样进行限制
+   2. 限制方法是联合签名：
+      1. 每次保存，服务器先给 client 返回一个 challenge+ 时间戳（防止重放），client 进行私钥签名
+      2. 然后服务器进行私钥签名
+      3. 然后合约进行两次解密验证，从而保障只有授权的服务器签名的交易，才允许保存
+   3. 所有服务器都在 node registry 进行注册，然后提供外部合约查询接口：根据服务器公钥查询是否注册过
+
+### Node 私钥泄露 TODO
+a. 技术层面
+
+使用硬件安全模块 (HSM) 存储私钥
+分布式密钥管理
+定期轮换私钥
+多重签名机制
+b. 管理层面
+
+严格访问控制
+员工权限最小化
+实施安全审计
+入侵检测系统
+日志监控
+c. 应急响应
+
+快速吊销被泄露私钥
+备用私钥快速切换
+合约层支持私钥注销和更新
+综合以上措施，可将私钥泄露风险降到最低。
+
+
+
+## 区块链专家建议与后续开发步骤
+
+### 合约架构优化建议
+
+1. **数据分层存储**
+   - 将元数据表拆分为独立合约
+   - 使用代理模式实现可升级性
+   - 实现数据压缩以降低链上存储成本
+   ```solidity
+   contract HeroMetadata {
+       // 使用紧凑编码存储技能数据
+       mapping(uint256 => uint8[20]) public skillData; // 4 个天赋 x5 个技能
+       // 使用位图存储种族和职业
+       mapping(uint256 => uint8) public raceAndClass; 
+   }
+   ```
+
+2. **访问控制优化**
+   - 实现细粒度的权限控制
+   - 添加紧急暂停机制
+   - 设计多签机制用于关键操作
+   ```solidity
+   contract HeroAccessControl {
+       bytes32 public constant GAME_MANAGER = keccak256("GAME_MANAGER");
+       bytes32 public constant DATA_CURATOR = keccak256("DATA_CURATOR");
+       
+       function updateHeroData(uint256 heroId) external onlyRole(GAME_MANAGER) {
+           // 更新逻辑
+       }
+   }
+   ```
+
+3. **跨链互操作性**
+   - 实现跨链消息传递接口
+   - 设计统一的资产标识符
+   - 支持多链数据同步
+   ```solidity
+   interface ICrossChainHero {
+       function verifyHeroData(
+           bytes32 sourceChain,
+           uint256 heroId,
+           bytes calldata proof
+       ) external returns (bool);
+   }
+   ```
+
+### 后续开发步骤
+
+1. **Phase 1: 基础设施搭建**
+   - 部署元数据合约集
+   - 实现基础的 CRUD 操作
+   - 开发测试套件
+   ```bash
+   # 开发步骤
+   1. 编写合约
+   2. 本地测试
+   3. 测试网部署
+   4. 审计
+   5. 主网部署
+   ```
+
+2. **Phase 2: 安全与优化**
+   - 实现数据验证层
+   - 添加事件监听和索引
+   - 优化 gas 消耗
+   ```solidity
+   contract HeroValidator {
+       event HeroValidated(uint256 indexed heroId, bool success);
+       
+       function validateHeroData(HeroData memory data) public returns (bool) {
+           // 验证逻辑
+           emit HeroValidated(data.heroId, true);
+           return true;
+       }
+   }
+   ```
+
+3. **Phase 3: 跨链功能**
+   - 实现 Aptos 合约
+   - 开发跨链桥接器
+   - 测试跨链交互
+   ```move
+   module HeroData {
+       struct Hero {
+           id: u64,
+           owner: address,
+           data: vector<u8>,
+       }
+       
+       public fun create_hero(owner: address, data: vector<u8>) {
+           // 创建逻辑
+       }
+   }
+   ```
+
+### 技术风险与缓解策略
+
+1. **数据一致性**
+   - 实现乐观更新机制
+   - 添加状态回滚功能
+   - 设计冲突解决策略
+   ```solidity
+   contract HeroStateManager {
+       mapping(uint256 => uint256) public stateNonce;
+       mapping(uint256 => HeroState[]) public stateHistory;
+       
+       function rollbackToNonce(uint256 heroId, uint256 nonce) external {
+           require(hasAuthority(msg.sender));
+           // 回滚逻辑
+       }
+   }
+   ```
+
+2. **性能优化**
+   - 批量处理机制
+   - 链下数据存储
+   - 状态通道集成
+   ```solidity
+   contract HeroBatchProcessor {
+       function batchUpdateHeroes(uint256[] calldata heroIds, bytes[] calldata updates)
+           external returns (bool[] memory results) {
+           // 批量更新逻辑
+       }
+   }
+   ```
+
+3. **安全考虑**
+   - 实现重入锁
+   - 添加速率限制
+   - 设计多重签名机制
+   ```solidity
+   contract HeroSecurity {
+       mapping(address => uint256) public lastUpdateTime;
+       uint256 public constant UPDATE_COOLDOWN = 1 hours;
+       
+       modifier rateLimited() {
+           require(block.timestamp >= lastUpdateTime[msg.sender] + UPDATE_COOLDOWN);
+           _;
+           lastUpdateTime[msg.sender] = block.timestamp;
+       }
+   }
+   ```
+
+### API 接口优化
+
+1. **链上数据查询优化**
+   ```typescript
+   interface IHeroQueryService {
+       // 批量查询接口
+       function getHeroesByOwner(address owner): Promise<Hero[]>;
+       // 分页查询接口
+       function getHeroesWithPagination(uint256 offset, uint256 limit): Promise<Hero[]>;
+       // 条件过滤接口
+       function getHeroesByAttributes(HeroFilter filter): Promise<Hero[]>;
+   }
+   ```
+
+2. **事件监听与数据同步**
+   ```typescript
+   interface IHeroEventListener {
+       // 监听英雄创建事件
+       function onHeroCreated(heroId: number, owner: string): void;
+       // 监听属性更新事件
+       function onHeroAttributesUpdated(heroId: number, attributes: any): void;
+       // 监听装备变更事件
+       function onHeroEquipmentChanged(heroId: number, equipment: any): void;
+   }
+   ```
+
+### 测试策略
+
+1. **单元测试**
+   - 合约功能测试
+   - 边界条件测试
+   - Gas 消耗测试
+
+2. **集成测试**
+   - 跨合约交互测试
+   - 跨链操作测试
+   - 并发操作测试
+
+3. **性能测试**
+   - 负载测试
+   - 并发测试
+   - 网络延迟测试
+
+### 监控与维护
+
+1. **链上监控**
+   - 交易状态监控
+   - Gas 价格监控
+   - 合约事件监控
+
+2. **数据分析**
+   - 使用模式分析
+   - 性能瓶颈分析
+   - 异常行为检测
+
+3. **升级维护**
+   - 合约升级计划
+   - 数据迁移策略
+   - 紧急响应预案
+
+

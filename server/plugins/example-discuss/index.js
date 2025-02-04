@@ -1,195 +1,195 @@
-const express = require('express');
-const fs = require('node:fs/promises');
-const path = require('node:path');
-
-class DiscussPlugin {
-  constructor(config) {
-    this.config = config;
-    this.router = express.Router();
-    this.dataDir = path.join(process.cwd(), 'data', 'discuss');
-    this.indexFile = path.join(this.dataDir, 'post-index.json');
-    
-    // 使用 QuickNode IPFS
-    const apiKey = process.env.IPFS_QUICKNODE_API_KEY;
-    if (!apiKey) {
-      throw new Error('IPFS_QUICKNODE_API_KEY is required');
-    }
-
-    this.ipfsConfig = {
-      baseURL: config.ipfs.api,
-      headers: {
-        'x-api-key': apiKey,
-        'Content-Type': 'application/json'
-      }
-    };
-
-    this.setupRoutes();
-  }
-
-  async uploadToIPFS(content) {
-    const response = await fetch(`${this.ipfsConfig.baseURL}/pinning/pinJson`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.ipfsConfig.headers
-      },
-      body: JSON.stringify(content)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to upload to IPFS: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    return result.cid;
-  }
-
-  async getFromIPFS(cid) {
-    const response = await fetch(`${this.config.ipfs.gateway}/ipfs/${cid}`, {
-      headers: this.ipfsConfig.headers
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get from IPFS: ${response.statusText}`);
-    }
-
-    return response.json();
-  }
-
-  async init() {
-    // 确保数据目录存在
-    await fs.mkdir(this.dataDir, { recursive: true });
-    
-    // 初始化索引文件
-    try {
-      await fs.access(this.indexFile);
-    } catch {
-      await fs.writeFile(this.indexFile, JSON.stringify({
-        categories: [],
-        posts: [],
-        lastUpdate: Date.now()
-      }));
-    }
-  }
-
-  setupRoutes() {
-    // 获取所有帖子
-    this.router.get('/posts', async (req, res) => {
-      try {
-        const { category, tag } = req.query;
-        const posts = await this.getAllPosts();
-        
-        let filteredPosts = posts;
-        if (category) {
-          filteredPosts = filteredPosts.filter(post => post.category === category);
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discussion Forum - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            line-height: 1.4;
+            background-color: #f5f7fa;
         }
-        if (tag) {
-          filteredPosts = filteredPosts.filter(post => post.tags.includes(tag));
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
         }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="header">
+        <div class="container">
+            <div class="nav-links">
+                <a href="/" id="backToHome">返回首页</a>
+            </div>
+            <h1 class="text-2xl font-bold text-center">Discussion Forum</h1>
+        </div>
+    </div>
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Discussion Forum</h1>
         
-        res.json(filteredPosts);
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
+        <!-- Plugin Status -->
+        <div id="pluginStatus" class="mb-8"></div>
 
-    // 获取所有分类
-    this.router.get('/categories', async (req, res) => {
-      try {
-        const index = await this.getIndex();
-        res.json(index.categories);
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
+        <!-- Create Post Form -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Create New Post</h2>
+            <form id="postForm" class="space-y-4">
+                <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+                    <input type="text" id="title" name="title" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="content" class="block text-sm font-medium text-gray-700">Content</label>
+                    <textarea id="content" name="content" rows="4" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                </div>
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                    <input type="text" id="category" name="category"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="tags" class="block text-sm font-medium text-gray-700">Tags</label>
+                    <input type="text" id="tags" name="tags"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="Enter tags separated by commas">
+                </div>
+                <button type="submit"
+                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Submit Post
+                </button>
+            </form>
+        </div>
 
-    // 创建新帖子
-    this.router.post('/posts', async (req, res) => {
-      try {
-        const { title, content, author, category, tags = [] } = req.body;
-        const post = {
-          title,
-          content,
-          author,
-          category,
-          tags,
-          timestamp: Date.now(),
-          comments: []
-        };
-        
-        // 将帖子内容上传到IPFS
-        const cid = await this.uploadToIPFS(post);
-        
-        // 更新帖子列表
-        await this.addPostToIndex(cid, post);
-        
-        res.json({ 
-          success: true, 
-          cid,
-          post 
+        <!-- Posts List -->
+        <div id="postsList" class="space-y-6"></div>
+    </div>
+
+    <script>
+        // 获取插件状态
+        async function fetchPluginStatus() {
+            try {
+                const response = await fetch('http://localhost:3017');
+                const data = await response.json();
+                const discussPlugin = data.plugins.find(p => p.name === 'discuss');
+                
+                const statusDiv = document.getElementById('pluginStatus');
+                if (discussPlugin) {
+                    const statusClass = discussPlugin.status === 'healthy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                    statusDiv.innerHTML = `
+                        <div class="bg-white rounded-lg shadow p-4 mb-4">
+                            <h3 class="font-semibold mb-2">Plugin Status</h3>
+                            <div class="flex items-center space-x-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
+                                    ${discussPlugin.status}
+                                </span>
+                                ${discussPlugin.details ? `
+                                    <span class="text-sm text-gray-500">
+                                        ${discussPlugin.details.error ? `Error: ${discussPlugin.details.error}` : ''}
+                                        ${discussPlugin.details.ipfs ? `IPFS: ${discussPlugin.details.ipfs}` : ''}
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error fetching plugin status:', error);
+            }
+        }
+
+        // 获取帖子列表
+        async function fetchPosts() {
+            try {
+                const response = await fetch('http://localhost:3017/api/v1/discuss/posts');
+                const posts = await response.json();
+                const postsListDiv = document.getElementById('postsList');
+                
+                postsListDiv.innerHTML = posts.map(post => `
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-xl font-semibold mb-2">${post.title}</h3>
+                        <div class="text-sm text-gray-500 mb-4">
+                            <span>${new Date(post.timestamp).toLocaleString()}</span>
+                            <span class="mx-2">•</span>
+                            <span>${post.author}</span>
+                            ${post.category ? `
+                                <span class="mx-2">•</span>
+                                <span>${post.category}</span>
+                            ` : ''}
+                        </div>
+                        ${post.content ? `<p class="mb-4">${post.content}</p>` : ''}
+                        ${post.tags && post.tags.length > 0 ? `
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                ${post.tags.map(tag => `
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        ${tag}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error fetching posts:', error);
+                document.getElementById('postsList').innerHTML = `
+                    <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                        <div class="text-red-700">Error loading posts: ${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // 提交新帖子
+        document.getElementById('postForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                title: document.getElementById('title').value,
+                content: document.getElementById('content').value,
+                category: document.getElementById('category').value,
+                tags: document.getElementById('tags').value.split(',').map(tag => tag.trim()),
+                author: 'Anonymous'
+            };
+
+            try {
+                const response = await fetch('http://localhost:3017/api/v1/discuss/posts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create post');
+                }
+
+                // 清空表单
+                document.getElementById('postForm').reset();
+                // 刷新帖子列表
+                fetchPosts();
+            } catch (error) {
+                console.error('Error creating post:', error);
+                alert('Failed to create post: ' + error.message);
+            }
         });
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
 
-    // 获取特定帖子
-    this.router.get('/posts/:id', async (req, res) => {
-      try {
-        const { id } = req.params;
-        const post = await this.getFromIPFS(id);
-        res.json(post);
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
+        // 初始化
+        fetchPluginStatus();
+        fetchPosts();
 
-    // 添加评论
-    this.router.post('/posts/:id/comments', async (req, res) => {
-      try {
-        const { id } = req.params;
-        const { content, author } = req.body;
-        const comment = {
-          content,
-          author,
-          timestamp: Date.now()
-        };
-
-        const post = await this.getFromIPFS(id);
-        post.comments.push(comment);
-        
-        // 更新帖子内容
-        const newCid = await this.uploadToIPFS(post);
-        
-        // 更新索引中的CID
-        await this.updatePostCid(id, newCid);
-        
-        res.json({ success: true, comment, newCid });
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-  }
-
-  async getIndex() {
-    const data = await fs.readFile(this.indexFile, 'utf-8');
-    return JSON.parse(data);
-  }
-
-  async saveIndex(index) {
-    await fs.writeFile(this.indexFile, JSON.stringify(index, null, 2));
-  }
-
-  async getAllPosts() {
-    const index = await this.getIndex();
-    return index.posts;
-  }
-
-  async addPostToIndex(cid, postSummary) {
-    const index = await this.getIndex();
-    
-    // 添加新分类（如果不存在）
-    if (postSummary.category && !index.categories.includes(postSummary.category)) {
+        // 定期刷新状态和帖子
+        setInterval(fetchPluginStatus, 30000); // 每 30 秒刷新一次状态
+        setInterval(fetchPosts, 60000); // 每 60 秒刷新一次帖子列表
+    </script>
+</body>
+</html> postSummary.category && !index.categories.includes(postSummary.category)) {
       index.categories.push(postSummary.category);
     }
     
@@ -228,24 +228,99 @@ class DiscussPlugin {
 
   async healthCheck() {
     try {
+      // 检查数据目录和索引文件
+      const indexExists = await this.checkDataFiles();
+      if (!indexExists) {
+        return {
+          status: 'unhealthy',
+          error: 'Data files not initialized',
+          ipfs: 'unknown'
+        };
+      }
+
       // 测试 IPFS 连接
-      const testContent = { test: 'health check' };
-      const cid = await this.uploadToIPFS(testContent);
-      const retrieved = await this.getFromIPFS(cid);
-      
+      const ipfsStatus = await this.checkIPFSConnection();
       const index = await this.getIndex();
-      return { 
-        status: 'healthy',
-        posts: index.posts.length,
-        categories: index.categories.length,
-        lastUpdate: index.lastUpdate,
-        ipfs: 'connected'
-      };
+
+      if (ipfsStatus.ok) {
+        return {
+          status: 'healthy',
+          posts: index.posts.length,
+          categories: index.categories.length,
+          lastUpdate: index.lastUpdate,
+          ipfs: 'connected',
+          gateway: this.config.ipfs.gateway,
+          api: this.config.ipfs.api
+        };
+      } else {
+        return {
+          status: 'unhealthy',
+          error: ipfsStatus.error,
+          ipfs: 'disconnected',
+          gateway: this.config.ipfs.gateway,
+          api: this.config.ipfs.api
+        };
+      }
     } catch (error) {
-      return { 
-        status: 'unhealthy', 
+      return {
+        status: 'unhealthy',
         error: error.message,
-        ipfs: 'disconnected'
+        ipfs: 'unknown'
+      };
+    }
+  }
+
+  async checkDataFiles() {
+    try {
+      await fs.access(this.dataDir);
+      await fs.access(this.indexFile);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async checkIPFSConnection() {
+    try {
+      // 首先检查 API Key 是否存在
+      if (!process.env.IPFS_QUICKNODE_API_KEY) {
+        return {
+          ok: false,
+          error: 'IPFS_QUICKNODE_API_KEY not configured'
+        };
+      }
+
+      // 测试 IPFS API 连接
+      const testContent = { test: 'health check', timestamp: Date.now() };
+      const response = await fetch(`${this.ipfsConfig.baseURL}/pinning/pinJson`, {
+        method: 'POST',
+        headers: this.ipfsConfig.headers,
+        body: JSON.stringify(testContent)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return {
+          ok: false,
+          error: `IPFS API Error: ${response.status} - ${errorText}`
+        };
+      }
+
+      const result = await response.json();
+      
+      // 验证返回的 CID
+      if (!result.cid) {
+        return {
+          ok: false,
+          error: 'Invalid IPFS response: No CID returned'
+        };
+      }
+
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: `IPFS Connection Error: ${error.message}`
       };
     }
   }
