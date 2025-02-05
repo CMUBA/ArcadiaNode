@@ -1,35 +1,56 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "../interfaces/IHeroMetadata.sol";
 
 /**
  * @title HeroMetadata
- * @dev 存储和管理英雄元数据的合约
- * 包括：技能、种族、职业、属性等数据
+ * @dev 存储和管理英雄相关的元数据，使用压缩存储方式
  */
 contract HeroMetadata is 
     Initializable, 
     PausableUpgradeable, 
     AccessControlUpgradeable,
-    UUPSUpgradeable 
+    UUPSUpgradeable,
+    IHeroMetadata
 {
     bytes32 public constant GAME_MANAGER = keccak256("GAME_MANAGER");
     bytes32 public constant DATA_CURATOR = keccak256("DATA_CURATOR");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     
-    // 技能数据压缩存储: heroId => [4个天赋x5个技能]
-    mapping(uint256 => uint8[20]) public skillData;
+    // 压缩存储的技能数据
+    // heroId => seasonId => skillsData
+    // 每个技能用 1 字节存储: 
+    // - 高 4 位存储等级 (0-15)
+    // - 低 4 位存储技能ID (0-15)
+    mapping(uint256 => mapping(uint8 => uint8[5])) public compressedSkills;
     
-    // 种族和职业使用位图存储: heroId => (race << 4 | class)
-    mapping(uint256 => uint8) public raceAndClass;
+    // 压缩存储的种族和职业数据
+    // heroId => raceAndClass
+    // 1 字节存储种族和职业:
+    // - 高 4 位存储种族 (0-15)
+    // - 低 4 位存储职业 (0-15)
+    mapping(uint256 => uint8) public compressedRaceClass;
     
-    // 属性数据压缩存储: heroId => (agility | attack << 8 | health << 16 | defense << 24)
-    mapping(uint256 => uint32) public attributes;
+    // 压缩存储的属性数据
+    // heroId => attributes
+    // 每个属性用 2 字节存储 (0-65535)
+    // [敏捷,攻击,生命,防御]
+    mapping(uint256 => uint16[4]) public attributes;
+
+    // 技能数据缓存
+    mapping(uint8 => mapping(uint8 => mapping(uint8 => Skill))) private skills;
     
+    // 种族数据缓存
+    mapping(uint8 => RaceAttributes) private races;
+    
+    // 职业数据缓存
+    mapping(uint8 => ClassAttributes) private classes;
+
     // 每日限制数据
     struct DailyLimit {
         uint8 energy;      // 默认100
@@ -64,7 +85,11 @@ contract HeroMetadata is
         onlyRole(GAME_MANAGER)
         whenNotPaused 
     {
-        skillData[heroId] = _skillData;
+        for (uint8 i = 0; i < 5; i++) {
+            for (uint8 j = 0; j < 4; j++) {
+                skills[i][j][_skillData[i * 4 + j]] = Skill(_skillData[i * 4 + j], _skillData[i * 4 + j + 5], _skillData[i * 4 + j + 10], _skillData[i * 4 + j + 15]);
+            }
+        }
         emit SkillDataUpdated(heroId, _skillData);
     }
     
@@ -79,7 +104,7 @@ contract HeroMetadata is
         whenNotPaused 
     {
         require(race < 16 && class < 16, "Invalid race or class");
-        raceAndClass[heroId] = (race << 4) | class;
+        _setCompressedRaceClass(heroId, race, class);
         emit RaceAndClassUpdated(heroId, race, class);
     }
     
@@ -95,10 +120,10 @@ contract HeroMetadata is
         onlyRole(GAME_MANAGER)
         whenNotPaused
     {
-        uint32 packed = uint32(agility) |
-                       (uint32(attack) << 8) |
-                       (uint32(health) << 16) |
-                       (uint32(defense) << 24);
+        uint16 packed = uint16(agility) |
+                       (uint16(attack) << 8) |
+                       (uint16(health) << 16) |
+                       (uint16(defense) << 16);
         attributes[heroId] = packed;
         emit AttributesUpdated(heroId, agility, attack, health, defense);
     }
@@ -109,7 +134,7 @@ contract HeroMetadata is
         view 
         returns (uint8 race, uint8 class) 
     {
-        uint8 data = raceAndClass[heroId];
+        uint8 data = compressedRaceClass[heroId];
         race = data >> 4;
         class = data & 0x0F;
     }
@@ -125,11 +150,11 @@ contract HeroMetadata is
             uint8 defense
         )
     {
-        uint32 packed = attributes[heroId];
+        uint16 packed = attributes[heroId];
         agility = uint8(packed);
         attack = uint8(packed >> 8);
         health = uint8(packed >> 16);
-        defense = uint8(packed >> 24);
+        defense = uint8(packed >> 16);
     }
     
     // 管理NFT白名单
@@ -168,4 +193,65 @@ contract HeroMetadata is
         uint8 defense
     );
     event NFTAllowedUpdated(address indexed nft, bool allowed);
+
+    // 实现接口函数
+    function getSkill(uint8 seasonId, uint8 skillId, uint8 level) external view returns (Skill memory) {
+        return skills[seasonId][skillId][level];
+    }
+
+    function getRace(uint8 raceId) external view returns (RaceAttributes memory) {
+        return races[raceId];
+    }
+
+    function getClass(uint8 classId) external view returns (ClassAttributes memory) {
+        return classes[classId];
+    }
+
+    // 内部工具函数
+    function _setCompressedSkill(
+        uint256 heroId,
+        uint8 seasonId,
+        uint8 skillIndex,
+        uint8 skillId,
+        uint8 level
+    ) internal {
+        require(skillIndex < 5, "Invalid skill index");
+        require(skillId < 16, "Skill ID too large");
+        require(level < 16, "Level too large");
+        
+        // 压缩存储: level(4位) + skillId(4位)
+        uint8 compressed = (level << 4) | skillId;
+        compressedSkills[heroId][seasonId][skillIndex] = compressed;
+    }
+
+    function _getCompressedSkill(
+        uint256 heroId,
+        uint8 seasonId,
+        uint8 skillIndex
+    ) internal view returns (uint8 skillId, uint8 level) {
+        uint8 compressed = compressedSkills[heroId][seasonId][skillIndex];
+        level = compressed >> 4;    // 获取高4位
+        skillId = compressed & 0xF;  // 获取低4位
+    }
+
+    function _setCompressedRaceClass(
+        uint256 heroId,
+        uint8 raceId,
+        uint8 classId
+    ) internal {
+        require(raceId < 16, "Race ID too large");
+        require(classId < 16, "Class ID too large");
+        
+        // 压缩存储: raceId(4位) + classId(4位)
+        uint8 compressed = (raceId << 4) | classId;
+        compressedRaceClass[heroId] = compressed;
+    }
+
+    function _getCompressedRaceClass(
+        uint256 heroId
+    ) internal view returns (uint8 raceId, uint8 classId) {
+        uint8 compressed = compressedRaceClass[heroId];
+        raceId = compressed >> 4;    // 获取高4位
+        classId = compressed & 0xF;   // 获取低4位
+    }
 } 
