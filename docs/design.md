@@ -1,140 +1,140 @@
-export default {
-    title: 'Arcadia Node - 服务导航',
-    nodeManagement: '节点管理',
-    nodeRegister: '节点注册',
-    healthCheck: '健康检测',
-    serviceManagement: '服务管理',
-    serviceDiscovery: '服务注册与发现',
-    userManagement: '用户管理',
-    userAuth: '用户注册与登录',
-    chainInteraction: '链交互',
-    heroDataManagement: '英雄数据管理',
-    contractManagement: '合约管理',
-    contracts: {
-        token: '代币合约',
-        stakeManager: '质押管理合约',
-        nodeRegistry: '节点注册合约'
-    },
-    language: '语言',
-    registeredNodes: '已注册节点',
-    // Node Register Page
-    nodeRegisterTitle: '节点注册',
-    registerNewNode: '注册新节点',
-    backToHome: '返回首页',
-    nodeAddress: '节点地址',
-    ipOrDomain: 'IP/域名',
-    apiServices: 'API 服务',
-    register: '注册',
-    // Node Registry Info Page
-    nodeRegistryInfoTitle: '节点注册信息',
-    queryNodeInfo: '查询节点信息',
-    enterNodeAddress: '输入节点地址',
-    query: '查询',
-    contractAddress: '合约地址',
-    status: '状态',
-    minStakeAmount: '最低质押金额',
-    totalNodes: '节点总数',
-    registrationTime: '注册时间',
-    active: '活跃',
-    // Service Management Page
-    serviceManageTitle: '服务管理',
-    selectNode: '选择节点',
-    serviceIndex: '服务索引',
-    serviceName: '服务名称',
-    serviceUrl: '服务地址',
-    serviceDescription: '描述',
-    serviceType: '类型',
-    loading: '加载中...',
-    noServices: '暂无可用服务',
-    basic: '基础服务',
-    extend: '扩展服务'
-};  extend: '扩展'
-}; 
-    %% City Service connections
-    M1 --> MP1
-    M1 --> MP2
-    M2 --> MP1
-    M2 --> MP2
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Registry Contract - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="nav-links">
+                <a href="/" id="backToHome">返回首页</a>
+            </div>
+            <h1 id="pageTitle">Node Registry Contract</h1>
+        </div>
+    </div>
 
-    %% Chain Layer connections
-    E --> F
-    F --> G
+    <div class="container">
+        <!-- 合约信息 -->
+        <div class="card">
+            <h2>合约信息</h2>
+            <div class="info-group">
+                <label>合约地址：</label>
+                <span id="contractAddress"></span>
+            </div>
+            <div class="info-group">
+                <label>总节点数：</label>
+                <span id="totalNodes"></span>
+            </div>
+            <div class="info-group">
+                <label>最小质押数量：</label>
+                <span id="minStakeAmount"></span>
+            </div>
+        </div>
 
-    %% Service Discovery and Recovery
-    C1 -.->|Health Check| D1
-    C1 -.->|Health Check| D2
-    D1 -.->|Health Check| M1
-    D1 -.->|Health Check| M2
+        <!-- 节点注册 -->
+        <div class="card">
+            <h2>节点注册</h2>
+            <div class="form-group">
+                <label for="nodeAddress">节点地址：</label>
+                <input type="text" id="nodeAddress" class="form-control" placeholder="输入节点地址">
+            </div>
+            <div class="form-group">
+                <label for="stakeAmount">质押数量：</label>
+                <input type="number" id="stakeAmount" class="form-control" placeholder="输入质押数量">
+            </div>
+            <button class="btn" onclick="registerNode()">注册节点</button>
+            <div id="registerResult" class="result"></div>
+        </div>
 
-    classDef primary fill:#f96,stroke:#333,stroke-width:2px
-    classDef backup fill:#69f,stroke:#333,stroke-width:2px
-    classDef compute fill:#9f6,stroke:#333,stroke-width:2px
-    
-    class C1 primary
-    class C2 backup
-    class D2 compute
-```
+        <!-- 节点列表 -->
+        <div class="card">
+            <h2>已注册节点</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>节点地址</th>
+                        <th>质押数量</th>
+                        <th>状态</th>
+                        <th>注册时间</th>
+                    </tr>
+                </thead>
+                <tbody id="nodeTable">
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-## Service Components
+    <script type="module">
+        import { ethers } from '/js/ethers.min.js';
+        import { nodeRegistryABI } from '/abi/NodeRegistry.js';
 
-1. **节点注册/节点验证组件**：依赖链上合约注册和节点提供 API。
-2. **服务注册/服务发现组件**：依赖节点运行此服务。
-3. **用户注册/登录组件**：处理用户的注册和认证。
-4. **链交互组件**：负责与区块链的交互。
+        let provider;
+        let contract;
+        const contractAddress = ''; // 从环境变量或配置中获取
 
-### 可选服务组件
+        async function init() {
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                contract = new ethers.Contract(contractAddress, nodeRegistryABI, provider);
+                
+                // 显示合约信息
+                document.getElementById('contractAddress').textContent = contractAddress;
+                const totalNodes = await contract.getTotalNodes();
+                document.getElementById('totalNodes').textContent = totalNodes.toString();
+                const minStake = await contract.getMinStakeAmount();
+                document.getElementById('minStakeAmount').textContent = ethers.formatEther(minStake);
+                
+                // 加载节点列表
+                await updateNodeList();
+            } catch (error) {
+                console.error('初始化失败：', error);
+            }
+        }
 
-- 至少运行一个可选的业务组件
-- **游戏服务组件**：处理游戏逻辑和数据。
-- **内容评论组件**：管理用户评论。
-- **物品交易组件**：处理物品的买卖。
-- **资产发行组件**：管理数字资产的发行。
-- **更多组件**：根据需求添加。
+        async function registerNode() {
+            try {
+                const signer = await provider.getSigner();
+                const nodeAddress = document.getElementById('nodeAddress').value;
+                const stakeAmount = ethers.parseEther(document.getElementById('stakeAmount').value);
+                
+                const tx = await contract.connect(signer).registerNode(nodeAddress, { value: stakeAmount });
+                await tx.wait();
+                
+                document.getElementById('registerResult').textContent = '注册成功';
+                await updateNodeList();
+            } catch (error) {
+                document.getElementById('registerResult').textContent = '注册失败：' + error.message;
+            }
+        }
 
-### 架构设计
+        async function updateNodeList() {
+            try {
+                const nodes = await contract.getNodes();
+                const table = document.getElementById('nodeTable');
+                table.innerHTML = nodes.map(node => `
+                    <tr>
+                        <td>${node.addr}</td>
+                        <td>${ethers.formatEther(node.stake)}</td>
+                        <td>${node.active ? '活跃' : '非活跃'}</td>
+                        <td>${new Date(node.registeredAt * 1000).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('更新节点列表失败：', error);
+            }
+        }
 
-- **API 服务**：所有服务组件通过 API 提供对外服务。
-- **服务组件间通信**：主要通过 API 通信，部分采用进程内通信。
-- **服务发现**：通过服务发现组件获取依赖服务。
-- **节点**：运行服务组件的服务器，每个节点可选择运行相关组件。
-
-## Service Discovery and Recovery
-
-### Health Check Protocol
-1. Each service registers with Auth Service
-2. Regular heartbeat signals
-3. Service state monitoring
-4. Automatic failover triggers
-
-### Service Recovery Process
-1. Detection: Auth Service detects node failure
-2. Election: Backup nodes participate in election
-3. Promotion: Selected node becomes primary
-4. State Recovery: Load state from blockchain
-5. Service Resumption: New node takes over
-
-### Permissionless Node Participation
-1. Node Registration
-   - Generate keypair
-   - Register on chain
-   - Obtain node address
-   - Join service network
-
-2. Role Assignment
-   - Capability declaration
-   - State synchronization
-   - Service integration
-
-3. Monitoring and Validation
-   - Performance monitoring
-   - State validation
-   - Reputation tracking
-
-4. Graceful Exit
-   - State handover
-   - Network notification
-   - Chain record update
-
+        // 页面加载时初始化
+        window.addEventListener('load', init);
+        
+        // 导出函数到全局作用域
+        window.registerNode = registerNode;
+    </script>
+</body>
+</html> 
 ## API 设计
 
 ### 1. 节点 API
@@ -974,3 +974,26 @@ c. 应急响应
    - 紧急响应预案
 
 
+----
+
+先部署 NFT 合约：forge script script/DeployHeroNFT.s.sol
+部署 Metadata 合约：forge script script/DeployHeroMetadata.s.sol
+最后部署 Hero 合约：forge script script/DeployHero.s.sol
+请确保在 optimism/.env 文件中设置了必要的环境变量：
+
+梳理一下三个 hero 合约的逻辑和权限
+1.metadta 合约，是部署后就静态读取，可以通过代理合约升级，但是不能修改，只有 owner，部署者有权限升级
+2.nft 合约，是部署后任何人都可以 mint，但需要支付 erc20 token，不可升级
+3.hero 合约，部署后任何拥有（管理员注册过的 nft 合约）NFT 的人，都可以创建 hero 记录，包括保存 hero。加载 hero 不需要拥有 NFT。
+
+
+让我们来分析一下测试结果：
+HeroNFT.t.sol 测试套件：
+所有 6 个测试都通过了
+包括铸造、批量铸造、授权和销毁的测试
+Gas 消耗合理，最高的是批量铸造操作（134,614 gas）
+Hero.t.sol 测试套件：
+所有 4 个测试都通过了
+创建英雄、保存英雄、加载英雄的功能都正常工作
+无效签名的测试也按预期失败
+Gas 消耗在合理范围内，最高的是保存英雄操作（172,793 gas）

@@ -38,6 +38,9 @@ contract Hero is
         __Ownable_init();
         __UUPSUpgradeable_init();
         heroNFT = IHeroNFT(_heroNFT);
+        
+        // 确保 Hero 合约是 NFT 合约的所有者
+        OwnableUpgradeable(_heroNFT).transferOwnership(address(this));
     }
 
     function createHero(

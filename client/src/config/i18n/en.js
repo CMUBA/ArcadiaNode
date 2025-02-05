@@ -13,7 +13,12 @@ export default {
     contracts: {
         token: 'Token Contract',
         stakeManager: 'Stake Manager Contract',
-        nodeRegistry: 'Node Registry Contract'
+        nodeRegistry: 'Node Registry Contract',
+        hero: {
+            nft: 'Hero NFT Contract',
+            metadata: 'Hero Metadata Contract',
+            core: 'Hero Core Contract'
+        }
     },
     language: 'Language',
     qa: {
