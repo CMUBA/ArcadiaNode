@@ -31,12 +31,54 @@ interface IHeroMetadata {
     }
 
     // 事件定义
-    event SkillUpdated(uint8 seasonId, uint8 skillId, uint8 level, string name, uint16 points);
-    event RaceUpdated(uint8 raceId, uint16[4] baseAttributes, string description);
-    event ClassUpdated(uint8 classId, uint16[4] baseAttributes, uint16[4] growthRates, string description);
+    event SkillUpdated(
+        uint8 indexed seasonId,
+        uint8 indexed skillId,
+        uint8 level,
+        string name,
+        uint16 points
+    );
+
+    event RaceUpdated(
+        uint8 indexed raceId,
+        uint16[4] baseAttributes,
+        string description
+    );
+
+    event ClassUpdated(
+        uint8 indexed classId,
+        uint16[4] baseAttributes,
+        uint16[4] growthRates,
+        string description
+    );
 
     // 函数定义
     function getSkill(uint8 seasonId, uint8 skillId, uint8 level) external view returns (Skill memory);
     function getRace(uint8 raceId) external view returns (RaceAttributes memory);
     function getClass(uint8 classId) external view returns (ClassAttributes memory);
+
+    // Setter 函数
+    function setSkill(
+        uint8 seasonId,
+        uint8 skillId,
+        uint8 level,
+        string calldata name,
+        uint16 points,
+        bool isActive
+    ) external;
+
+    function setRace(
+        uint8 raceId,
+        uint16[4] calldata baseAttributes,
+        string calldata description,
+        bool isActive
+    ) external;
+
+    function setClass(
+        uint8 classId,
+        uint16[4] calldata baseAttributes,
+        uint16[4] calldata growthRates,
+        string calldata description,
+        bool isActive
+    ) external;
 } 

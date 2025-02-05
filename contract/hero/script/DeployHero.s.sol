@@ -8,7 +8,6 @@ import "../src/proxy/ProxyAdmin.sol";
 
 contract DeployHeroScript is Script {
     function run() external {
-        string memory optimismEnv = vm.readFile("optimism/.env");
         bytes32 privateKeyHash = vm.envBytes32("HERO_PRIVATE_KEY");
         uint256 deployerPrivateKey = uint256(privateKeyHash);
 
