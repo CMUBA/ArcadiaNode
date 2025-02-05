@@ -1,0 +1,14 @@
+{
+  "name": "@arcadia/hero-plugin",
+  "version": "1.0.0",
+  "description": "Hero contract interaction plugin for Arcadia Node",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "ethers": "^6.0.0",
+    "express": "^4.18.2",
+    "winston": "^3.11.0"
+  }
+} 

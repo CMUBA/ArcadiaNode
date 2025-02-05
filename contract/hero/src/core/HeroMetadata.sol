@@ -39,8 +39,7 @@ contract HeroMetadata is
     // 压缩存储的属性数据
     // heroId => attributes
     // 每个属性用 2 字节存储 (0-65535)
-    // [敏捷,攻击,生命,防御]
-    mapping(uint256 => uint16[4]) public attributes;
+    mapping(uint256 => uint16) public attributes;
 
     // 技能数据缓存
     mapping(uint8 => mapping(uint8 => mapping(uint8 => Skill))) private skills;
@@ -80,17 +79,30 @@ contract HeroMetadata is
     }
     
     // 设置技能数据
-    function setSkillData(uint256 heroId, uint8[20] calldata _skillData) 
+    function setSkillData(
+        uint256 heroId,
+        uint8[5] calldata seasonIds,
+        uint8[5] calldata skillIds,
+        uint8[5] calldata levels,
+        string[5] calldata names,
+        uint16[5] calldata points
+    ) 
         external 
         onlyRole(GAME_MANAGER)
         whenNotPaused 
     {
         for (uint8 i = 0; i < 5; i++) {
-            for (uint8 j = 0; j < 4; j++) {
-                skills[i][j][_skillData[i * 4 + j]] = Skill(_skillData[i * 4 + j], _skillData[i * 4 + j + 5], _skillData[i * 4 + j + 10], _skillData[i * 4 + j + 15]);
-            }
+            require(seasonIds[i] < 4, "Invalid season");
+            skills[seasonIds[i]][skillIds[i]][levels[i]] = Skill(
+                names[i],
+                levels[i],
+                points[i],
+                Season(seasonIds[i]),
+                true
+            );
+            _setCompressedSkill(heroId, seasonIds[i], i, skillIds[i], levels[i]);
         }
-        emit SkillDataUpdated(heroId, _skillData);
+        emit SkillDataUpdated(heroId, skillIds);
     }
     
     // 设置种族和职业
@@ -121,9 +133,9 @@ contract HeroMetadata is
         whenNotPaused
     {
         uint16 packed = uint16(agility) |
-                       (uint16(attack) << 8) |
-                       (uint16(health) << 16) |
-                       (uint16(defense) << 16);
+                       (uint16(attack) << 4) |
+                       (uint16(health) << 8) |
+                       (uint16(defense) << 12);
         attributes[heroId] = packed;
         emit AttributesUpdated(heroId, agility, attack, health, defense);
     }
@@ -151,10 +163,10 @@ contract HeroMetadata is
         )
     {
         uint16 packed = attributes[heroId];
-        agility = uint8(packed);
-        attack = uint8(packed >> 8);
-        health = uint8(packed >> 16);
-        defense = uint8(packed >> 16);
+        agility = uint8(packed & 0xF);
+        attack = uint8((packed >> 4) & 0xF);
+        health = uint8((packed >> 8) & 0xF);
+        defense = uint8((packed >> 12) & 0xF);
     }
     
     // 管理NFT白名单
@@ -183,7 +195,7 @@ contract HeroMetadata is
     {}
 
     // Events
-    event SkillDataUpdated(uint256 indexed heroId, uint8[20] skillData);
+    event SkillDataUpdated(uint256 indexed heroId, uint8[5] skillData);
     event RaceAndClassUpdated(uint256 indexed heroId, uint8 race, uint8 class);
     event AttributesUpdated(
         uint256 indexed heroId,
