@@ -1,140 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Node Registry Contract - Arcadia Node</title>
-    <link rel="stylesheet" href="/css/common.css">
-</head>
-<body>
-    <div class="header">
-        <div class="container">
-            <div class="nav-links">
-                <a href="/" id="backToHome">返回首页</a>
-            </div>
-            <h1 id="pageTitle">Node Registry Contract</h1>
-        </div>
-    </div>
-
-    <div class="container">
-        <!-- 合约信息 -->
-        <div class="card">
-            <h2>合约信息</h2>
-            <div class="info-group">
-                <label>合约地址：</label>
-                <span id="contractAddress"></span>
-            </div>
-            <div class="info-group">
-                <label>总节点数：</label>
-                <span id="totalNodes"></span>
-            </div>
-            <div class="info-group">
-                <label>最小质押数量：</label>
-                <span id="minStakeAmount"></span>
-            </div>
-        </div>
-
-        <!-- 节点注册 -->
-        <div class="card">
-            <h2>节点注册</h2>
-            <div class="form-group">
-                <label for="nodeAddress">节点地址：</label>
-                <input type="text" id="nodeAddress" class="form-control" placeholder="输入节点地址">
-            </div>
-            <div class="form-group">
-                <label for="stakeAmount">质押数量：</label>
-                <input type="number" id="stakeAmount" class="form-control" placeholder="输入质押数量">
-            </div>
-            <button class="btn" onclick="registerNode()">注册节点</button>
-            <div id="registerResult" class="result"></div>
-        </div>
-
-        <!-- 节点列表 -->
-        <div class="card">
-            <h2>已注册节点</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>节点地址</th>
-                        <th>质押数量</th>
-                        <th>状态</th>
-                        <th>注册时间</th>
-                    </tr>
-                </thead>
-                <tbody id="nodeTable">
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <script type="module">
-        import { ethers } from '/js/ethers.min.js';
-        import { nodeRegistryABI } from '/abi/NodeRegistry.js';
-
-        let provider;
-        let contract;
-        const contractAddress = ''; // 从环境变量或配置中获取
-
-        async function init() {
-            try {
-                provider = new ethers.BrowserProvider(window.ethereum);
-                contract = new ethers.Contract(contractAddress, nodeRegistryABI, provider);
-                
-                // 显示合约信息
-                document.getElementById('contractAddress').textContent = contractAddress;
-                const totalNodes = await contract.getTotalNodes();
-                document.getElementById('totalNodes').textContent = totalNodes.toString();
-                const minStake = await contract.getMinStakeAmount();
-                document.getElementById('minStakeAmount').textContent = ethers.formatEther(minStake);
-                
-                // 加载节点列表
-                await updateNodeList();
-            } catch (error) {
-                console.error('初始化失败：', error);
-            }
-        }
-
-        async function registerNode() {
-            try {
-                const signer = await provider.getSigner();
-                const nodeAddress = document.getElementById('nodeAddress').value;
-                const stakeAmount = ethers.parseEther(document.getElementById('stakeAmount').value);
-                
-                const tx = await contract.connect(signer).registerNode(nodeAddress, { value: stakeAmount });
-                await tx.wait();
-                
-                document.getElementById('registerResult').textContent = '注册成功';
-                await updateNodeList();
-            } catch (error) {
-                document.getElementById('registerResult').textContent = '注册失败：' + error.message;
-            }
-        }
-
-        async function updateNodeList() {
-            try {
-                const nodes = await contract.getNodes();
-                const table = document.getElementById('nodeTable');
-                table.innerHTML = nodes.map(node => `
-                    <tr>
-                        <td>${node.addr}</td>
-                        <td>${ethers.formatEther(node.stake)}</td>
-                        <td>${node.active ? '活跃' : '非活跃'}</td>
-                        <td>${new Date(node.registeredAt * 1000).toLocaleString()}</td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error('更新节点列表失败：', error);
-            }
-        }
-
-        // 页面加载时初始化
-        window.addEventListener('load', init);
-        
-        // 导出函数到全局作用域
-        window.registerNode = registerNode;
-    </script>
-</body>
-</html> 
 ## API 设计
 
 ### 1. 节点 API
@@ -986,25 +849,205 @@ c. 应急响应
 2.nft 合约，是部署后任何人都可以 mint，但需要支付 erc20 token，不可升级
 3.hero 合约，部署后任何拥有（管理员注册过的 nft 合约）NFT 的人，都可以创建 hero 记录，包括保存 hero。加载 hero 不需要拥有 NFT。
 
+让我们总结一下测试结果：
+HeroMetadataTest 测试套件（6 个测试全部通过）：
+testSetAndGetSkill: 成功测试技能的设置和获取（gas: 77292）
+testSetAndGetRace: 成功测试种族的设置和获取（gas: 110591）
+testSetAndGetClass: 成功测试职业的设置和获取（gas: 148303）
+testFailUnauthorizedSetSkill: 成功测试未授权设置技能的失败情况（gas: 16444）
+testFailUnauthorizedSetRace: 成功测试未授权设置种族的失败情况（gas: 16758）
+testFailUnauthorizedSetClass: 成功测试未授权设置职业的失败情况（gas: 17397）
+HeroTest 测试套件（4 个测试全部通过）：
+testCreateHero: 成功测试创建英雄（gas: 146020）
+testLoadHero: 成功测试加载英雄数据（gas: 140116）
+testSaveHero: 成功测试保存英雄数据（gas: 172793）
+testFailSaveHeroInvalidNodeSignature: 成功测试无效节点签名的失败情况（gas: 154267）
+HeroNFTTest 测试套件（6 个测试全部通过）：
+testMint: 成功测试铸造功能（gas: 72061）
+testMintBatch: 成功测试批量铸造（gas: 134614）
+testBurn: 成功测试销毁功能（gas: 57752）
+testFailBurnUnauthorized: 成功测试未授权销毁的失败情况（gas: 74123）
+testFailMintUnauthorized: 成功测试未授权铸造的失败情况（gas: 17964）
+testIsApprovedForToken: 成功测试授权检查（gas: 99808）
+CounterTest 测试套件（2 个测试全部通过）：
+testFuzz_SetNumber: 成功测试模糊测试设置数字（256 次运行）
+test_Increment: 成功测试递增功能（gas: 31303）
+所有合约的功能都按预期工作，包括：
+权限控制正常工作
+数据存储和检索功能正确
+业务逻辑验证正确
+Gas 消耗在合理范围内
+接下来，我们可以继续进行部署脚本的编写和优化工作。你想先关注哪个方面？
 
-让我们来分析一下测试结果：
-HeroNFT.t.sol 测试套件：
-所有 6 个测试都通过了
-包括铸造、批量铸造、授权和销毁的测试
-Gas 消耗合理，最高的是批量铸造操作（134,614 gas）
-Hero.t.sol 测试套件：
-所有 4 个测试都通过了
-创建英雄、保存英雄、加载英雄的功能都正常工作
-无效签名的测试也按预期失败
-Gas 消耗在合理范围内，最高的是保存英雄操作（172,793 gas）
+## 合约业务逻辑分析
 
-HeroMetadata 合约的测试脚本，包含以下测试用例：
-testSetAndGetSkill: 测试技能的设置和获取功能
-设置一个春季的 Fireball 技能
-验证技能的名称、等级、点数、季节和激活状态
-testSetAndGetRace: 测试种族的设置和获取功能
-设置人类种族的基础属性和描述
-验证种族的基础属性、描述和激活状态
-testSetAndGetClass: 测试职业的设置和获取功能
-设置战士职业的基础属性、成长率和描述
-验证职业的基础属性、成长率、描述和激活状态
+### 1. 合约架构概述
+
+整个英雄系统由三个主要合约组成：
+- HeroNFT：负责英雄 NFT 的铸造和管理
+- HeroMetadata：负责英雄元数据（技能、种族、职业）的管理
+- Hero：核心合约，负责英雄数据的创建、加载和保存
+
+所有合约都采用可升级代理模式实现，使用 OpenZeppelin 的 UUPS 模式。
+
+### 2. HeroNFT 合约
+
+#### 核心功能：
+1. NFT 基础功能
+   - `mint(address to, uint256 tokenId)`: 铸造单个英雄 NFT
+   - `mintBatch(address to, uint256[] tokenIds)`: 批量铸造英雄 NFT
+   - `burn(uint256 tokenId)`: 销毁英雄 NFT
+   - `exists(uint256 tokenId)`: 检查 NFT 是否存在
+   - `isApprovedForToken(address operator, uint256 tokenId)`: 检查授权状态
+
+#### 权限控制：
+- 只有合约所有者可以铸造 NFT
+- NFT 持有者可以销毁自己的 NFT
+- 支持标准的 ERC721 授权机制
+
+### 3. HeroMetadata 合约
+
+#### 数据结构：
+1. 技能系统
+   ```solidity
+   struct Skill {
+       string name;        // 技能名称
+       uint8 level;       // 技能等级
+       uint16 points;     // 所需技能点
+       Season season;     // 所属季节
+       bool isActive;     // 是否激活
+   }
+   ```
+
+2. 种族属性
+   ```solidity
+   struct RaceAttributes {
+       uint16[4] baseAttributes;  // 基础属性值 [敏捷，攻击，生命，防御]
+       string description;        // 种族描述
+       bool isActive;            // 是否激活
+   }
+   ```
+
+3. 职业属性
+   ```solidity
+   struct ClassAttributes {
+       uint16[4] baseAttributes;  // 基础属性值
+       uint16[4] growthRates;     // 属性成长率
+       string description;        // 职业描述
+       bool isActive;            // 是否激活
+   }
+   ```
+
+#### 核心功能：
+1. 技能管理
+   - `setSkill(uint8 seasonId, uint8 skillId, uint8 level, string name, uint16 points, bool isActive)`
+   - `getSkill(uint8 seasonId, uint8 skillId, uint8 level)`
+
+2. 种族管理
+   - `setRace(uint8 raceId, uint16[4] baseAttributes, string description, bool isActive)`
+   - `getRace(uint8 raceId)`
+
+3. 职业管理
+   - `setClass(uint8 classId, uint16[4] baseAttributes, uint16[4] growthRates, string description, bool isActive)`
+   - `getClass(uint8 classId)`
+
+### 4. Hero 核心合约
+
+#### 数据结构：
+```solidity
+struct HeroData {
+    uint256 id;           // 英雄ID
+    uint8 level;         // 等级
+    uint32 exp;          // 经验值
+    uint32 createTime;   // 创建时间
+    uint32 lastSaveTime; // 最后保存时间
+    bytes signature;     // 最后一次保存的签名
+}
+```
+
+#### 核心功能：
+1. 英雄管理
+   - `createHero(uint256 userId, string name, uint8 race, uint8 class)`: 创建新英雄
+   - `loadHero(uint256 heroId)`: 加载英雄数据
+   - `saveHero(uint256 heroId, HeroData data, bytes nodeSignature, bytes clientSignature)`: 保存英雄数据
+
+2. 签名验证
+   - `verifyNodeSignature(uint256 heroId, HeroData data, bytes signature)`: 验证节点签名
+   - `verifyClientSignature(uint256 heroId, HeroData data, bytes signature)`: 验证客户端签名
+
+3. 节点管理
+   - `registerNode(address node)`: 注册验证节点
+   - `unregisterNode(address node)`: 注销验证节点
+
+#### 安全机制：
+1. 双重签名验证
+   - 需要节点签名验证
+   - 需要客户端（用户）签名验证
+2. 权限控制
+   - 只有 NFT 持有者可以加载和保存英雄数据
+   - 只有合约所有者可以注册/注销节点
+3. 数据验证
+   - 等级上限检查
+   - 经验值上限检查
+   - 时间戳验证
+
+### 5. 代理合约架构
+
+1. ProxyAdmin
+   - 管理所有可升级合约的代理
+   - 控制合约升级权限
+
+2. HeroProxy
+   - 使用 ERC1967 代理标准
+   - 支持合约初始化
+   - 实现合约可升级性
+
+### 6. 关键业务流程
+
+1. 英雄创建流程：
+   ```
+   1. 调用 Hero.createHero()
+   2. 生成唯一的英雄 ID
+   3. 创建英雄基础数据
+   4. 铸造对应的 NFT
+   5. 触发 HeroCreated 事件
+   ```
+
+2. 英雄数据保存流程：
+   ```
+   1. 节点验证并签名数据
+   2. 客户端签名数据
+   3. 调用 Hero.saveHero()
+   4. 验证双重签名
+   5. 更新英雄数据
+   6. 触发 HeroSaved 事件
+   ```
+
+### 7. Gas 优化策略
+
+1. 数据压缩
+   - 使用 uint8/uint32 等较小的数据类型
+   - 将多个小数据打包存储
+
+2. 存储优化
+   - 使用 mapping 进行数据存储
+   - 合理组织数据结构减少存储槽使用
+
+3. 批量操作
+   - 支持批量 NFT 铸造
+   - 数据更新批处理
+
+### 8. 未来扩展性
+
+1. 预留接口
+   - 跨链消息传递接口
+   - 元数据扩展接口
+
+2. 升级机制
+   - 所有合约支持 UUPS 升级模式
+   - 可以通过升级添加新功能
+
+3. 可扩展性设计
+   - 模块化的合约架构
+   - 清晰的接口定义
+   - 可插拔的组件设计
