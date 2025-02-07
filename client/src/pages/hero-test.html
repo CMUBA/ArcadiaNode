@@ -269,50 +269,64 @@
                     method: 'eth_requestAccounts' 
                 });
                 console.log('User address:', accounts[0]);
-                
-                // 获取 gas 估算
-                try {
-                    const gasEstimate = await heroContract.createHero.estimateGas(name, race, classId);
-                    console.log('Estimated gas:', gasEstimate.toString());
-                } catch (gasError) {
-                    console.error('Gas estimation failed:', gasError);
-                    throw new Error(`Gas estimation failed: ${gasError.message}`);
-                }
 
-                // 准备交易参数
-                const tx = await heroContract.createHero(
-                    name,
-                    Number(race),
-                    Number(classId),
-                    {
-                        gasLimit: 500000 // 设置一个较高的 gas limit
-                    }
-                );
-                
-                console.log('Transaction sent:', tx);
-                
-                document.getElementById('createResult').innerHTML = `
-                    <div class="mt-4 p-4 bg-green-100 rounded">
-                        <p>Transaction sent! Hash: ${tx.hash}</p>
-                        <p>Waiting for confirmation...</p>
-                    </div>
-                `;
-                
-                // 等待交易确认
-                const receipt = await tx.wait();
-                console.log('Transaction receipt:', receipt);
-                
-                // 从事件中获取英雄 ID
-                const event = receipt.events.find(e => e.event === 'HeroCreated');
-                const heroId = event.args.heroId;
-                
-                document.getElementById('createResult').innerHTML = `
-                    <div class="mt-4 p-4 bg-green-100 rounded">
-                        <p>Hero created successfully!</p>
-                        <p>Hero ID: ${heroId}</p>
-                        <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
-                    </div>
-                `;
+                // 检查合约状态
+                try {
+                    const signer = await provider.getSigner();
+                    const signerAddress = await signer.getAddress();
+                    console.log('Signer address:', signerAddress);
+
+                    // 重新连接合约
+                    const connectedContract = heroContract.connect(signer);
+                    console.log('Contract connected with signer');
+
+                    // 准备参数
+                    const raceValue = Number(race);
+                    const classValue = Number(classId);
+                    console.log('Parameters:', {
+                        name,
+                        race: raceValue,
+                        class: classValue
+                    });
+
+                    // 发送交易
+                    const tx = await connectedContract.createHero(
+                        name,
+                        raceValue,
+                        classValue,
+                        {
+                            gasLimit: 500000
+                        }
+                    );
+                    
+                    console.log('Transaction sent:', tx);
+                    
+                    document.getElementById('createResult').innerHTML = `
+                        <div class="mt-4 p-4 bg-green-100 rounded">
+                            <p>Transaction sent! Hash: ${tx.hash}</p>
+                            <p>Waiting for confirmation...</p>
+                        </div>
+                    `;
+                    
+                    // 等待交易确认
+                    const receipt = await tx.wait();
+                    console.log('Transaction receipt:', receipt);
+                    
+                    // 从事件中获取英雄 ID
+                    const event = receipt.events.find(e => e.event === 'HeroCreated');
+                    const heroId = event.args.heroId;
+                    
+                    document.getElementById('createResult').innerHTML = `
+                        <div class="mt-4 p-4 bg-green-100 rounded">
+                            <p>Hero created successfully!</p>
+                            <p>Hero ID: ${heroId}</p>
+                            <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('Contract interaction failed:', error);
+                    throw error;
+                }
             } catch (error) {
                 console.error('创建英雄失败：', error);
                 
@@ -356,121 +370,128 @@
         </div>
     </div>
 
-    <div class="container mx-auto px-4 py-8">
-        <!-- 钱包连接 -->
-        <div class="mb-8">
-            <h2 id="walletTitle" class="text-xl font-semibold mb-4">钱包连接</h2>
-            <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+    <div class="container mx-auto px-4 py-4">
+        <!-- 顶部区域：钱包连接 -->
+        <div class="mb-4 bg-white rounded-lg shadow p-4">
+            <h2 id="walletTitle" class="text-lg font-semibold mb-2">钱包连接</h2>
+            <button id="connectWallet" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
                 连接钱包
             </button>
             <div id="connectedWallet" class="hidden">
-                <span class="text-green-500">已连接</span>
-                <span id="walletAddress" class="ml-2 text-gray-600"></span>
+                <span class="text-green-500 text-sm">已连接</span>
+                <span id="walletAddress" class="ml-2 text-gray-600 text-sm"></span>
             </div>
         </div>
 
-        <!-- 种族数据测试 -->
-        <div class="mb-8">
-            <h2 id="raceTitle" class="text-xl font-semibold mb-4">种族数据测试</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- 左侧：数据查询区域 -->
             <div class="space-y-4">
-                <div>
-                    <label for="raceId" class="block text-sm font-medium text-gray-700">选择种族</label>
-                    <select id="raceId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                        <option value="0">Human</option>
-                        <option value="1">Elf</option>
-                        <option value="2">Dwarf</option>
-                        <option value="3">Orc</option>
-                        <option value="4">Undead</option>
-                    </select>
+                <!-- 种族数据测试 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 id="raceTitle" class="text-lg font-semibold mb-2">种族数据测试</h2>
+                    <div class="space-y-2">
+                        <div>
+                            <label for="raceId" class="block text-sm font-medium text-gray-700">选择种族</label>
+                            <select id="raceId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                <option value="0">Human</option>
+                                <option value="1">Elf</option>
+                                <option value="2">Dwarf</option>
+                                <option value="3">Orc</option>
+                                <option value="4">Undead</option>
+                            </select>
+                        </div>
+                        <button id="getRaceData" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
+                            获取数据
+                        </button>
+                        <div id="raceResult"></div>
+                    </div>
                 </div>
-                <button id="getRaceData" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>
-                    获取数据
-                </button>
-                <div id="raceResult"></div>
-            </div>
-        </div>
 
-        <!-- 职业数据测试 -->
-        <div class="mb-8">
-            <h2 id="classTitle" class="text-xl font-semibold mb-4">职业数据测试</h2>
-            <div class="space-y-4">
-                <div>
-                    <label for="classId" class="block text-sm font-medium text-gray-700">选择职业</label>
-                    <select id="classId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                        <option value="0">Warrior</option>
-                        <option value="1">Mage</option>
-                        <option value="2">Archer</option>
-                        <option value="3">Rogue</option>
-                        <option value="4">Priest</option>
-                    </select>
+                <!-- 职业数据测试 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 id="classTitle" class="text-lg font-semibold mb-2">职业数据测试</h2>
+                    <div class="space-y-2">
+                        <div>
+                            <label for="classId" class="block text-sm font-medium text-gray-700">选择职业</label>
+                            <select id="classId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                <option value="0">Warrior</option>
+                                <option value="1">Mage</option>
+                                <option value="2">Archer</option>
+                                <option value="3">Rogue</option>
+                                <option value="4">Priest</option>
+                            </select>
+                        </div>
+                        <button id="getClassData" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
+                            获取数据
+                        </button>
+                        <div id="classResult"></div>
+                    </div>
                 </div>
-                <button id="getClassData" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>
-                    获取数据
-                </button>
-                <div id="classResult"></div>
-            </div>
-        </div>
 
-        <!-- 技能数据测试 -->
-        <div class="mb-8">
-            <h2 id="skillTitle" class="text-xl font-semibold mb-4">技能数据测试</h2>
-            <div class="space-y-4">
-                <div>
-                    <label for="seasonId" class="block text-sm font-medium text-gray-700">选择季节</label>
-                    <select id="seasonId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                        <option value="0">Spring</option>
-                        <option value="1">Summer</option>
-                        <option value="2">Autumn</option>
-                        <option value="3">Winter</option>
-                    </select>
+                <!-- 技能数据测试 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 id="skillTitle" class="text-lg font-semibold mb-2">技能数据测试</h2>
+                    <div class="space-y-2">
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label for="seasonId" class="block text-sm font-medium text-gray-700">选择季节</label>
+                                <select id="seasonId" class="mt-1 block w-full pl-2 pr-8 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                    <option value="0">Spring</option>
+                                    <option value="1">Summer</option>
+                                    <option value="2">Autumn</option>
+                                    <option value="3">Winter</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="skillId" class="block text-sm font-medium text-gray-700">技能 ID</label>
+                                <input type="number" id="skillId" min="0" max="4" value="0" class="mt-1 block w-full pl-2 pr-2 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                            </div>
+                            <div>
+                                <label for="skillLevel" class="block text-sm font-medium text-gray-700">等级</label>
+                                <input type="number" id="skillLevel" min="1" max="10" value="1" class="mt-1 block w-full pl-2 pr-2 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                            </div>
+                        </div>
+                        <button id="getSkillData" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
+                            获取数据
+                        </button>
+                        <div id="skillResult"></div>
+                    </div>
                 </div>
-                <div>
-                    <label for="skillId" class="block text-sm font-medium text-gray-700">技能 ID</label>
-                    <input type="number" id="skillId" min="0" max="4" value="0" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                </div>
-                <div>
-                    <label for="skillLevel" class="block text-sm font-medium text-gray-700">等级</label>
-                    <input type="number" id="skillLevel" min="1" max="10" value="1" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                </div>
-                <button id="getSkillData" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>
-                    获取数据
-                </button>
-                <div id="skillResult"></div>
             </div>
-        </div>
 
-        <!-- 创建英雄 -->
-        <div class="mb-8">
-            <h2 id="creationTitle" class="text-xl font-semibold mb-4">创建英雄</h2>
-            <div class="space-y-4">
-                <div>
-                    <label for="heroName" class="block text-sm font-medium text-gray-700">英雄名称</label>
-                    <input type="text" id="heroName" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+            <!-- 右侧：创建英雄区域 -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 id="creationTitle" class="text-lg font-semibold mb-2">创建英雄</h2>
+                <div class="space-y-2">
+                    <div>
+                        <label for="heroName" class="block text-sm font-medium text-gray-700">英雄名称</label>
+                        <input type="text" id="heroName" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                    </div>
+                    <div>
+                        <label for="createRaceId" class="block text-sm font-medium text-gray-700">选择种族</label>
+                        <select id="createRaceId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                            <option value="0">Human</option>
+                            <option value="1">Elf</option>
+                            <option value="2">Dwarf</option>
+                            <option value="3">Orc</option>
+                            <option value="4">Undead</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="createClassId" class="block text-sm font-medium text-gray-700">选择职业</label>
+                        <select id="createClassId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                            <option value="0">Warrior</option>
+                            <option value="1">Mage</option>
+                            <option value="2">Archer</option>
+                            <option value="3">Rogue</option>
+                            <option value="4">Priest</option>
+                        </select>
+                    </div>
+                    <button id="createHero" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
+                        创建英雄
+                    </button>
+                    <div id="createResult"></div>
                 </div>
-                <div>
-                    <label for="createRaceId" class="block text-sm font-medium text-gray-700">选择种族</label>
-                    <select id="createRaceId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                        <option value="0">Human</option>
-                        <option value="1">Elf</option>
-                        <option value="2">Dwarf</option>
-                        <option value="3">Orc</option>
-                        <option value="4">Undead</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="createClassId" class="block text-sm font-medium text-gray-700">选择职业</label>
-                    <select id="createClassId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                        <option value="0">Warrior</option>
-                        <option value="1">Mage</option>
-                        <option value="2">Archer</option>
-                        <option value="3">Rogue</option>
-                        <option value="4">Priest</option>
-                    </select>
-                </div>
-                <button id="createHero" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>
-                    创建英雄
-                </button>
-                <div id="createResult"></div>
             </div>
         </div>
     </div>
