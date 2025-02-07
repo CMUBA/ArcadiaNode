@@ -1,4 +1,4 @@
-const heroAbi = [
+export const heroAbi = [
     {
         "inputs": [
             {
@@ -88,6 +88,4 @@ const heroAbi = [
         "name": "HeroCreated",
         "type": "event"
     }
-];
-
-export { heroAbi as default }; 
+]; 

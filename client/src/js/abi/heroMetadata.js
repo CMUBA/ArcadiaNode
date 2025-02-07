@@ -1,4 +1,4 @@
-const heroMetadataAbi = [
+export const heroMetadataAbi = [
     {
         "inputs": [
             {
@@ -123,5 +123,3 @@ const heroMetadataAbi = [
         "type": "function"
     }
 ];
-
-export { heroMetadataAbi as default };

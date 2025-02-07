@@ -1,11 +1,12 @@
-import heroAbi from '../js/abi/hero.js';
-import heroMetadataAbi from '../js/abi/heroMetadata.js';
+import { heroAbi } from '../js/abi/hero.js';
+import { heroMetadataAbi } from '../js/abi/heroMetadata.js';
 import baseConfig from './index.js';
 
 // Hero 相关配置
 export const heroConfig = {
     ethereum: {
-        ...baseConfig.ethereum,
+        nodeUrl: 'https://sepolia.optimism.io',
+        chainId: 11155420, // Optimism Sepolia testnet
         contracts: {
             hero: '0x5aEe59c7D6434eC6f83066C388E6fe76959F9ec1',
             heroMetadata: '0xb6A58680db8ffA71B8eb219e11A8B1d267D01095',
@@ -17,7 +18,7 @@ export const heroConfig = {
         }
     },
     aptos: {
-        ...baseConfig.aptos,
+        nodeUrl: 'https://fullnode.testnet.aptoslabs.com',
         contracts: {
             heroNft: '0x...',
             hero: '0x...'
