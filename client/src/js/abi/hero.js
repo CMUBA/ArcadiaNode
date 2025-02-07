@@ -70,19 +70,6 @@ export const heroAbi = [
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "getRegisteredNFTs",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "",
-                "type": "address[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
         "anonymous": false,
         "inputs": [
             {
