@@ -1,4 +1,5 @@
 module hero_nft::hero_nft {
+    use std::string::String;
     use std::string;
     use std::signer;
     use std::vector;
@@ -203,17 +204,37 @@ module hero_nft::hero_nft {
     }
 
     // Internal functions
-    fun mint_internal(account: &signer, _token_id: u64) {
-        let token_data_id = token::create_token_data_id(
-            @hero_nft,
-            string::utf8(b"Hero NFT"),
-            string::utf8(b"HERO"),
+    fun mint_internal(account: &signer, token_id: u64) {
+        let token_name = string::utf8(b"");
+        string::append(&mut token_name, string::utf8(b"HERO #"));
+        string::append(&mut token_name, string::utf8(num_to_string(token_id)));
+
+        let collection = string::utf8(b"Hero NFT");
+        let description = string::utf8(b"Hero NFT Collection");
+        let uri = string::utf8(b"https://hero.example.com/nft/");
+
+        // Create token data
+        let token_data_id = token::create_tokendata(
+            account,
+            collection,
+            token_name,
+            description,
+            1, // maximum
+            uri,
+            @hero_nft, // royalty payee address
+            100, // royalty points denominator
+            5, // royalty points numerator (5%)
+            token::create_token_mutability_config(&vector::empty<bool>()), // token mutate config
+            vector::empty<String>(), // property keys
+            vector::empty<vector<u8>>(), // property values
+            vector::empty<String>(), // property types
         );
 
+        // Mint token
         token::mint_token(
             account,
             token_data_id,
-            1,
+            1, // amount
         );
     }
 
@@ -239,6 +260,29 @@ module hero_nft::hero_nft {
             i = i + 1;
         };
         collection_data.default_native_price
+    }
+
+    fun num_to_string(num: u64): vector<u8> {
+        if (num == 0) {
+            return b"0"
+        };
+        let bytes = vector::empty<u8>();
+        let n = num;
+        while (n > 0) {
+            let digit = ((48 + n % 10) as u8);
+            vector::push_back(&mut bytes, digit);
+            n = n / 10;
+        };
+        let len = vector::length(&bytes);
+        let i = 0;
+        while (i < len / 2) {
+            let j = len - i - 1;
+            let temp = *vector::borrow(&bytes, i);
+            *vector::borrow_mut(&mut bytes, i) = *vector::borrow(&bytes, j);
+            *vector::borrow_mut(&mut bytes, j) = temp;
+            i = i + 1;
+        };
+        bytes
     }
 
     fun get_token_price<CoinType>(token_id: u64, collection_data: &CollectionData): u64 {

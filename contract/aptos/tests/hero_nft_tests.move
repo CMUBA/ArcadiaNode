@@ -46,11 +46,13 @@ module hero_nft::hero_nft_tests {
         
         // Initialize Aptos coin for testing
         let framework_signer = account::create_account_for_test(@0x1);
-        coin::register<AptosCoin>(&framework_signer);
+        let (burn_cap, mint_cap) = aptos_coin::initialize_for_test(&framework_signer);
+        
+        // Register admin and user for AptosCoin
+        coin::register<AptosCoin>(admin);
+        coin::register<AptosCoin>(user);
         
         // Give user some APT
-        coin::register<AptosCoin>(user);
-        let (burn_cap, mint_cap) = aptos_coin::initialize_for_test(&framework_signer);
         let coins = coin::mint<AptosCoin>(NATIVE_PRICE * 2, &mint_cap);
         coin::deposit(signer::address_of(user), coins);
         coin::destroy_burn_cap(burn_cap);
@@ -85,11 +87,13 @@ module hero_nft::hero_nft_tests {
         
         // Initialize Aptos coin for testing
         let framework_signer = account::create_account_for_test(@0x1);
-        coin::register<AptosCoin>(&framework_signer);
+        let (burn_cap, mint_cap) = aptos_coin::initialize_for_test(&framework_signer);
+        
+        // Register admin and user for AptosCoin
+        coin::register<AptosCoin>(admin);
+        coin::register<AptosCoin>(user);
         
         // Give user some APT
-        coin::register<AptosCoin>(user);
-        let (burn_cap, mint_cap) = aptos_coin::initialize_for_test(&framework_signer);
         let coins = coin::mint<AptosCoin>(NATIVE_PRICE * 4, &mint_cap);
         coin::deposit(signer::address_of(user), coins);
         coin::destroy_burn_cap(burn_cap);

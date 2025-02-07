@@ -124,6 +124,9 @@
                 });
 
                 console.log('Wallet connected successfully:', userAddress);
+
+                // Load NFT contracts after successful connection
+                await loadRegisteredNFTContracts();
             } catch (error) {
                 console.error('Wallet connection failed:', error);
                 alert('Failed to connect wallet: ' + error.message);
@@ -238,6 +241,11 @@
                 document.getElementById('languageSelect')?.addEventListener('change', (e) => {
                     changeLanguage(e.target.value);
                 });
+
+                // Load registered NFT contracts after connecting
+                if (userAddress) {
+                    await loadRegisteredNFTContracts();
+                }
             } catch (error) {
                 console.error('Initialization failed:', error);
                 alert('Initialization failed: ' + error.message);
@@ -447,6 +455,35 @@
             }
         }
 
+        // Add new function to get registered NFT contracts
+        async function loadRegisteredNFTContracts() {
+            try {
+                if (!heroContract) return;
+                
+                // 假设合约有一个获取已注册NFT合约列表的函数
+                const nftContracts = await heroContract.getRegisteredNFTContracts();
+                const nftContractsList = document.getElementById('nftContractsList');
+                
+                if (nftContracts && nftContracts.length > 0) {
+                    nftContractsList.innerHTML = nftContracts.map(contract => `
+                        <div class="p-3 bg-gray-50 rounded">
+                            <a href="https://sepolia-optimism.etherscan.io/address/${contract}" 
+                               target="_blank" 
+                               class="text-blue-600 hover:text-blue-800 break-all">
+                                ${contract}
+                            </a>
+                        </div>
+                    `).join('');
+                } else {
+                    nftContractsList.innerHTML = '<p class="text-sm text-gray-500">No registered NFT contracts found</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load NFT contracts:', error);
+                document.getElementById('nftContractsList').innerHTML = 
+                    '<p class="text-sm text-red-500">Failed to load NFT contracts</p>';
+            }
+        }
+
         // 将函数暴露到全局作用域
         window.connectWallet = connectWallet;
         window.getRaceData = getRaceData;
@@ -472,19 +509,19 @@
     <div class="container mx-auto px-4 py-4">
         <!-- 顶部区域：钱包连接 -->
         <div class="mb-4 bg-white rounded-lg shadow p-4">
-            <h2 id="walletTitle" class="text-lg font-semibold mb-2">Wallet Connection</h2>
+            <h2 class="text-lg font-semibold mb-2">Wallet Connection</h2>
             <div class="flex items-center space-x-4">
                 <button id="connectWallet" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
                     Connect Wallet
                 </button>
-                <a href="/pages/nft-mint.html" class="text-blue-600 hover:text-blue-800 text-sm">
+                <a href="/pages/nft-mint.html" class="text-blue-500 hover:text-blue-700 text-sm ml-4">
                     Mint Hero NFT →
                 </a>
             </div>
             <div id="connectedWallet" class="hidden mt-2">
                 <div class="flex items-center justify-between">
                     <div>
-                        <span class="text-green-500 text-sm">Connected</span>
+                        <span class="text-green-500 text-sm">Connected:</span>
                         <span id="walletAddress" class="ml-2 text-gray-600 text-sm"></span>
                     </div>
                     <div id="nftStatus" class="text-sm">
@@ -570,39 +607,51 @@
                 </div>
             </div>
 
-            <!-- 右侧：创建英雄区域 -->
-            <div class="bg-white rounded-lg shadow p-4">
-                <h2 id="creationTitle" class="text-lg font-semibold mb-2">Create Hero</h2>
-                <div class="space-y-2">
-                    <div>
-                        <label for="heroName" class="block text-sm font-medium text-gray-700">Hero Name
-                        </label>
-                        <input type="text" id="heroName" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+            <!-- 右侧：NFT和创建英雄区域 -->
+            <div class="space-y-4">
+                <!-- NFT 区域 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-lg font-semibold mb-2">Hero NFT Contracts</h2>
+                    <div class="space-y-2">
+                        <div id="nftContractsList" class="space-y-2">
+                            <p class="text-sm text-gray-500">Loading registered NFT contracts...</p>
+                        </div>
                     </div>
-                    <div>
-                        <label for="createRaceId" class="block text-sm font-medium text-gray-700">Select Race</label>
-                        <select id="createRaceId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
-                            <option value="0">Human</option>
-                            <option value="1">Elf</option>
-                            <option value="2">Dwarf</option>
-                            <option value="3">Orc</option>
-                            <option value="4">Undead</option>
-                        </select>
+                </div>
+
+                <!-- 创建英雄区域 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 id="creationTitle" class="text-lg font-semibold mb-2">Create Hero</h2>
+                    <div class="space-y-2">
+                        <div>
+                            <label for="heroName" class="block text-sm font-medium text-gray-700">Hero Name</label>
+                            <input type="text" id="heroName" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                        </div>
+                        <div>
+                            <label for="createRaceId" class="block text-sm font-medium text-gray-700">Select Race</label>
+                            <select id="createRaceId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                <option value="0">Human</option>
+                                <option value="1">Elf</option>
+                                <option value="2">Dwarf</option>
+                                <option value="3">Orc</option>
+                                <option value="4">Undead</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="createClassId" class="block text-sm font-medium text-gray-700">Select Class</label>
+                            <select id="createClassId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                <option value="0">Warrior</option>
+                                <option value="1">Mage</option>
+                                <option value="2">Archer</option>
+                                <option value="3">Rogue</option>
+                                <option value="4">Priest</option>
+                            </select>
+                        </div>
+                        <button id="createHero" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
+                            Create Hero
+                        </button>
+                        <div id="createResult"></div>
                     </div>
-                    <div>
-                        <label for="createClassId" class="block text-sm font-medium text-gray-700">Select Class</label>
-                        <select id="createClassId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
-                            <option value="0">Warrior</option>
-                            <option value="1">Mage</option>
-                            <option value="2">Archer</option>
-                            <option value="3">Rogue</option>
-                            <option value="4">Priest</option>
-                        </select>
-                    </div>
-                    <button id="createHero" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
-                        Create Hero
-                    </button>
-                    <div id="createResult"></div>
                 </div>
             </div>
         </div>

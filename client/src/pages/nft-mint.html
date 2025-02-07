@@ -1,513 +1,302 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFT Minting - Arcadia Node</title>
+    <title>Hero NFT Minting - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100">
-    <div class="header bg-white shadow-md">
-        <div class="container mx-auto px-4 py-4">
-            <div class="flex justify-between items-center">
-                <a href="/" id="backToHome" class="text-blue-600 hover:text-blue-800">← Back to Home</a>
-                <div class="language-selector">
-                    <select id="languageSelect" class="px-2 py-1 border rounded">
-                        <option value="en">English</option>
-                        <option value="zh">中文</option>
-                    </select>
-                </div>
-            </div>
-            <h1 id="pageTitle" class="text-2xl font-bold text-center mt-4">NFT Minting</h1>
-        </div>
-    </div>
-
-    <div class="container mx-auto px-4 py-8">
-        <!-- Chain Selection -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4" id="selectChainTitle">Select Chain</h2>
-            <div class="flex space-x-4">
-                <button id="ethereumChain" class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2">
-                    <img src="/images/ethereum.svg" alt="Ethereum" class="w-6 h-6">
-                    <span>Ethereum</span>
-                </button>
-                <button id="aptosChain" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2">
-                    <img src="/images/aptos.svg" alt="Aptos" class="w-6 h-6">
-                    <span>Aptos</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Loading State -->
-        <div id="loadingState" class="hidden">
-            <div class="flex justify-center items-center py-12">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            </div>
-        </div>
-
-        <!-- Error State -->
-        <div id="errorState" class="hidden">
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <strong class="font-bold">Error!</strong>
-                <span id="errorMessage" class="block sm:inline"></span>
-            </div>
-        </div>
-
-        <!-- NFT Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="nftList">
-            <!-- NFT cards will be dynamically added here -->
-        </div>
-
-        <!-- Mint Modal -->
-        <div id="mintModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                <h3 class="text-xl font-semibold mb-4" id="mintModalTitle">Mint NFT</h3>
-                
-                <div class="mb-6">
-                    <div class="flex justify-between mb-2">
-                        <span class="text-gray-600">NFT ID:</span>
-                        <span id="mintNftId" class="font-medium"></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Price:</span>
-                        <span id="mintPrice" class="font-medium"></span>
-                    </div>
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2" id="paymentMethodLabel">Payment Method</label>
-                    <select id="paymentMethod" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="native">Native Token</option>
-                        <option value="token">ERC20/Aptos Token</option>
-                    </select>
-                </div>
-
-                <!-- Minting Progress -->
-                <div id="mintProgress" class="hidden mb-4">
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
-                    </div>
-                    <p id="mintStatus" class="text-sm text-gray-600 mt-2 text-center"></p>
-                </div>
-
-                <div class="flex justify-end space-x-4">
-                    <button id="cancelMint" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">Cancel</button>
-                    <button id="confirmMint" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Confirm</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 先加载库文件 -->
-    <script src="/js/ethers.umd.min.js"></script>
-    <script src="/js/aptos.js"></script>
-    <script src="/js/config.js"></script>
-    <script src="/js/contracts/heroNftABI.js"></script>
-
-    <!-- 然后加载应用代码 -->
     <script type="module">
-        // Types
-        const ChainType = {
-            ETHEREUM: 'ethereum',
-            APTOS: 'aptos'
-        };
+        import { ethers } from 'ethers';
+        import { heroConfig } from '../config/hero.js';
 
-        const PaymentType = {
-            NATIVE: 'native',
-            TOKEN: 'token'
-        };
-
-        // State
-        let currentChain = ChainType.ETHEREUM;
         let provider;
-        let aptosClient;
         let nftContract;
-        let selectedNft = null;
-        let isLoading = false;
+        let tokenContract;
+        let userAddress;
 
-        // Initialize
-        async function init() {
+        // NFT Contract ABI - 只包含我们需要的函数
+        const nftAbi = [
+            "function totalSupply() view returns (uint256)",
+            "function balanceOf(address) view returns (uint256)",
+            "function getAcceptedToken() view returns (address)",
+            "function getNativePrice(uint256) view returns (uint256)",
+            "function getTokenPrice(uint256) view returns (uint256)",
+            "function mintWithNative(address, uint256) payable",
+            "function mintWithToken(address, uint256)"
+        ];
+
+        // ERC20 Token ABI
+        const tokenAbi = [
+            "function balanceOf(address) view returns (uint256)",
+            "function approve(address, uint256) returns (bool)",
+            "function allowance(address, address) view returns (uint256)",
+            "function symbol() view returns (string)",
+            "function decimals() view returns (uint8)"
+        ];
+
+        async function connectWallet() {
             try {
-                showLoading(true);
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                userAddress = accounts[0];
                 
-                // 添加环境检查
-                config.checkEnvironment();
-                
-                // 初始化providers
-                if (window.ethereum) {
-                    provider = new ethers.BrowserProvider(window.ethereum);
-                    const network = await provider.getNetwork();
-                    config.log('Connected to network:', network);
-                    
-                    // 检查合约加载
-                    config.checkContractLoading();
-                    
-                    nftContract = new ethers.Contract(
-                        config.ethereum.contracts.heroNft,
-                        heroNftABI,
-                        provider
-                    );
-                    config.log('NFT contract initialized:', nftContract.address);
-                }
-
-                aptosClient = new AptosClient(config.aptos.nodeUrl);
-                config.log('Aptos client initialized');
-
-                // Load initial NFTs
-                await loadNFTs();
-                config.log('Initial NFTs loaded');
-
-                // Bind events
-                setupEventListeners();
-                config.log('Event listeners set up');
-                
-                // Initialize language
-                updateLanguage(localStorage.getItem('language') || 'en');
-                config.log('Language initialized');
-            } catch (error) {
-                config.log('Initialization error:', error);
-                showError(error.message);
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        function setupEventListeners() {
-            document.getElementById('ethereumChain').onclick = () => switchChain(ChainType.ETHEREUM);
-            document.getElementById('aptosChain').onclick = () => switchChain(ChainType.APTOS);
-            document.getElementById('cancelMint').onclick = closeMintModal;
-            document.getElementById('confirmMint').onclick = mint;
-            document.getElementById('languageSelect').onchange = (e) => updateLanguage(e.target.value);
-        }
-
-        async function switchChain(chain) {
-            try {
-                showLoading(true);
-                currentChain = chain;
-                
-                // Update UI
-                document.getElementById('ethereumChain').classList.toggle('bg-blue-500', chain === ChainType.ETHEREUM);
-                document.getElementById('aptosChain').classList.toggle('bg-blue-500', chain === ChainType.APTOS);
-                
-                // Switch network if needed
-                if (chain === ChainType.ETHEREUM && window.ethereum) {
+                // Check and switch network if needed
+                const network = await provider.getNetwork();
+                if (network.chainId !== BigInt(heroConfig.ethereum.chainId)) {
                     await window.ethereum.request({
                         method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: config.ethereum.chainId }],
+                        params: [{ chainId: '0x' + heroConfig.ethereum.chainId.toString(16) }],
                     });
                 }
-                
-                await loadNFTs();
-            } catch (error) {
-                showError(error.message);
-            } finally {
-                showLoading(false);
-            }
-        }
 
-        async function loadNFTs() {
-            const nftList = document.getElementById('nftList');
-            nftList.innerHTML = '';
+                // Get signer and initialize contracts
+                const signer = await provider.getSigner();
+                nftContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.heroNFT,
+                    nftAbi,
+                    signer
+                );
 
-            try {
-                const nfts = currentChain === ChainType.ETHEREUM 
-                    ? await loadEthereumNFTs()
-                    : await loadAptosNFTs();
+                // Get accepted token address and initialize token contract
+                const tokenAddress = await nftContract.getAcceptedToken();
+                tokenContract = new ethers.Contract(
+                    tokenAddress,
+                    tokenAbi,
+                    signer
+                );
 
-                nfts.forEach(nft => {
-                    const card = createNFTCard(nft);
-                    nftList.appendChild(card);
+                // Update UI
+                document.getElementById('connectWallet').style.display = 'none';
+                document.getElementById('connectedWallet').style.display = 'block';
+                document.getElementById('walletAddress').textContent = userAddress;
+
+                // Load NFT and token data
+                await loadNFTData();
+                await loadTokenBalance();
+
+                // Enable mint buttons
+                document.querySelectorAll('.mint-button').forEach(button => {
+                    button.disabled = false;
                 });
+
             } catch (error) {
-                showError('Failed to load NFTs: ' + error.message);
+                console.error('Wallet connection failed:', error);
+                alert('Failed to connect wallet: ' + error.message);
             }
         }
 
-        function createNFTCard(nft) {
-            const div = document.createElement('div');
-            div.className = 'bg-white rounded-lg shadow-lg overflow-hidden transform transition-transform hover:scale-105';
-            div.innerHTML = `
-                <div class="relative pb-2/3">
-                    <img src="${nft.image}" alt="${nft.name}" class="absolute h-full w-full object-cover">
-                </div>
-                <div class="p-4">
-                    <h3 class="text-lg font-semibold mb-2">${nft.name}</h3>
-                    <p class="text-gray-600 mb-4">Price: ${nft.price} ${currentChain === ChainType.ETHEREUM ? 'ETH' : 'APT'}</p>
-                    <button class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                            onclick="window.openMintModal(${JSON.stringify(nft)})">
-                        Mint
-                    </button>
-                </div>
-            `;
-            return div;
-        }
-
-        function showLoading(show) {
-            isLoading = show;
-            document.getElementById('loadingState').classList.toggle('hidden', !show);
-        }
-
-        function showError(message) {
-            const errorState = document.getElementById('errorState');
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = message;
-            errorState.classList.remove('hidden');
-            setTimeout(() => {
-                errorState.classList.add('hidden');
-            }, 5000);
-        }
-
-        function updateMintProgress(progress, status) {
-            const progressBar = document.querySelector('#mintProgress .bg-blue-500');
-            const statusText = document.getElementById('mintStatus');
-            document.getElementById('mintProgress').classList.remove('hidden');
-            progressBar.style.width = `${progress}%`;
-            statusText.textContent = status;
-        }
-
-        // Export necessary functions to window
-        window.openMintModal = function(nft) {
-            selectedNft = nft;
-            document.getElementById('mintNftId').textContent = nft.tokenId;
-            document.getElementById('mintPrice').textContent = `${nft.price} ${currentChain === ChainType.ETHEREUM ? 'ETH' : 'APT'}`;
-            document.getElementById('mintModal').classList.remove('hidden');
-        };
-
-        window.closeMintModal = function() {
-            selectedNft = null;
-            document.getElementById('mintModal').classList.add('hidden');
-            document.getElementById('mintProgress').classList.add('hidden');
-        };
-
-        async function mint() {
-            if (!selectedNft) return;
-
-            try {
-                const paymentMethod = document.getElementById('paymentMethod').value;
-                updateMintProgress(0, 'Initializing transaction...');
-                
-                if (currentChain === ChainType.ETHEREUM) {
-                    await mintEthereumNFT(selectedNft, paymentMethod);
-                } else {
-                    await mintAptosNFT(selectedNft, paymentMethod);
-                }
-
-                updateMintProgress(100, 'Minting successful!');
-                setTimeout(() => {
-                    closeMintModal();
-                    loadNFTs(); // Refresh NFT list
-                }, 2000);
-            } catch (error) {
-                console.error('Minting failed:', error);
-                updateMintProgress(0, `Minting failed: ${error.message}`);
-            }
-        }
-
-        async function mintEthereumNFT(nft, paymentMethod) {
-            if (!window.ethereum) {
-                throw new Error('MetaMask is not installed');
-            }
-
-            const signer = await provider.getSigner();
-            const contract = nftContract.connect(signer);
-
-            updateMintProgress(20, 'Waiting for wallet approval...');
-
-            try {
-                let tx;
-                if (paymentMethod === PaymentType.NATIVE) {
-                    tx = await contract.mint(
-                        await signer.getAddress(),
-                        nft.tokenId,
-                        { value: ethers.parseEther(nft.price) }
-                    );
-                } else {
-                    // First approve token spending if needed
-                    const tokenContract = new ethers.Contract(
-                        nft.priceToken,
-                        ['function approve(address spender, uint256 amount) public returns (bool)'],
-                        signer
-                    );
-
-                    updateMintProgress(40, 'Approving token spending...');
-                    const approveTx = await tokenContract.approve(
-                        contract.address,
-                        ethers.parseEther(nft.price)
-                    );
-                    await approveTx.wait();
-
-                    updateMintProgress(60, 'Minting NFT...');
-                    tx = await contract.mintWithToken(
-                        await signer.getAddress(),
-                        nft.tokenId
-                    );
-                }
-
-                updateMintProgress(80, 'Waiting for confirmation...');
-                await tx.wait();
-            } catch (error) {
-                if (error.code === 4001) {
-                    throw new Error('Transaction rejected by user');
-                }
-                throw error;
-            }
-        }
-
-        async function mintAptosNFT(nft, paymentMethod) {
-            if (!window.aptos) {
-                throw new Error('Petra Wallet is not installed');
-            }
-
-            updateMintProgress(20, 'Preparing transaction...');
-
-            const payload = {
-                type: 'entry_function_payload',
-                function: `${config.aptos.contracts.heroNft}::hero_nft::mint`,
-                type_arguments: [],
-                arguments: [
-                    nft.tokenId,
-                    paymentMethod === PaymentType.NATIVE ? [] : [nft.priceToken]
-                ]
-            };
-
-            try {
-                updateMintProgress(40, 'Waiting for wallet approval...');
-                const response = await window.aptos.signAndSubmitTransaction(payload);
-
-                updateMintProgress(60, 'Waiting for confirmation...');
-                await aptosClient.waitForTransaction(response.hash);
-            } catch (error) {
-                if (error.code === 'user_rejected') {
-                    throw new Error('Transaction rejected by user');
-                }
-                throw error;
-            }
-        }
-
-        async function loadEthereumNFTs() {
+        async function loadNFTData() {
             try {
                 const totalSupply = await nftContract.totalSupply();
-                const nfts = [];
+                document.getElementById('totalSupply').textContent = totalSupply.toString();
+                
+                const userBalance = await nftContract.balanceOf(userAddress);
+                document.getElementById('userBalance').textContent = userBalance.toString();
 
-                for (let i = 0; i < totalSupply; i++) {
-                    const tokenId = await nftContract.tokenByIndex(i);
-                    const [price, priceToken, uri] = await Promise.all([
-                        nftContract.getNativePrice(tokenId),
-                        nftContract.getTokenPrice(tokenId),
-                        nftContract.tokenURI(tokenId)
-                    ]);
+                // Load NFT prices for display
+                const nftTypes = [0, 1, 2, 3, 4]; // 假设有5种不同的NFT类型
+                const nftList = document.getElementById('nftList');
+                nftList.innerHTML = '';
 
-                    // Fetch metadata from IPFS
-                    const response = await fetch(uri);
-                    const metadata = await response.json();
-
-                    nfts.push({
-                        tokenId: tokenId.toString(),
-                        name: metadata.name,
-                        image: metadata.image,
-                        price: ethers.formatEther(price),
-                        priceToken: priceToken
-                    });
+                for (const tokenId of nftTypes) {
+                    const nativePrice = await nftContract.getNativePrice(tokenId);
+                    const tokenPrice = await nftContract.getTokenPrice(tokenId);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-lg shadow p-4';
+                    card.innerHTML = `
+                        <h3 class="text-lg font-semibold mb-2">Hero NFT #${tokenId}</h3>
+                        <div class="space-y-2">
+                            <p class="text-sm text-gray-600">Native Price: ${ethers.formatEther(nativePrice)} ETH</p>
+                            <p class="text-sm text-gray-600">Token Price: ${ethers.formatUnits(tokenPrice, await tokenContract.decimals())} ${await tokenContract.symbol()}</p>
+                            <div class="flex space-x-2">
+                                <button onclick="mintWithNative(${tokenId})" class="mint-button bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm" disabled>
+                                    Mint with ETH
+                                </button>
+                                <button onclick="mintWithToken(${tokenId})" class="mint-button bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" disabled>
+                                    Mint with Token
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    nftList.appendChild(card);
                 }
-
-                return nfts;
             } catch (error) {
-                console.error('Failed to load Ethereum NFTs:', error);
-                throw new Error('Failed to load NFTs');
+                console.error('Failed to load NFT data:', error);
+                alert('Failed to load NFT data: ' + error.message);
             }
         }
 
-        async function loadAptosNFTs() {
+        async function loadTokenBalance() {
             try {
-                const resources = await aptosClient.getAccountResources(
-                    config.aptos.contracts.heroNft
-                );
-
-                const nftResource = resources.find(r => 
-                    r.type === `${config.aptos.contracts.heroNft}::hero_nft::Collection`
-                );
-
-                if (!nftResource) {
-                    throw new Error('NFT collection not found');
-                }
-
-                const nfts = [];
-                for (const [tokenId, data] of Object.entries(nftResource.data.tokens)) {
-                    // Fetch metadata from IPFS
-                    const response = await fetch(data.uri);
-                    const metadata = await response.json();
-
-                    nfts.push({
-                        tokenId,
-                        name: metadata.name,
-                        image: metadata.image,
-                        price: data.native_price,
-                        priceToken: data.token_price.token
-                    });
-                }
-
-                return nfts;
+                const balance = await tokenContract.balanceOf(userAddress);
+                const symbol = await tokenContract.symbol();
+                const decimals = await tokenContract.decimals();
+                
+                document.getElementById('tokenBalance').textContent = 
+                    `${ethers.formatUnits(balance, decimals)} ${symbol}`;
             } catch (error) {
-                console.error('Failed to load Aptos NFTs:', error);
-                throw new Error('Failed to load NFTs');
+                console.error('Failed to load token balance:', error);
+                document.getElementById('tokenBalance').textContent = 'Error loading balance';
             }
         }
 
-        function updateLanguage(lang) {
-            const translations = {
-                en: {
-                    title: 'NFT Minting',
-                    backToHome: '← Back to Home',
-                    selectChain: 'Select Chain',
-                    mintNFT: 'Mint NFT',
-                    price: 'Price',
-                    paymentMethod: 'Payment Method',
-                    native: 'Native Token',
-                    token: 'ERC20/Aptos Token',
-                    cancel: 'Cancel',
-                    confirm: 'Confirm',
-                    mint: 'Mint'
-                },
-                zh: {
-                    title: 'NFT 铸造',
-                    backToHome: '← 返回首页',
-                    selectChain: '选择链',
-                    mintNFT: '铸造 NFT',
-                    price: '价格',
-                    paymentMethod: '支付方式',
-                    native: '原生代币',
-                    token: 'ERC20/Aptos 代币',
-                    cancel: '取消',
-                    confirm: '确认',
-                    mint: '铸造'
+        async function mintWithNative(tokenId) {
+            try {
+                const price = await nftContract.getNativePrice(tokenId);
+                const tx = await nftContract.mintWithNative(userAddress, tokenId, {
+                    value: price
+                });
+                
+                await handleMintTransaction(tx);
+            } catch (error) {
+                console.error('Minting with native token failed:', error);
+                alert('Minting failed: ' + error.message);
+            }
+        }
+
+        async function mintWithToken(tokenId) {
+            try {
+                const price = await nftContract.getTokenPrice(tokenId);
+                
+                // Check and handle allowance
+                const allowance = await tokenContract.allowance(userAddress, nftContract.address);
+                if (allowance < price) {
+                    const approveTx = await tokenContract.approve(nftContract.address, price);
+                    await approveTx.wait();
                 }
-            };
+                
+                const tx = await nftContract.mintWithToken(userAddress, tokenId);
+                await handleMintTransaction(tx);
+            } catch (error) {
+                console.error('Minting with token failed:', error);
+                alert('Minting failed: ' + error.message);
+            }
+        }
 
-            const t = translations[lang] || translations.en;
-            
-            // Update all text content
-            document.getElementById('pageTitle').textContent = t.title;
-            document.getElementById('backToHome').textContent = t.backToHome;
-            document.getElementById('selectChainTitle').textContent = t.selectChain;
-            document.getElementById('mintModalTitle').textContent = t.mintNFT;
-            document.getElementById('paymentMethodLabel').textContent = t.paymentMethod;
-            document.getElementById('cancelMint').textContent = t.cancel;
-            document.getElementById('confirmMint').textContent = t.confirm;
-
-            // Update payment method options
-            const paymentMethod = document.getElementById('paymentMethod');
-            paymentMethod.options[0].text = t.native;
-            paymentMethod.options[1].text = t.token;
-
-            // Update all mint buttons
-            document.querySelectorAll('#nftList button').forEach(button => {
-                button.textContent = t.mint;
-            });
+        async function handleMintTransaction(tx) {
+            try {
+                document.getElementById('mintStatus').innerHTML = `
+                    <div class="text-blue-600">
+                        Transaction sent! Hash: ${tx.hash}<br>
+                        Waiting for confirmation...
+                    </div>
+                `;
+                
+                const receipt = await tx.wait();
+                
+                if (receipt.status === 1) {
+                    document.getElementById('mintStatus').innerHTML = `
+                        <div class="text-green-600">
+                            Minting successful!<br>
+                            Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" 
+                                          target="_blank" 
+                                          class="underline">View on Etherscan</a>
+                        </div>
+                    `;
+                    
+                    // Refresh data
+                    await loadNFTData();
+                    await loadTokenBalance();
+                } else {
+                    throw new Error('Transaction failed');
+                }
+            } catch (error) {
+                document.getElementById('mintStatus').innerHTML = `
+                    <div class="text-red-600">
+                        Minting failed: ${error.message}
+                    </div>
+                `;
+            }
         }
 
         // Initialize on page load
-        window.addEventListener('load', init);
+        window.addEventListener('load', async () => {
+            try {
+                if (window.ethereum) {
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    
+                    // Initialize contracts (read-only)
+                    nftContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.heroNFT,
+                        nftAbi,
+                        provider
+                    );
+
+                    // Check if already connected
+                    const accounts = await provider.listAccounts();
+                    if (accounts.length > 0) {
+                        await connectWallet();
+                    }
+                } else {
+                    alert('Please install MetaMask to use this dApp');
+                }
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                alert('Initialization failed: ' + error.message);
+            }
+        });
+
+        // Export functions to window
+        window.connectWallet = connectWallet;
+        window.mintWithNative = mintWithNative;
+        window.mintWithToken = mintWithToken;
     </script>
+</head>
+<body class="bg-gray-100">
+    <div class="header">
+        <div class="container">
+            <div class="nav-links">
+                <a href="/pages/hero-test.html" class="back-link">← Back to Hero Test</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-4">
+        <!-- Wallet Connection -->
+        <div class="mb-4 bg-white rounded-lg shadow p-4">
+            <h2 class="text-lg font-semibold mb-2">Wallet Connection</h2>
+            <button id="connectWallet" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
+                Connect Wallet
+            </button>
+            <div id="connectedWallet" class="hidden mt-2">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-green-500 text-sm">Connected:</span>
+                        <span id="walletAddress" class="ml-2 text-gray-600 text-sm"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NFT Info -->
+        <div class="mb-4 bg-white rounded-lg shadow p-4">
+            <h2 class="text-lg font-semibold mb-2">NFT Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <p class="text-sm text-gray-600">Total Supply:</p>
+                    <p id="totalSupply" class="font-medium">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Your NFT Balance:</p>
+                    <p id="userBalance" class="font-medium">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Your Token Balance:</p>
+                    <p id="tokenBalance" class="font-medium">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Minting Status -->
+        <div id="mintStatus" class="mb-4"></div>
+
+        <!-- NFT List -->
+        <div id="nftList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- NFT cards will be dynamically added here -->
+        </div>
+    </div>
 </body>
 </html> 
