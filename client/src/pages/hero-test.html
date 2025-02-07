@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="hero.test.title">Hero System Test - Arcadia Node</title>
+    <title>Hero System Test - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script type="module">
@@ -13,6 +13,8 @@
         import enLang from '../config/i18n/en.js';
         import zhLang from '../config/i18n/zh.js';
         import thLang from '../config/i18n/th.js';
+        import { heroAbi } from '../js/abi/hero.js';
+        import { heroMetadataAbi } from '../js/abi/heroMetadata.js';
 
         const translations = {
             en: enLang,
@@ -26,79 +28,6 @@
         let heroContract;
         let heroMetadataContract;
         let userAddress;
-
-        // 等待所有脚本加载完成
-        window.addEventListener('load', async () => {
-            try {
-                // 初始化 provider
-                if (window.ethereum) {
-                    provider = new ethers.BrowserProvider(window.ethereum);
-                    
-                    // 初始化合约
-                    heroContract = new ethers.Contract(
-                        heroConfig.ethereum.contracts.hero,
-                        heroConfig.ethereum.abis.hero,
-                        provider
-                    );
-
-                    heroMetadataContract = new ethers.Contract(
-                        heroConfig.ethereum.contracts.heroMetadata,
-                        heroConfig.ethereum.abis.heroMetadata,
-                        provider
-                    );
-
-                    console.log('Contracts initialized successfully');
-                } else {
-                    console.error('Please install MetaMask!');
-                    alert('Please install MetaMask to use this dApp');
-                }
-
-                // 更新页面文本
-                updateContent();
-
-                // 设置连接按钮事件
-                document.getElementById('connectWallet').addEventListener('click', connectWallet);
-                
-                // 设置其他按钮事件
-                document.getElementById('getRaceData').addEventListener('click', getRaceData);
-                document.getElementById('getClassData').addEventListener('click', getClassData);
-                document.getElementById('getSkillData').addEventListener('click', getSkillData);
-                document.getElementById('createHero').addEventListener('click', createNewHero);
-
-                // 设置语言选择事件
-                document.getElementById('languageSelect').addEventListener('change', (e) => {
-                    changeLanguage(e.target.value);
-                });
-            } catch (error) {
-                console.error('初始化失败：', error);
-            }
-        });
-
-        function updateContent() {
-            const t = translations[currentLang];
-            
-            // Update page title and headers
-            document.title = t.heroTestTitle;
-            document.querySelector('h1').textContent = t.heroTestTitle;
-            document.querySelector('a[href="/"]').textContent = t.backToHome;
-
-            // Update all data-i18n elements
-            document.querySelectorAll('[data-i18n]').forEach(element => {
-                const key = element.getAttribute('data-i18n');
-                if (t[key]) {
-                    element.textContent = t[key];
-                }
-            });
-
-            // Update language selector
-            document.getElementById('languageSelect').value = currentLang;
-        }
-
-        window.changeLanguage = function(lang) {
-            currentLang = lang;
-            localStorage.setItem('language', lang);
-            updateContent();
-        };
 
         // 连接钱包
         async function connectWallet() {
@@ -155,11 +84,111 @@
                 document.querySelectorAll('.requires-wallet').forEach(button => {
                     button.disabled = false;
                 });
+
+                console.log('Wallet connected successfully:', userAddress);
             } catch (error) {
                 console.error('连接钱包失败：', error);
                 alert('Failed to connect wallet: ' + error.message);
             }
         }
+
+        function updateContent() {
+            const t = translations[currentLang];
+            
+            // Update page title
+            document.title = t.hero.test.title;
+
+            // Update wallet section
+            if (document.getElementById('walletTitle')) {
+                document.getElementById('walletTitle').textContent = t.hero.test.wallet.title;
+            }
+            if (document.getElementById('connectWallet')) {
+                document.getElementById('connectWallet').textContent = t.hero.test.wallet.connect;
+            }
+
+            // Update race section
+            if (document.getElementById('raceTitle')) {
+                document.getElementById('raceTitle').textContent = t.hero.test.race.title;
+            }
+
+            // Update class section
+            if (document.getElementById('classTitle')) {
+                document.getElementById('classTitle').textContent = t.hero.test.class.title;
+            }
+
+            // Update skill section
+            if (document.getElementById('skillTitle')) {
+                document.getElementById('skillTitle').textContent = t.hero.test.skill.title;
+            }
+
+            // Update creation section
+            if (document.getElementById('creationTitle')) {
+                document.getElementById('creationTitle').textContent = t.hero.test.creation.title;
+            }
+
+            // Update language selector
+            if (document.getElementById('languageSelect')) {
+                document.getElementById('languageSelect').value = currentLang;
+            }
+        }
+
+        window.changeLanguage = function(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            updateContent();
+        };
+
+        // 等待所有脚本加载完成
+        window.addEventListener('load', async () => {
+            try {
+                // 初始化 provider
+                if (window.ethereum) {
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    
+                    // 初始化合约
+                    heroContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.hero,
+                        heroAbi,
+                        provider
+                    );
+
+                    heroMetadataContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.heroMetadata,
+                        heroMetadataAbi,
+                        provider
+                    );
+
+                    console.log('Contracts initialized successfully');
+
+                    // 绑定连接钱包事件
+                    const connectWalletBtn = document.getElementById('connectWallet');
+                    if (connectWalletBtn) {
+                        connectWalletBtn.addEventListener('click', connectWallet);
+                        console.log('Wallet connect button event listener added');
+                    }
+                } else {
+                    console.error('Please install MetaMask!');
+                    alert('Please install MetaMask to use this dApp');
+                }
+
+                // 更新页面文本
+                updateContent();
+                
+                // 设置其他按钮事件
+                document.getElementById('getRaceData')?.addEventListener('click', getRaceData);
+                document.getElementById('getClassData')?.addEventListener('click', getClassData);
+                document.getElementById('getSkillData')?.addEventListener('click', getSkillData);
+                document.getElementById('createHero')?.addEventListener('click', createNewHero);
+
+                // 设置语言选择事件
+                document.getElementById('languageSelect')?.addEventListener('change', (e) => {
+                    changeLanguage(e.target.value);
+                });
+            } catch (error) {
+                console.error('初始化失败：', error);
+                alert('初始化失败：' + error.message);
+            }
+        });
 
         // 获取种族数据
         async function getRaceData() {
@@ -222,10 +251,46 @@
         async function createNewHero() {
             try {
                 const name = document.getElementById('heroName').value;
+                if (!name) {
+                    throw new Error('请输入英雄名称');
+                }
                 const race = document.getElementById('createRaceId').value;
                 const classId = document.getElementById('createClassId').value;
                 
-                const tx = await heroContract.createHero(name, race, classId);
+                // 检查网络
+                const network = await provider.getNetwork();
+                console.log('Current network:', network);
+                
+                // 检查合约地址
+                console.log('Hero contract address:', heroConfig.ethereum.contracts.hero);
+                
+                // 检查用户地址
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                console.log('User address:', accounts[0]);
+                
+                // 获取 gas 估算
+                try {
+                    const gasEstimate = await heroContract.createHero.estimateGas(name, race, classId);
+                    console.log('Estimated gas:', gasEstimate.toString());
+                } catch (gasError) {
+                    console.error('Gas estimation failed:', gasError);
+                    throw new Error(`Gas estimation failed: ${gasError.message}`);
+                }
+
+                // 准备交易参数
+                const tx = await heroContract.createHero(
+                    name,
+                    Number(race),
+                    Number(classId),
+                    {
+                        gasLimit: 500000 // 设置一个较高的 gas limit
+                    }
+                );
+                
+                console.log('Transaction sent:', tx);
+                
                 document.getElementById('createResult').innerHTML = `
                     <div class="mt-4 p-4 bg-green-100 rounded">
                         <p>Transaction sent! Hash: ${tx.hash}</p>
@@ -235,6 +300,7 @@
                 
                 // 等待交易确认
                 const receipt = await tx.wait();
+                console.log('Transaction receipt:', receipt);
                 
                 // 从事件中获取英雄 ID
                 const event = receipt.events.find(e => e.event === 'HeroCreated');
@@ -249,9 +315,20 @@
                 `;
             } catch (error) {
                 console.error('创建英雄失败：', error);
+                
+                // 解析错误信息
+                let errorMessage = error.message;
+                if (error.data) {
+                    errorMessage += `\nError data: ${JSON.stringify(error.data)}`;
+                }
+                if (error.transaction) {
+                    errorMessage += `\nTransaction: ${JSON.stringify(error.transaction)}`;
+                }
+                
                 document.getElementById('createResult').innerHTML = `
                     <div class="mt-4 p-4 bg-red-100 rounded">
-                        <p>Failed to create hero: ${error.message}</p>
+                        <p>Failed to create hero:</p>
+                        <pre class="mt-2 text-sm text-red-600 whitespace-pre-wrap">${errorMessage}</pre>
                     </div>
                 `;
             }
@@ -269,7 +346,7 @@
     <div class="header">
         <div class="container">
             <div class="nav-links">
-                <a href="/" id="backToHome" data-i18n="backToHome">返回首页</a>
+                <a href="/" id="backToHome">返回首页</a>
                 <select id="languageSelect" class="language-select">
                     <option value="en">English</option>
                     <option value="zh">中文</option>
@@ -282,22 +359,22 @@
     <div class="container mx-auto px-4 py-8">
         <!-- 钱包连接 -->
         <div class="mb-8">
-            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.wallet.title">钱包连接</h2>
-            <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" data-i18n="hero.test.wallet.connect">
+            <h2 id="walletTitle" class="text-xl font-semibold mb-4">钱包连接</h2>
+            <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
                 连接钱包
             </button>
             <div id="connectedWallet" class="hidden">
-                <span class="text-green-500" data-i18n="hero.test.wallet.connected">已连接</span>
+                <span class="text-green-500">已连接</span>
                 <span id="walletAddress" class="ml-2 text-gray-600"></span>
             </div>
         </div>
 
         <!-- 种族数据测试 -->
         <div class="mb-8">
-            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.race.title">种族数据测试</h2>
+            <h2 id="raceTitle" class="text-xl font-semibold mb-4">种族数据测试</h2>
             <div class="space-y-4">
                 <div>
-                    <label for="raceId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.race.select">选择种族</label>
+                    <label for="raceId" class="block text-sm font-medium text-gray-700">选择种族</label>
                     <select id="raceId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                         <option value="0">Human</option>
                         <option value="1">Elf</option>
@@ -315,10 +392,10 @@
 
         <!-- 职业数据测试 -->
         <div class="mb-8">
-            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.class.title">职业数据测试</h2>
+            <h2 id="classTitle" class="text-xl font-semibold mb-4">职业数据测试</h2>
             <div class="space-y-4">
                 <div>
-                    <label for="classId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.class.select">选择职业</label>
+                    <label for="classId" class="block text-sm font-medium text-gray-700">选择职业</label>
                     <select id="classId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                         <option value="0">Warrior</option>
                         <option value="1">Mage</option>
@@ -336,10 +413,10 @@
 
         <!-- 技能数据测试 -->
         <div class="mb-8">
-            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.skill.title">技能数据测试</h2>
+            <h2 id="skillTitle" class="text-xl font-semibold mb-4">技能数据测试</h2>
             <div class="space-y-4">
                 <div>
-                    <label for="seasonId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.skill.season">选择季节</label>
+                    <label for="seasonId" class="block text-sm font-medium text-gray-700">选择季节</label>
                     <select id="seasonId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                         <option value="0">Spring</option>
                         <option value="1">Summer</option>
@@ -348,11 +425,11 @@
                     </select>
                 </div>
                 <div>
-                    <label for="skillId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.skill.id">技能 ID</label>
+                    <label for="skillId" class="block text-sm font-medium text-gray-700">技能 ID</label>
                     <input type="number" id="skillId" min="0" max="4" value="0" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                 </div>
                 <div>
-                    <label for="skillLevel" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.skill.level">等级</label>
+                    <label for="skillLevel" class="block text-sm font-medium text-gray-700">等级</label>
                     <input type="number" id="skillLevel" min="1" max="10" value="1" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                 </div>
                 <button id="getSkillData" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>
@@ -364,14 +441,14 @@
 
         <!-- 创建英雄 -->
         <div class="mb-8">
-            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.creation.title">创建英雄</h2>
+            <h2 id="creationTitle" class="text-xl font-semibold mb-4">创建英雄</h2>
             <div class="space-y-4">
                 <div>
-                    <label for="heroName" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.creation.name">英雄名称</label>
+                    <label for="heroName" class="block text-sm font-medium text-gray-700">英雄名称</label>
                     <input type="text" id="heroName" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                 </div>
                 <div>
-                    <label for="createRaceId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.creation.race">选择种族</label>
+                    <label for="createRaceId" class="block text-sm font-medium text-gray-700">选择种族</label>
                     <select id="createRaceId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                         <option value="0">Human</option>
                         <option value="1">Elf</option>
@@ -381,7 +458,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="createClassId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.creation.class">选择职业</label>
+                    <label for="createClassId" class="block text-sm font-medium text-gray-700">选择职业</label>
                     <select id="createClassId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                         <option value="0">Warrior</option>
                         <option value="1">Mage</option>
@@ -390,7 +467,7 @@
                         <option value="4">Priest</option>
                     </select>
                 </div>
-                <button id="createHero" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled data-i18n="hero.test.creation.create">
+                <button id="createHero" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>
                     创建英雄
                 </button>
                 <div id="createResult"></div>
