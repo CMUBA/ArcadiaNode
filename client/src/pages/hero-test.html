@@ -460,8 +460,8 @@
             try {
                 if (!heroContract) return;
                 
-                // 假设合约有一个获取已注册NFT合约列表的函数
-                const nftContracts = await heroContract.getRegisteredNFTContracts();
+                // 使用正确的函数名 getRegisteredNFTs
+                const nftContracts = await heroContract.getRegisteredNFTs();
                 const nftContractsList = document.getElementById('nftContractsList');
                 
                 if (nftContracts && nftContracts.length > 0) {

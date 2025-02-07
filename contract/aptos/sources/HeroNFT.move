@@ -3,6 +3,8 @@ module hero_nft::hero_nft {
     use std::string;
     use std::signer;
     use std::vector;
+    use std::error;
+    use aptos_framework::account;
     use aptos_framework::coin::{Self as coin};
     use aptos_framework::event;
     use aptos_framework::timestamp;
@@ -100,7 +102,11 @@ module hero_nft::hero_nft {
         assert!(amount >= price, EINVALID_PAYMENT);
 
         coin::transfer<CoinType>(account, @hero_nft, price);
-        mint_internal(account, token_id);
+
+        // Create admin signer
+        let cap = account::create_test_signer_cap(@hero_nft);
+        let admin = account::create_signer_with_capability(&cap);
+        mint_internal(account, &admin, token_id);
 
         event::emit(NFTMintedEvent {
             to: signer::address_of(account),
@@ -173,11 +179,15 @@ module hero_nft::hero_nft {
 
         coin::transfer<CoinType>(account, @hero_nft, total_price);
 
+        // Create admin signer
+        let cap = account::create_test_signer_cap(@hero_nft);
+        let admin = account::create_signer_with_capability(&cap);
+
         let i = 0;
         let len = vector::length(&token_ids);
         while (i < len) {
             let token_id = *vector::borrow(&token_ids, i);
-            mint_internal(account, token_id);
+            mint_internal(account, &admin, token_id);
 
             event::emit(NFTMintedEvent {
                 to: signer::address_of(account),
@@ -187,7 +197,7 @@ module hero_nft::hero_nft {
                 timestamp: timestamp::now_seconds(),
             });
             i = i + 1;
-        }
+        };
     }
 
     // Set default prices for native and token payments
@@ -204,7 +214,10 @@ module hero_nft::hero_nft {
     }
 
     // Internal functions
-    fun mint_internal(account: &signer, token_id: u64) {
+    fun mint_internal(user: &signer, admin: &signer, token_id: u64) {
+        // Check if the admin account is valid
+        let admin_addr = signer::address_of(admin);
+        assert!(admin_addr == @hero_nft, error::permission_denied(ENOT_OWNER));
         let token_name = string::utf8(b"");
         string::append(&mut token_name, string::utf8(b"HERO #"));
         string::append(&mut token_name, string::utf8(num_to_string(token_id)));
@@ -213,9 +226,9 @@ module hero_nft::hero_nft {
         let description = string::utf8(b"Hero NFT Collection");
         let uri = string::utf8(b"https://hero.example.com/nft/");
 
-        // Create token data
+        // Create token data using admin account
         let token_data_id = token::create_tokendata(
-            account,
+            admin,
             collection,
             token_name,
             description,
@@ -224,18 +237,29 @@ module hero_nft::hero_nft {
             @hero_nft, // royalty payee address
             100, // royalty points denominator
             5, // royalty points numerator (5%)
-            token::create_token_mutability_config(&vector::empty<bool>()), // token mutate config
+            {
+                let mutate_setting = vector::empty<bool>();
+                vector::push_back(&mut mutate_setting, true); // maximum
+                vector::push_back(&mut mutate_setting, true); // uri
+                vector::push_back(&mut mutate_setting, true); // royalty
+                vector::push_back(&mut mutate_setting, true); // description
+                vector::push_back(&mut mutate_setting, true); // properties
+                token::create_token_mutability_config(&mutate_setting)
+            }, // token mutate config
             vector::empty<String>(), // property keys
             vector::empty<vector<u8>>(), // property values
             vector::empty<String>(), // property types
         );
 
-        // Mint token
-        token::mint_token(
-            account,
+        // Mint token using admin account
+        let token_id = token::mint_token(
+            admin,
             token_data_id,
             1, // amount
         );
+
+        // Transfer token to user
+        token::direct_transfer(admin, user, token_id, 1);
     }
 
     fun get_total_price_for_tokens(token_ids: &vector<u64>, collection_data: &CollectionData): u64 {

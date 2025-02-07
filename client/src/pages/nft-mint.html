@@ -15,15 +15,18 @@
         let tokenContract;
         let userAddress;
 
-        // NFT Contract ABI - 只包含我们需要的函数
+        // NFT Contract ABI - 更新为正确的函数
         const nftAbi = [
             "function totalSupply() view returns (uint256)",
             "function balanceOf(address) view returns (uint256)",
-            "function getAcceptedToken() view returns (address)",
-            "function getNativePrice(uint256) view returns (uint256)",
+            "function exists(uint256) view returns (bool)",
+            "function ownerOf(uint256) view returns (address)",
+            "function mint(uint256) payable",
+            "function mintWithToken(uint256)",
+            "function getPrice(uint256) view returns (uint256)",
             "function getTokenPrice(uint256) view returns (uint256)",
-            "function mintWithNative(address, uint256) payable",
-            "function mintWithToken(address, uint256)"
+            "function getAcceptedTokens() view returns (address[])",
+            "function isTokenAccepted(address) view returns (bool)"
         ];
 
         // ERC20 Token ABI
@@ -37,35 +40,66 @@
 
         async function connectWallet() {
             try {
+                // Request user authorization
                 const accounts = await window.ethereum.request({ 
                     method: 'eth_requestAccounts' 
                 });
                 userAddress = accounts[0];
+                console.log('Connected account:', userAddress);
                 
-                // Check and switch network if needed
+                // Check network
                 const network = await provider.getNetwork();
+                console.log('Current network:', network);
+                
                 if (network.chainId !== BigInt(heroConfig.ethereum.chainId)) {
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: '0x' + heroConfig.ethereum.chainId.toString(16) }],
-                    });
+                    // Request switch to Optimism Sepolia
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x' + heroConfig.ethereum.chainId.toString(16) }],
+                        });
+                    } catch (switchError) {
+                        // Add network if not exists
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0x' + heroConfig.ethereum.chainId.toString(16),
+                                    chainName: 'Optimism Sepolia',
+                                    nativeCurrency: {
+                                        name: 'ETH',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: [heroConfig.ethereum.nodeUrl],
+                                    blockExplorerUrls: ['https://sepolia-optimism.etherscan.io/']
+                                }],
+                            });
+                        }
+                    }
                 }
 
                 // Get signer and initialize contracts
                 const signer = await provider.getSigner();
+                console.log('Signer obtained');
+
+                // Initialize NFT contract with signer
                 nftContract = new ethers.Contract(
                     heroConfig.ethereum.contracts.heroNFT,
                     nftAbi,
                     signer
                 );
 
-                // Get accepted token address and initialize token contract
-                const tokenAddress = await nftContract.getAcceptedToken();
-                tokenContract = new ethers.Contract(
-                    tokenAddress,
-                    tokenAbi,
-                    signer
-                );
+                // Get accepted tokens
+                const acceptedTokens = await nftContract.getAcceptedTokens();
+                if (acceptedTokens && acceptedTokens.length > 0) {
+                    // Initialize the first accepted token contract
+                    tokenContract = new ethers.Contract(
+                        acceptedTokens[0],
+                        tokenAbi,
+                        signer
+                    );
+                }
 
                 // Update UI
                 document.getElementById('connectWallet').style.display = 'none';
@@ -145,8 +179,8 @@
 
         async function mintWithNative(tokenId) {
             try {
-                const price = await nftContract.getNativePrice(tokenId);
-                const tx = await nftContract.mintWithNative(userAddress, tokenId, {
+                const price = await nftContract.getPrice(tokenId);
+                const tx = await nftContract.mint(tokenId, {
                     value: price
                 });
                 
@@ -161,6 +195,12 @@
             try {
                 const price = await nftContract.getTokenPrice(tokenId);
                 
+                // Check if token is accepted
+                const isAccepted = await nftContract.isTokenAccepted(tokenContract.address);
+                if (!isAccepted) {
+                    throw new Error('Token not accepted for minting');
+                }
+                
                 // Check and handle allowance
                 const allowance = await tokenContract.allowance(userAddress, nftContract.address);
                 if (allowance < price) {
@@ -168,7 +208,7 @@
                     await approveTx.wait();
                 }
                 
-                const tx = await nftContract.mintWithToken(userAddress, tokenId);
+                const tx = await nftContract.mintWithToken(tokenId);
                 await handleMintTransaction(tx);
             } catch (error) {
                 console.error('Minting with token failed:', error);
