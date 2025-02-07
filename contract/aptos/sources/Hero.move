@@ -182,8 +182,29 @@ module hero::core {
         vector::push_back(&mut hero_store.registered_nodes, node_address);
     }
 
+    /// Public getters
+    public fun get_name(hero: &HeroData): String {
+        hero.name
+    }
+
+    public fun get_race(hero: &HeroData): u8 {
+        hero.race
+    }
+
+    public fun get_class(hero: &HeroData): u8 {
+        hero.class
+    }
+
+    public fun get_level(hero: &HeroData): u8 {
+        hero.level
+    }
+
+    public fun get_exp(hero: &HeroData): u32 {
+        hero.exp
+    }
+
     /// Verify signatures
-    fun verify_signatures(node_signature: vector<u8>, client_signature: vector<u8>): bool {
+    fun verify_signatures(_node_signature: vector<u8>, _client_signature: vector<u8>): bool {
         // TODO: Implement signature verification logic
         true
     }

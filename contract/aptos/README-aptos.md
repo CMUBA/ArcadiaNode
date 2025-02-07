@@ -336,3 +336,42 @@ module hero {
    - Move Prover 形式化验证
    - 集成测试验证跨模块交互
 
+------
+我们需要针对三个核心合约：nft，metadata和hero进行编译和测试。
+
+```bash
+# 1. 编译 HeroNFT 模块
+# aptos move compile --package-dir hero_nft
+因为需要引用env变量，所以使用 compile.sh
+
+# 2. 编译 HeroMetadata 模块
+aptos move compile --package-dir hero_metadata
+
+# 3. 编译 Hero 核心模块
+aptos move compile --package-dir hero
+
+```
+测试
+
+
+```bash
+aptos move test
+
+```
+
+1. 请扫描整个代码库，然后阅读 readme-aptos.md,了解产品设计思路
+2.然后更改所有使用中文注释的move代码为英文
+3.然后运行 aptos move test
+
+
+----
+1. 请用中文对话，但是所有代码注释使用英文
+2. 目前hero合约的逻辑
+HeroNFT是所有用户必须先购买的NFT合约，拥有此collection的NFT，才可以在Hero合约创建新hero
+
+HeroMetadata是静态数据表，存储一些技能计算数据，种族和职业设定等，在部署后需要部署者初始化这个数据，然后以读取为主（也可能会维护）
+
+Hero是核心英雄数据结构，包括基本属性，技能数据表等，另外会有一个NFT合约注册表，只有在此注册表的NFT，才可以新增hero记录，部署者可以给NFT注册表新增NFT合约collection
+
+我们需要讨论下测试者这三个合约，需要先初始化HeroMetadata么？需要先mint一个NFT么？
+基于此思路，请改进相关测试合约的脚本

@@ -49,10 +49,6 @@
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-        }
-        .service-group:hover {
-            transform: translateY(-5px);
         }
         .service-group h2 {
             color: #2c3e50;
@@ -125,28 +121,18 @@
             <div class="service-group">
                 <h2 id="contractManagement">Contract Management</h2>
                 <ul class="service-list">
+                    <!-- Node Register Contracts -->
                     <li class="service-item">
-                        <a href="https://sepolia-optimism.etherscan.io/address/0xBda48255DA1ed61a209641144Dd24696926aF3F0" 
-                           target="_blank" 
-                           class="service-link">
-                            <span id="tokenContract">Token Contract</span>
-                            <span class="contract-link">0xBda4...F3F0</span>
+                        <a href="/pages/node-contracts.html" class="service-link">
+                            <span id="nodeContracts">Node Register Contracts</span>
+                            <span class="service-index">Node</span>
                         </a>
                     </li>
+                    <!-- Hero System Contracts -->
                     <li class="service-item">
-                        <a href="https://sepolia-optimism.etherscan.io/address/0xf7081161f19FB6246c1931aABd4fbe890DbdE8c4" 
-                           target="_blank" 
-                           class="service-link">
-                            <span id="stakeManager">Stake Manager Contract</span>
-                            <span class="contract-link">0xf708...E8c4</span>
-                        </a>
-                    </li>
-                    <li class="service-item">
-                        <a href="https://sepolia-optimism.etherscan.io/address/0xE1A3B41be95Ff379DBDFd194680d26b5d8786462" 
-                           target="_blank" 
-                           class="service-link">
-                            <span id="nodeRegistry">Node Registry Contract</span>
-                            <span class="contract-link">0xE1A3...6462</span>
+                        <a href="/pages/hero-contracts.html" class="service-link">
+                            <span id="heroContracts">Hero System Contracts</span>
+                            <span class="service-index">Hero</span>
                         </a>
                     </li>
                 </ul>
@@ -285,9 +271,8 @@
             document.getElementById('userManagement').textContent = t.userManagement;
             document.getElementById('chainInteraction').textContent = t.chainInteraction;
             
-            document.getElementById('tokenContract').textContent = t.contracts.token;
-            document.getElementById('stakeManager').textContent = t.contracts.stakeManager;
-            document.getElementById('nodeRegistry').textContent = t.contracts.nodeRegistry;
+            document.getElementById('nodeContracts').textContent = t.contracts.nodeContracts;
+            document.getElementById('heroContracts').textContent = t.contracts.heroContracts;
             
             document.getElementById('nodeRegister').textContent = t.nodeRegister;
             document.getElementById('registeredNodes').textContent = t.registeredNodes;

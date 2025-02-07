@@ -24,38 +24,34 @@
 
         let currentLang = localStorage.getItem('language') || 'en';
         let provider;
-        let signer;
         let heroContract;
         let heroMetadataContract;
         let userAddress;
+        let nftContract;
 
-        // 连接钱包
+        // Connect wallet function
         async function connectWallet() {
             try {
-                // 请求用户授权
+                // Request user authorization
                 const accounts = await window.ethereum.request({ 
                     method: 'eth_requestAccounts' 
                 });
                 userAddress = accounts[0];
+                console.log('Connected account:', userAddress);
                 
-                // 获取 signer
-                signer = await provider.getSigner();
-                
-                // 使用 signer 重新连接合约
-                heroContract = heroContract.connect(signer);
-                heroMetadataContract = heroMetadataContract.connect(signer);
-                
-                // 检查网络
+                // Check network
                 const network = await provider.getNetwork();
+                console.log('Current network:', network);
+                
                 if (network.chainId !== BigInt(heroConfig.ethereum.chainId)) {
-                    // 请求切换到 Optimism Sepolia
+                    // Request switch to Optimism Sepolia
                     try {
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: '0x' + heroConfig.ethereum.chainId.toString(16) }],
                         });
                     } catch (switchError) {
-                        // 如果网络不存在，添加网络
+                        // Add network if not exists
                         if (switchError.code === 4902) {
                             await window.ethereum.request({
                                 method: 'wallet_addEthereumChain',
@@ -75,19 +71,61 @@
                     }
                 }
 
-                // 更新 UI
+                // Get signer and reinitialize contracts
+                const signer = await provider.getSigner();
+                console.log('Signer obtained');
+
+                // Initialize contracts with signer
+                heroContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.hero,
+                    heroAbi,
+                    signer
+                );
+
+                heroMetadataContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.heroMetadata,
+                    heroMetadataAbi,
+                    signer
+                );
+
+                // Initialize NFT contract
+                nftContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.heroNFT,
+                    ['function balanceOf(address) view returns (uint256)'],
+                    provider
+                );
+
+                // Check NFT ownership
+                const nftBalance = await nftContract.balanceOf(userAddress);
+                const hasNFT = nftBalance > 0;
+                
+                // Update NFT status display
+                const nftStatus = document.getElementById('nftStatus');
+                if (hasNFT) {
+                    nftStatus.innerHTML = '<span class="text-green-500">✓ You own a Hero NFT</span>';
+                    // Enable create hero button
+                    document.getElementById('createHero').disabled = false;
+                } else {
+                    nftStatus.innerHTML = '<span class="text-red-500">✗ No Hero NFT found</span> <a href="/pages/nft-mint.html" class="text-blue-600 hover:text-blue-800">Mint one now →</a>';
+                    // Disable create hero button
+                    document.getElementById('createHero').disabled = true;
+                }
+
+                console.log('Contracts reinitialized with signer');
+
+                // Update UI
                 document.getElementById('connectWallet').style.display = 'none';
                 document.getElementById('connectedWallet').style.display = 'block';
                 document.getElementById('walletAddress').textContent = userAddress;
                 
-                // 启用所有需要钱包的按钮
-                document.querySelectorAll('.requires-wallet').forEach(button => {
+                // Enable wallet-required buttons except create hero (which depends on NFT ownership)
+                document.querySelectorAll('.requires-wallet:not(#createHero)').forEach(button => {
                     button.disabled = false;
                 });
 
                 console.log('Wallet connected successfully:', userAddress);
             } catch (error) {
-                console.error('连接钱包失败：', error);
+                console.error('Wallet connection failed:', error);
                 alert('Failed to connect wallet: ' + error.message);
             }
         }
@@ -138,14 +176,16 @@
             updateContent();
         };
 
-        // 等待所有脚本加载完成
+        // Initialize on page load
         window.addEventListener('load', async () => {
             try {
-                // 初始化 provider
+                // Check MetaMask
                 if (window.ethereum) {
+                    // Initialize provider
                     provider = new ethers.BrowserProvider(window.ethereum);
+                    console.log('Provider initialized');
                     
-                    // 初始化合约
+                    // Initialize contracts with provider (read-only)
                     heroContract = new ethers.Contract(
                         heroConfig.ethereum.contracts.hero,
                         heroAbi,
@@ -158,35 +198,49 @@
                         provider
                     );
 
+                    // Initialize NFT contract
+                    nftContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.heroNFT,
+                        ['function balanceOf(address) view returns (uint256)'],
+                        provider
+                    );
+
                     console.log('Contracts initialized successfully');
 
-                    // 绑定连接钱包事件
+                    // Add wallet connect button event listener
                     const connectWalletBtn = document.getElementById('connectWallet');
                     if (connectWalletBtn) {
                         connectWalletBtn.addEventListener('click', connectWallet);
                         console.log('Wallet connect button event listener added');
+                    }
+
+                    // Check if already connected
+                    const accounts = await provider.listAccounts();
+                    if (accounts.length > 0) {
+                        console.log('Found existing connection');
+                        await connectWallet();
                     }
                 } else {
                     console.error('Please install MetaMask!');
                     alert('Please install MetaMask to use this dApp');
                 }
 
-                // 更新页面文本
+                // Update page content
                 updateContent();
                 
-                // 设置其他按钮事件
+                // Set up other button events
                 document.getElementById('getRaceData')?.addEventListener('click', getRaceData);
                 document.getElementById('getClassData')?.addEventListener('click', getClassData);
                 document.getElementById('getSkillData')?.addEventListener('click', getSkillData);
                 document.getElementById('createHero')?.addEventListener('click', createNewHero);
 
-                // 设置语言选择事件
+                // Set up language selection event
                 document.getElementById('languageSelect')?.addEventListener('change', (e) => {
                     changeLanguage(e.target.value);
                 });
             } catch (error) {
-                console.error('初始化失败：', error);
-                alert('初始化失败：' + error.message);
+                console.error('Initialization failed:', error);
+                alert('Initialization failed: ' + error.message);
             }
         });
 
@@ -247,90 +301,135 @@
             }
         }
 
-        // 创建新英雄
+        // Create new hero function
         async function createNewHero() {
             try {
+                // Validate input
                 const name = document.getElementById('heroName').value;
                 if (!name) {
-                    throw new Error('请输入英雄名称');
+                    throw new Error('Please enter hero name');
                 }
                 const race = document.getElementById('createRaceId').value;
                 const classId = document.getElementById('createClassId').value;
                 
-                // 检查网络
-                const network = await provider.getNetwork();
-                console.log('Current network:', network);
+                // Get user ID (using wallet address as user ID for now)
+                const userId = ethers.keccak256(ethers.toUtf8Bytes(userAddress));
                 
-                // 检查合约地址
-                console.log('Hero contract address:', heroConfig.ethereum.contracts.hero);
-                
-                // 检查用户地址
-                const accounts = await window.ethereum.request({ 
-                    method: 'eth_requestAccounts' 
+                console.log('Creating hero with params:', {
+                    userId,
+                    name,
+                    race,
+                    classId,
+                    contractAddress: heroConfig.ethereum.contracts.hero
                 });
-                console.log('User address:', accounts[0]);
 
-                // 检查合约状态
-                try {
+                // Verify contract is properly initialized
+                if (!heroContract.runner?.provider?.provider?.selectedAddress) {
+                    console.log('Reconnecting contract with signer...');
                     const signer = await provider.getSigner();
-                    const signerAddress = await signer.getAddress();
-                    console.log('Signer address:', signerAddress);
-
-                    // 重新连接合约
-                    const connectedContract = heroContract.connect(signer);
-                    console.log('Contract connected with signer');
-
-                    // 准备参数
-                    const raceValue = Number(race);
-                    const classValue = Number(classId);
-                    console.log('Parameters:', {
-                        name,
-                        race: raceValue,
-                        class: classValue
-                    });
-
-                    // 发送交易
-                    const tx = await connectedContract.createHero(
-                        name,
-                        raceValue,
-                        classValue,
-                        {
-                            gasLimit: 500000
-                        }
+                    heroContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.hero,
+                        heroAbi,
+                        signer
                     );
-                    
-                    console.log('Transaction sent:', tx);
-                    
-                    document.getElementById('createResult').innerHTML = `
-                        <div class="mt-4 p-4 bg-green-100 rounded">
-                            <p>Transaction sent! Hash: ${tx.hash}</p>
-                            <p>Waiting for confirmation...</p>
-                        </div>
-                    `;
-                    
-                    // 等待交易确认
-                    const receipt = await tx.wait();
-                    console.log('Transaction receipt:', receipt);
-                    
-                    // 从事件中获取英雄 ID
-                    const event = receipt.events.find(e => e.event === 'HeroCreated');
-                    const heroId = event.args.heroId;
+                }
+
+                // Calculate expected NFT token ID
+                const tokenId = ethers.keccak256(
+                    ethers.AbiCoder.defaultAbiCoder().encode(
+                        ['uint256', 'string', 'uint8', 'uint8'],
+                        [userId, name, race, classId]
+                    )
+                );
+
+                // Check if NFT exists and is owned by the user
+                const nftContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.heroNFT,
+                    ['function exists(uint256) view returns (bool)', 'function ownerOf(uint256) view returns (address)'],
+                    provider
+                );
+
+                const nftExists = await nftContract.exists(tokenId);
+                if (!nftExists) {
+                    throw new Error('Please mint the hero NFT first');
+                }
+
+                const nftOwner = await nftContract.ownerOf(tokenId);
+                if (nftOwner.toLowerCase() !== userAddress.toLowerCase()) {
+                    throw new Error('You do not own this hero NFT');
+                }
+
+                // Prepare parameters
+                const raceValue = Number(race);
+                const classValue = Number(classId);
+
+                // Encode function data for verification
+                const encodedData = heroContract.interface.encodeFunctionData('createHero', [
+                    userId,
+                    name,
+                    raceValue,
+                    classValue
+                ]);
+                console.log('Encoded transaction data:', encodedData);
+
+                // Send transaction
+                const tx = await heroContract.createHero(
+                    userId,
+                    name,
+                    raceValue,
+                    classValue,
+                    {
+                        gasLimit: 500000
+                    }
+                );
+                
+                console.log('Transaction sent:', tx);
+                
+                document.getElementById('createResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-green-100 rounded">
+                        <p>Transaction sent! Hash: ${tx.hash}</p>
+                        <p>Waiting for confirmation...</p>
+                        <p>NFT Token ID: ${tokenId}</p>
+                    </div>
+                `;
+                
+                // Wait for confirmation
+                const receipt = await tx.wait();
+                console.log('Transaction receipt:', receipt);
+                
+                if (receipt.status === 0) {
+                    throw new Error('Transaction failed');
+                }
+                
+                // Find event in logs
+                const event = receipt.logs.find(log => {
+                    try {
+                        const parsed = heroContract.interface.parseLog(log);
+                        return parsed.name === 'HeroCreated';
+                    } catch (e) {
+                        return false;
+                    }
+                });
+
+                if (event) {
+                    const parsedEvent = heroContract.interface.parseLog(event);
+                    const heroId = parsedEvent.args.heroId;
                     
                     document.getElementById('createResult').innerHTML = `
                         <div class="mt-4 p-4 bg-green-100 rounded">
                             <p>Hero created successfully!</p>
                             <p>Hero ID: ${heroId}</p>
+                            <p>NFT Token ID: ${tokenId}</p>
                             <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
                         </div>
                     `;
-                } catch (error) {
-                    console.error('Contract interaction failed:', error);
-                    throw error;
+                } else {
+                    throw new Error('HeroCreated event not found in transaction logs');
                 }
             } catch (error) {
-                console.error('创建英雄失败：', error);
+                console.error('Create hero failure: ', error);
                 
-                // 解析错误信息
+                // Parse error message
                 let errorMessage = error.message;
                 if (error.data) {
                     errorMessage += `\nError data: ${JSON.stringify(error.data)}`;
@@ -374,12 +473,24 @@
         <!-- 顶部区域：钱包连接 -->
         <div class="mb-4 bg-white rounded-lg shadow p-4">
             <h2 id="walletTitle" class="text-lg font-semibold mb-2">钱包连接</h2>
-            <button id="connectWallet" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
-                连接钱包
-            </button>
-            <div id="connectedWallet" class="hidden">
-                <span class="text-green-500 text-sm">已连接</span>
-                <span id="walletAddress" class="ml-2 text-gray-600 text-sm"></span>
+            <div class="flex items-center space-x-4">
+                <button id="connectWallet" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
+                    连接钱包
+                </button>
+                <a href="/pages/nft-mint.html" class="text-blue-600 hover:text-blue-800 text-sm">
+                    Mint Hero NFT →
+                </a>
+            </div>
+            <div id="connectedWallet" class="hidden mt-2">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-green-500 text-sm">已连接</span>
+                        <span id="walletAddress" class="ml-2 text-gray-600 text-sm"></span>
+                    </div>
+                    <div id="nftStatus" class="text-sm">
+                        <span class="text-gray-500">Checking NFT ownership...</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -388,10 +499,10 @@
             <div class="space-y-4">
                 <!-- 种族数据测试 -->
                 <div class="bg-white rounded-lg shadow p-4">
-                    <h2 id="raceTitle" class="text-lg font-semibold mb-2">种族数据测试</h2>
+                    <h2 id="raceTitle" class="text-lg font-semibold mb-2">Race Data Test</h2>
                     <div class="space-y-2">
                         <div>
-                            <label for="raceId" class="block text-sm font-medium text-gray-700">选择种族</label>
+                            <label for="raceId" class="block text-sm font-medium text-gray-700">Select Race</label>
                             <select id="raceId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
                                 <option value="0">Human</option>
                                 <option value="1">Elf</option>
@@ -401,7 +512,7 @@
                             </select>
                         </div>
                         <button id="getRaceData" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
-                            获取数据
+                            Get Data
                         </button>
                         <div id="raceResult"></div>
                     </div>
@@ -409,10 +520,10 @@
 
                 <!-- 职业数据测试 -->
                 <div class="bg-white rounded-lg shadow p-4">
-                    <h2 id="classTitle" class="text-lg font-semibold mb-2">职业数据测试</h2>
+                    <h2 id="classTitle" class="text-lg font-semibold mb-2">Class Data Test</h2>
                     <div class="space-y-2">
                         <div>
-                            <label for="classId" class="block text-sm font-medium text-gray-700">选择职业</label>
+                            <label for="classId" class="block text-sm font-medium text-gray-700">Select Class</label>
                             <select id="classId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
                                 <option value="0">Warrior</option>
                                 <option value="1">Mage</option>
@@ -422,7 +533,7 @@
                             </select>
                         </div>
                         <button id="getClassData" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
-                            获取数据
+                            Get Data
                         </button>
                         <div id="classResult"></div>
                     </div>
@@ -430,7 +541,7 @@
 
                 <!-- 技能数据测试 -->
                 <div class="bg-white rounded-lg shadow p-4">
-                    <h2 id="skillTitle" class="text-lg font-semibold mb-2">技能数据测试</h2>
+                    <h2 id="skillTitle" class="text-lg font-semibold mb-2">Skill Data Test</h2>
                     <div class="space-y-2">
                         <div class="grid grid-cols-3 gap-2">
                             <div>
@@ -443,16 +554,16 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="skillId" class="block text-sm font-medium text-gray-700">技能 ID</label>
+                                <label for="skillId" class="block text-sm font-medium text-gray-700">Skill ID</label>
                                 <input type="number" id="skillId" min="0" max="4" value="0" class="mt-1 block w-full pl-2 pr-2 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
                             </div>
                             <div>
-                                <label for="skillLevel" class="block text-sm font-medium text-gray-700">等级</label>
+                                <label for="skillLevel" class="block text-sm font-medium text-gray-700">Level</label>
                                 <input type="number" id="skillLevel" min="1" max="10" value="1" class="mt-1 block w-full pl-2 pr-2 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
                             </div>
                         </div>
                         <button id="getSkillData" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
-                            获取数据
+                            Get Data
                         </button>
                         <div id="skillResult"></div>
                     </div>
@@ -461,14 +572,15 @@
 
             <!-- 右侧：创建英雄区域 -->
             <div class="bg-white rounded-lg shadow p-4">
-                <h2 id="creationTitle" class="text-lg font-semibold mb-2">创建英雄</h2>
+                <h2 id="creationTitle" class="text-lg font-semibold mb-2">Create Hero</h2>
                 <div class="space-y-2">
                     <div>
-                        <label for="heroName" class="block text-sm font-medium text-gray-700">英雄名称</label>
+                        <label for="heroName" class="block text-sm font-medium text-gray-700">Hero Name
+                        </label>
                         <input type="text" id="heroName" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
                     </div>
                     <div>
-                        <label for="createRaceId" class="block text-sm font-medium text-gray-700">选择种族</label>
+                        <label for="createRaceId" class="block text-sm font-medium text-gray-700">Select Race</label>
                         <select id="createRaceId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
                             <option value="0">Human</option>
                             <option value="1">Elf</option>
@@ -478,7 +590,7 @@
                         </select>
                     </div>
                     <div>
-                        <label for="createClassId" class="block text-sm font-medium text-gray-700">选择职业</label>
+                        <label for="createClassId" class="block text-sm font-medium text-gray-700">Select Class</label>
                         <select id="createClassId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
                             <option value="0">Warrior</option>
                             <option value="1">Mage</option>
@@ -488,7 +600,7 @@
                         </select>
                     </div>
                     <button id="createHero" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
-                        创建英雄
+                        Create Hero
                     </button>
                     <div id="createResult"></div>
                 </div>

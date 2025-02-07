@@ -52,7 +52,7 @@ module hero::metadata {
         skills: vector<SkillAttributes>,
     }
 
-    /// Events
+    // Events
     #[event]
     struct RaceAddedEvent has drop, store {
         race_id: u8,
@@ -197,6 +197,72 @@ module hero::metadata {
         let store = borrow_global<MetadataStore>(@hero);
         assert!(class_id < (vector::length(&store.classes) as u8), EINVALID_CLASS_ID);
         *vector::borrow(&store.classes, class_id as u64)
+    }
+
+    // Set race attributes
+    public entry fun set_race(
+        admin: &signer,
+        race_id: u8,
+        name: string::String,
+        base_attributes: vector<u32>
+    ) acquires MetadataStore {
+        assert!(signer::address_of(admin) == @hero, ENOT_AUTHORIZED);
+        let store = borrow_global_mut<MetadataStore>(@hero);
+        
+        let race = RaceAttributes {
+            id: race_id,
+            name,
+            description: string::utf8(b""),
+            base_hp: *vector::borrow(&base_attributes, 0),
+            base_mp: *vector::borrow(&base_attributes, 1),
+            base_attack: *vector::borrow(&base_attributes, 2),
+            base_defense: *vector::borrow(&base_attributes, 3),
+        };
+
+        if (race_id >= (vector::length(&store.races) as u8)) {
+            vector::push_back(&mut store.races, race);
+        } else {
+            *vector::borrow_mut(&mut store.races, race_id as u64) = race;
+        };
+
+        event::emit(RaceAddedEvent {
+            race_id,
+            name,
+            timestamp: timestamp::now_seconds(),
+        });
+    }
+
+    // Set class attributes
+    public entry fun set_class(
+        admin: &signer,
+        class_id: u8,
+        name: string::String,
+        base_attributes: vector<u32>
+    ) acquires MetadataStore {
+        assert!(signer::address_of(admin) == @hero, ENOT_AUTHORIZED);
+        let store = borrow_global_mut<MetadataStore>(@hero);
+        
+        let class = ClassAttributes {
+            id: class_id,
+            name,
+            description: string::utf8(b""),
+            hp_per_level: *vector::borrow(&base_attributes, 0),
+            mp_per_level: *vector::borrow(&base_attributes, 1),
+            attack_per_level: *vector::borrow(&base_attributes, 2),
+            defense_per_level: *vector::borrow(&base_attributes, 3),
+        };
+
+        if (class_id >= (vector::length(&store.classes) as u8)) {
+            vector::push_back(&mut store.classes, class);
+        } else {
+            *vector::borrow_mut(&mut store.classes, class_id as u64) = class;
+        };
+
+        event::emit(ClassAddedEvent {
+            class_id,
+            name,
+            timestamp: timestamp::now_seconds(),
+        });
     }
 
     /// Get skill attributes

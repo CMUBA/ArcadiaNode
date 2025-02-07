@@ -1,4 +1,4 @@
-module hero_nft::nft {
+module hero_nft::hero_nft {
     use std::string;
     use std::signer;
     use std::vector;
@@ -73,13 +73,18 @@ module hero_nft::nft {
         };
         move_to(account, collection_data);
 
+        let mutate_setting = vector::empty<bool>();
+        vector::push_back(&mut mutate_setting, true); // description
+        vector::push_back(&mut mutate_setting, true); // uri
+        vector::push_back(&mut mutate_setting, true); // maximum
+
         token::create_collection(
             account,
             name,
             description,
             uri,
             0,
-            vector::empty(),
+            mutate_setting,
         );
     }
 
@@ -155,6 +160,48 @@ module hero_nft::nft {
         collection_data.default_token_type = token_name;
     }
 
+    // Batch mint NFTs with native token
+    public entry fun mint_batch_with_native<CoinType>(
+        account: &signer,
+        token_ids: vector<u64>,
+        amount: u64,
+    ) acquires CollectionData {
+        let collection_data = borrow_global<CollectionData>(@hero_nft);
+        let total_price = get_total_price_for_tokens(&token_ids, collection_data);
+        assert!(amount >= total_price, EINVALID_PAYMENT);
+
+        coin::transfer<CoinType>(account, @hero_nft, total_price);
+
+        let i = 0;
+        let len = vector::length(&token_ids);
+        while (i < len) {
+            let token_id = *vector::borrow(&token_ids, i);
+            mint_internal(account, token_id);
+
+            event::emit(NFTMintedEvent {
+                to: signer::address_of(account),
+                token_id,
+                payment_token: type_info::type_name<CoinType>(),
+                price: get_price_for_token(token_id, collection_data),
+                timestamp: timestamp::now_seconds(),
+            });
+            i = i + 1;
+        }
+    }
+
+    // Set default prices for native and token payments
+    public entry fun set_default_prices(
+        account: &signer,
+        native_price: u64,
+        token_price: u64,
+    ) acquires CollectionData {
+        assert!(signer::address_of(account) == @hero_nft, 0);
+        
+        let collection_data = borrow_global_mut<CollectionData>(@hero_nft);
+        collection_data.default_native_price = native_price;
+        collection_data.default_token_price = token_price;
+    }
+
     // Internal functions
     fun mint_internal(account: &signer, _token_id: u64) {
         let token_data_id = token::create_token_data_id(
@@ -168,6 +215,18 @@ module hero_nft::nft {
             token_data_id,
             1,
         );
+    }
+
+    fun get_total_price_for_tokens(token_ids: &vector<u64>, collection_data: &CollectionData): u64 {
+        let total = 0u64;
+        let i = 0;
+        let len = vector::length(token_ids);
+        while (i < len) {
+            let token_id = *vector::borrow(token_ids, i);
+            total = total + get_price_for_token(token_id, collection_data);
+            i = i + 1;
+        };
+        total
     }
 
     fun get_price_for_token(token_id: u64, collection_data: &CollectionData): u64 {

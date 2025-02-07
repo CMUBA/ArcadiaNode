@@ -1,133 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hero Contracts - Arcadia Node</title>
+    <title>Hero System Contracts - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script type="module">
+        import { heroConfig } from '../config/hero.js';
+        
+        window.addEventListener('load', () => {
+            // Display contract addresses
+            document.getElementById('heroAddress').textContent = heroConfig.ethereum.contracts.hero;
+            document.getElementById('heroAddressLink').href = `https://sepolia-optimism.etherscan.io/address/${heroConfig.ethereum.contracts.hero}`;
+            
+            document.getElementById('heroMetadataAddress').textContent = heroConfig.ethereum.contracts.heroMetadata;
+            document.getElementById('heroMetadataLink').href = `https://sepolia-optimism.etherscan.io/address/${heroConfig.ethereum.contracts.heroMetadata}`;
+            
+            document.getElementById('heroNFTAddress').textContent = heroConfig.ethereum.contracts.heroNFT;
+            document.getElementById('heroNFTLink').href = `https://sepolia-optimism.etherscan.io/address/${heroConfig.ethereum.contracts.heroNFT}`;
+        });
+    </script>
 </head>
-<body>
+<body class="bg-gray-100">
     <div class="header">
         <div class="container">
             <div class="nav-links">
-                <a href="/" id="backToHome">返回首页</a>
-            </div>
-            <h1 id="pageTitle">Hero Contracts</h1>
-        </div>
-    </div>
-
-    <div class="container">
-        <!-- Hero NFT 合约 -->
-        <div class="card">
-            <h2>Hero NFT Contract</h2>
-            <div class="info-group">
-                <label>合约地址：</label>
-                <span id="nftContractAddress"></span>
-            </div>
-            <div class="info-group">
-                <label>总供应量：</label>
-                <span id="nftTotalSupply"></span>
-            </div>
-            <div class="info-group">
-                <label>代币名称：</label>
-                <span id="nftName"></span>
-            </div>
-            <div class="info-group">
-                <label>代币符号：</label>
-                <span id="nftSymbol"></span>
-            </div>
-        </div>
-
-        <!-- Hero Metadata 合约 -->
-        <div class="card">
-            <h2>Hero Metadata Contract</h2>
-            <div class="info-group">
-                <label>合约地址：</label>
-                <span id="metadataContractAddress"></span>
-            </div>
-            <div class="info-group">
-                <label>技能总数：</label>
-                <span id="totalSkills"></span>
-            </div>
-            <div class="info-group">
-                <label>种族总数：</label>
-                <span id="totalRaces"></span>
-            </div>
-            <div class="info-group">
-                <label>职业总数：</label>
-                <span id="totalClasses"></span>
-            </div>
-        </div>
-
-        <!-- Hero Core 合约 -->
-        <div class="card">
-            <h2>Hero Core Contract</h2>
-            <div class="info-group">
-                <label>合约地址：</label>
-                <span id="coreContractAddress"></span>
-            </div>
-            <div class="info-group">
-                <label>英雄总数：</label>
-                <span id="totalHeroes"></span>
-            </div>
-            <div class="info-group">
-                <label>注册节点数：</label>
-                <span id="totalNodes"></span>
+                <a href="/" class="back-link">Back to Home</a>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { ethers } from '/js/ethers.min.js';
-        import { heroNftABI } from '/abi/HeroNFT.js';
-        import { heroMetadataABI } from '/abi/HeroMetadata.js';
-        import { heroCoreABI } from '/abi/HeroCore.js';
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold mb-6">Hero System Contracts</h1>
+        
+        <div class="grid gap-6">
+            <!-- Hero Core Contract -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">Hero Core Contract</h2>
+                <div class="space-y-2">
+                    <p class="text-gray-600">Contract Address:</p>
+                    <a id="heroAddressLink" href="#" target="_blank" class="text-blue-600 hover:text-blue-800 break-all">
+                        <code id="heroAddress" class="bg-gray-100 px-2 py-1 rounded"></code>
+                    </a>
+                    <p class="text-sm text-gray-500 mt-2">Core contract for hero data management and game logic</p>
+                </div>
+            </div>
 
-        let provider;
-        let nftContract;
-        let metadataContract;
-        let coreContract;
+            <!-- Hero Metadata Contract -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">Hero Metadata Contract</h2>
+                <div class="space-y-2">
+                    <p class="text-gray-600">Contract Address:</p>
+                    <a id="heroMetadataLink" href="#" target="_blank" class="text-blue-600 hover:text-blue-800 break-all">
+                        <code id="heroMetadataAddress" class="bg-gray-100 px-2 py-1 rounded"></code>
+                    </a>
+                    <p class="text-sm text-gray-500 mt-2">Stores hero metadata including races, classes, and skills</p>
+                </div>
+            </div>
 
-        // 合约地址从环境变量或配置中获取
-        const nftContractAddress = '';
-        const metadataContractAddress = '';
-        const coreContractAddress = '';
-
-        async function init() {
-            try {
-                provider = new ethers.BrowserProvider(window.ethereum);
-                
-                // 初始化合约
-                nftContract = new ethers.Contract(nftContractAddress, heroNftABI, provider);
-                metadataContract = new ethers.Contract(metadataContractAddress, heroMetadataABI, provider);
-                coreContract = new ethers.Contract(coreContractAddress, heroCoreABI, provider);
-
-                // 显示 NFT 合约信息
-                document.getElementById('nftContractAddress').textContent = nftContractAddress;
-                document.getElementById('nftName').textContent = await nftContract.name();
-                document.getElementById('nftSymbol').textContent = await nftContract.symbol();
-                document.getElementById('nftTotalSupply').textContent = await nftContract.totalSupply();
-
-                // 显示 Metadata 合约信息
-                document.getElementById('metadataContractAddress').textContent = metadataContractAddress;
-                // 这些函数需要在合约中实现
-                document.getElementById('totalSkills').textContent = await metadataContract.getTotalSkills();
-                document.getElementById('totalRaces').textContent = await metadataContract.getTotalRaces();
-                document.getElementById('totalClasses').textContent = await metadataContract.getTotalClasses();
-
-                // 显示 Core 合约信息
-                document.getElementById('coreContractAddress').textContent = coreContractAddress;
-                // 这些函数需要在合约中实现
-                document.getElementById('totalHeroes').textContent = await coreContract.getTotalHeroes();
-                document.getElementById('totalNodes').textContent = await coreContract.getTotalNodes();
-
-            } catch (error) {
-                console.error('初始化失败:', error);
-            }
-        }
-
-        // 页面加载时初始化
-        window.addEventListener('load', init);
-    </script>
+            <!-- Hero NFT Contract -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">Hero NFT Contract</h2>
+                <div class="space-y-2">
+                    <p class="text-gray-600">Contract Address:</p>
+                    <a id="heroNFTLink" href="#" target="_blank" class="text-blue-600 hover:text-blue-800 break-all">
+                        <code id="heroNFTAddress" class="bg-gray-100 px-2 py-1 rounded"></code>
+                    </a>
+                    <p class="text-sm text-gray-500 mt-2">ERC721 contract for hero ownership and trading</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 
