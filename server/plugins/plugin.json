@@ -1,0 +1,18 @@
+{
+  "plugins": [
+    {
+      "name": "discuss",
+      "enabled": true,
+      "path": "./example-discuss/index.js",
+      "config": {
+        "ipfs": {
+          "gateway": "https://api.quicknode.com/ipfs",
+          "api": "https://api.quicknode.com/ipfs/rest/v1",
+          "headers": {
+            "x-api-key": "${IPFS_QUICKNODE_API_KEY}"
+          }
+        }
+      }
+    }
+  ]
+} 

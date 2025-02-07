@@ -1,0 +1,37 @@
+{
+  "name": "discuss",
+  "version": "1.0.0",
+  "description": "Decentralized discussion forum plugin",
+  "author": "Arcadia",
+  "license": "MIT",
+  "enabled": true,
+  "api": {
+    "prefix": "/api/v1/discuss",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/posts",
+        "description": "Get all posts"
+      },
+      {
+        "method": "POST",
+        "path": "/posts",
+        "description": "Create a new post"
+      },
+      {
+        "method": "GET",
+        "path": "/posts/:id",
+        "description": "Get post by ID"
+      },
+      {
+        "method": "POST",
+        "path": "/posts/:id/comments",
+        "description": "Add comment to a post"
+      }
+    ]
+  },
+  "ipfs": {
+    "gateway": "https://ipfs.io",
+    "api": "http://localhost:5001"
+  }
+} 

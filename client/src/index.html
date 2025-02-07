@@ -18,9 +18,9 @@
         }
         .header {
             background-color: #fff;
-            padding: 20px 0;
+            padding: 14px 0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             position: relative;
         }
         .header h1 {
@@ -49,10 +49,6 @@
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-        }
-        .service-group:hover {
-            transform: translateY(-5px);
         }
         .service-group h2 {
             color: #2c3e50;
@@ -99,6 +95,10 @@
         .contract-link:hover {
             text-decoration: underline;
         }
+        .qa-link {
+            text-decoration: none;
+            color: #34495e;
+        }
     </style>
 </head>
 <body>
@@ -121,28 +121,18 @@
             <div class="service-group">
                 <h2 id="contractManagement">Contract Management</h2>
                 <ul class="service-list">
+                    <!-- Node Register Contracts -->
                     <li class="service-item">
-                        <a href="https://sepolia-optimism.etherscan.io/address/0xBda48255DA1ed61a209641144Dd24696926aF3F0" 
-                           target="_blank" 
-                           class="service-link">
-                            <span id="tokenContract">Token Contract</span>
-                            <span class="contract-link">0xBda4...F3F0</span>
+                        <a href="/pages/node-contracts.html" class="service-link">
+                            <span id="nodeContracts1">Node Register Contracts</span>
+                            <span class="service-index">Node</span>
                         </a>
                     </li>
+                    <!-- Hero System Contracts -->
                     <li class="service-item">
-                        <a href="https://sepolia-optimism.etherscan.io/address/0xf7081161f19FB6246c1931aABd4fbe890DbdE8c4" 
-                           target="_blank" 
-                           class="service-link">
-                            <span id="stakeManager">Stake Manager Contract</span>
-                            <span class="contract-link">0xf708...E8c4</span>
-                        </a>
-                    </li>
-                    <li class="service-item">
-                        <a href="https://sepolia-optimism.etherscan.io/address/0xE1A3B41be95Ff379DBDFd194680d26b5d8786462" 
-                           target="_blank" 
-                           class="service-link">
-                            <span id="nodeRegistry">Node Registry Contract</span>
-                            <span class="contract-link">0xE1A3...6462</span>
+                        <a href="/pages/hero-contracts.html" class="service-link">
+                            <span id="heroContracts1">Hero System Contracts</span>
+                            <span class="service-index">Hero</span>
                         </a>
                     </li>
                 </ul>
@@ -183,6 +173,12 @@
                             <span class="service-index">6-8</span>
                         </a>
                     </li>
+                    <li class="service-item">
+                        <a href="/pages/discuss.html" class="service-link">
+                            <span id="discussService">Discussion Forum</span>
+                            <span class="service-index">Plugin</span>
+                        </a>
+                    </li>
                 </ul>
             </div>
 
@@ -209,7 +205,38 @@
                             <span class="service-index">11-13</span>
                         </a>
                     </li>
+                    <li class="service-item">
+                        <a href="/pages/hero-test.html" class="service-link">
+                            <span id="heroTest">Hero System Test</span>
+                            <span class="service-index">Test</span>
+                        </a>
+                    </li>
                 </ul>
+            </div>
+
+            <!-- Q&A Section -->
+            <div class="service-group">
+                <h2 id="qaTitle">Q&A</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="/pages/qa.html" class="qa-link">
+                            <span id="qa1Title">What is ArcadiaNode?</span>
+                        </a>
+                    </li>
+                    <li class="service-item">
+                        <a href="/pages/qa.html" class="qa-link">
+                            <span id="qa2Title">How to become a service provider?</span>
+                        </a>
+                    </li>
+                    <li class="service-item">
+                        <a href="/pages/qa.html" class="qa-link">
+                            <span id="qa3Title">What types of services can I provide?</span>
+                        </a>
+                    </li>
+                </ul>
+                <div class="text-right mt-4">
+                    <a href="/pages/qa.html" class="text-blue-600 hover:text-blue-800" id="viewAllQA">View All Questions</a>
+                </div>
             </div>
         </div>
     </div>
@@ -244,9 +271,8 @@
             document.getElementById('userManagement').textContent = t.userManagement;
             document.getElementById('chainInteraction').textContent = t.chainInteraction;
             
-            document.getElementById('tokenContract').textContent = t.contracts.token;
-            document.getElementById('stakeManager').textContent = t.contracts.stakeManager;
-            document.getElementById('nodeRegistry').textContent = t.contracts.nodeRegistry;
+            // document.getElementById('nodeContracts').textContent = t.contracts.nodeContracts;
+            // document.getElementById('heroContracts').textContent = t.contracts.heroContracts;
             
             document.getElementById('nodeRegister').textContent = t.nodeRegister;
             document.getElementById('registeredNodes').textContent = t.registeredNodes;
@@ -254,6 +280,16 @@
             document.getElementById('serviceDiscovery').textContent = t.serviceDiscovery;
             document.getElementById('userAuth').textContent = t.userAuth;
             document.getElementById('heroDataManagement').textContent = t.heroDataManagement;
+            
+            // Update Q&A content
+            document.getElementById('qaTitle').textContent = t.qa.title;
+            document.getElementById('qa1Title').textContent = t.qa.questions[0].title;
+            // document.getElementById('qa1Content').textContent = t.qa.questions[0].content;
+            document.getElementById('qa2Title').textContent = t.qa.questions[1].title;
+            // document.getElementById('qa2Content').textContent = t.qa.questions[1].content;
+            document.getElementById('qa3Title').textContent = t.qa.questions[2].title;
+            // document.getElementById('qa3Content').textContent = t.qa.questions[2].content;
+            document.getElementById('viewAllQA').textContent = t.qa.viewAll;
             
             // Update language selector
             document.getElementById('languageSelect').value = currentLang;

@@ -69,6 +69,10 @@
 <body>
     <div class="header">
         <div class="container">
+            <div class="nav-links">
+                <a href="/" id="backToHome">返回首页</a>
+            </div>
+            <h1 id="pageTitle">Service Management</h1>
             <div class="language-selector">
                 <select id="languageSelect" onchange="changeLanguage(this.value)">
                     <option value="en">English</option>
@@ -76,8 +80,6 @@
                     <option value="th">ไทย</option>
                 </select>
             </div>
-            <h1 id="pageTitle">Service Management</h1>
-            <a href="/" class="back-link" id="backToHome">Back to Home</a>
         </div>
     </div>
 
@@ -230,7 +232,6 @@
             
             // Update page title and headers
             document.getElementById('pageTitle').textContent = t.serviceManageTitle;
-            document.getElementById('backToHome').textContent = t.backToHome;
             document.getElementById('selectNodeLabel').textContent = t.selectNode;
             document.getElementById('serviceIndexHeader').textContent = t.serviceIndex;
             document.getElementById('serviceNameHeader').textContent = t.serviceName;

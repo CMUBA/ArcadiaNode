@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero NFT Minting - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script type="module">
+        import { ethers } from 'ethers';
+        import { heroConfig } from '../config/hero.js';
+
+        let provider;
+        let nftContract;
+        let tokenContract;
+        let userAddress;
+
+        // NFT Contract ABI - 更新为正确的函数
+        const nftAbi = [
+            "function totalSupply() view returns (uint256)",
+            "function balanceOf(address) view returns (uint256)",
+            "function exists(uint256) view returns (bool)",
+            "function ownerOf(uint256) view returns (address)",
+            "function mint(uint256) payable",
+            "function mintWithToken(uint256)",
+            "function getPrice(uint256) view returns (uint256)",
+            "function getTokenPrice(uint256) view returns (uint256)",
+            "function getAcceptedTokens() view returns (address[])",
+            "function isTokenAccepted(address) view returns (bool)"
+        ];
+
+        // ERC20 Token ABI
+        const tokenAbi = [
+            "function balanceOf(address) view returns (uint256)",
+            "function approve(address, uint256) returns (bool)",
+            "function allowance(address, address) view returns (uint256)",
+            "function symbol() view returns (string)",
+            "function decimals() view returns (uint8)"
+        ];
+
+        async function connectWallet() {
+            try {
+                // Request user authorization
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                userAddress = accounts[0];
+                console.log('Connected account:', userAddress);
+                
+                // Check network
+                const network = await provider.getNetwork();
+                console.log('Current network:', network);
+                
+                if (network.chainId !== BigInt(heroConfig.ethereum.chainId)) {
+                    // Request switch to Optimism Sepolia
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x' + heroConfig.ethereum.chainId.toString(16) }],
+                        });
+                    } catch (switchError) {
+                        // Add network if not exists
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0x' + heroConfig.ethereum.chainId.toString(16),
+                                    chainName: 'Optimism Sepolia',
+                                    nativeCurrency: {
+                                        name: 'ETH',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: [heroConfig.ethereum.nodeUrl],
+                                    blockExplorerUrls: ['https://sepolia-optimism.etherscan.io/']
+                                }],
+                            });
+                        }
+                    }
+                }
+
+                // Get signer and initialize contracts
+                const signer = await provider.getSigner();
+                console.log('Signer obtained');
+
+                // Initialize NFT contract with signer
+                nftContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.heroNFT,
+                    nftAbi,
+                    signer
+                );
+
+                // Get accepted tokens
+                const acceptedTokens = await nftContract.getAcceptedTokens();
+                if (acceptedTokens && acceptedTokens.length > 0) {
+                    // Initialize the first accepted token contract
+                    tokenContract = new ethers.Contract(
+                        acceptedTokens[0],
+                        tokenAbi,
+                        signer
+                    );
+                }
+
+                // Update UI
+                document.getElementById('connectWallet').style.display = 'none';
+                document.getElementById('connectedWallet').style.display = 'block';
+                document.getElementById('walletAddress').textContent = userAddress;
+
+                // Load NFT and token data
+                await loadNFTData();
+                await loadTokenBalance();
+
+                // Enable mint buttons
+                document.querySelectorAll('.mint-button').forEach(button => {
+                    button.disabled = false;
+                });
+
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                alert('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        async function loadNFTData() {
+            try {
+                const totalSupply = await nftContract.totalSupply();
+                document.getElementById('totalSupply').textContent = totalSupply.toString();
+                
+                const userBalance = await nftContract.balanceOf(userAddress);
+                document.getElementById('userBalance').textContent = userBalance.toString();
+
+                // Load NFT prices for display
+                const nftTypes = [0, 1, 2, 3, 4]; // 假设有5种不同的NFT类型
+                const nftList = document.getElementById('nftList');
+                nftList.innerHTML = '';
+
+                for (const tokenId of nftTypes) {
+                    const nativePrice = await nftContract.getNativePrice(tokenId);
+                    const tokenPrice = await nftContract.getTokenPrice(tokenId);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-lg shadow p-4';
+                    card.innerHTML = `
+                        <h3 class="text-lg font-semibold mb-2">Hero NFT #${tokenId}</h3>
+                        <div class="space-y-2">
+                            <p class="text-sm text-gray-600">Native Price: ${ethers.formatEther(nativePrice)} ETH</p>
+                            <p class="text-sm text-gray-600">Token Price: ${ethers.formatUnits(tokenPrice, await tokenContract.decimals())} ${await tokenContract.symbol()}</p>
+                            <div class="flex space-x-2">
+                                <button onclick="mintWithNative(${tokenId})" class="mint-button bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm" disabled>
+                                    Mint with ETH
+                                </button>
+                                <button onclick="mintWithToken(${tokenId})" class="mint-button bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" disabled>
+                                    Mint with Token
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    nftList.appendChild(card);
+                }
+            } catch (error) {
+                console.error('Failed to load NFT data:', error);
+                alert('Failed to load NFT data: ' + error.message);
+            }
+        }
+
+        async function loadTokenBalance() {
+            try {
+                const balance = await tokenContract.balanceOf(userAddress);
+                const symbol = await tokenContract.symbol();
+                const decimals = await tokenContract.decimals();
+                
+                document.getElementById('tokenBalance').textContent = 
+                    `${ethers.formatUnits(balance, decimals)} ${symbol}`;
+            } catch (error) {
+                console.error('Failed to load token balance:', error);
+                document.getElementById('tokenBalance').textContent = 'Error loading balance';
+            }
+        }
+
+        async function mintWithNative(tokenId) {
+            try {
+                const price = await nftContract.getPrice(tokenId);
+                const tx = await nftContract.mint(tokenId, {
+                    value: price
+                });
+                
+                await handleMintTransaction(tx);
+            } catch (error) {
+                console.error('Minting with native token failed:', error);
+                alert('Minting failed: ' + error.message);
+            }
+        }
+
+        async function mintWithToken(tokenId) {
+            try {
+                const price = await nftContract.getTokenPrice(tokenId);
+                
+                // Check if token is accepted
+                const isAccepted = await nftContract.isTokenAccepted(tokenContract.address);
+                if (!isAccepted) {
+                    throw new Error('Token not accepted for minting');
+                }
+                
+                // Check and handle allowance
+                const allowance = await tokenContract.allowance(userAddress, nftContract.address);
+                if (allowance < price) {
+                    const approveTx = await tokenContract.approve(nftContract.address, price);
+                    await approveTx.wait();
+                }
+                
+                const tx = await nftContract.mintWithToken(tokenId);
+                await handleMintTransaction(tx);
+            } catch (error) {
+                console.error('Minting with token failed:', error);
+                alert('Minting failed: ' + error.message);
+            }
+        }
+
+        async function handleMintTransaction(tx) {
+            try {
+                document.getElementById('mintStatus').innerHTML = `
+                    <div class="text-blue-600">
+                        Transaction sent! Hash: ${tx.hash}<br>
+                        Waiting for confirmation...
+                    </div>
+                `;
+                
+                const receipt = await tx.wait();
+                
+                if (receipt.status === 1) {
+                    document.getElementById('mintStatus').innerHTML = `
+                        <div class="text-green-600">
+                            Minting successful!<br>
+                            Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" 
+                                          target="_blank" 
+                                          class="underline">View on Etherscan</a>
+                        </div>
+                    `;
+                    
+                    // Refresh data
+                    await loadNFTData();
+                    await loadTokenBalance();
+                } else {
+                    throw new Error('Transaction failed');
+                }
+            } catch (error) {
+                document.getElementById('mintStatus').innerHTML = `
+                    <div class="text-red-600">
+                        Minting failed: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            try {
+                if (window.ethereum) {
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    
+                    // Initialize contracts (read-only)
+                    nftContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.heroNFT,
+                        nftAbi,
+                        provider
+                    );
+
+                    // Check if already connected
+                    const accounts = await provider.listAccounts();
+                    if (accounts.length > 0) {
+                        await connectWallet();
+                    }
+                } else {
+                    alert('Please install MetaMask to use this dApp');
+                }
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                alert('Initialization failed: ' + error.message);
+            }
+        });
+
+        // Export functions to window
+        window.connectWallet = connectWallet;
+        window.mintWithNative = mintWithNative;
+        window.mintWithToken = mintWithToken;
+    </script>
+</head>
+<body class="bg-gray-100">
+    <div class="header">
+        <div class="container">
+            <div class="nav-links">
+                <a href="/pages/hero-test.html" class="back-link">← Back to Hero Test</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-4">
+        <!-- Wallet Connection -->
+        <div class="mb-4 bg-white rounded-lg shadow p-4">
+            <h2 class="text-lg font-semibold mb-2">Wallet Connection</h2>
+            <button id="connectWallet" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
+                Connect Wallet
+            </button>
+            <div id="connectedWallet" class="hidden mt-2">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-green-500 text-sm">Connected:</span>
+                        <span id="walletAddress" class="ml-2 text-gray-600 text-sm"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NFT Info -->
+        <div class="mb-4 bg-white rounded-lg shadow p-4">
+            <h2 class="text-lg font-semibold mb-2">NFT Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <p class="text-sm text-gray-600">Total Supply:</p>
+                    <p id="totalSupply" class="font-medium">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Your NFT Balance:</p>
+                    <p id="userBalance" class="font-medium">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Your Token Balance:</p>
+                    <p id="tokenBalance" class="font-medium">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Minting Status -->
+        <div id="mintStatus" class="mb-4"></div>
+
+        <!-- NFT List -->
+        <div id="nftList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- NFT cards will be dynamically added here -->
+        </div>
+    </div>
+</body>
+</html> 

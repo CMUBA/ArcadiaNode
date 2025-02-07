@@ -1,140 +1,3 @@
-export default {
-    title: 'Arcadia Node - 服务导航',
-    nodeManagement: '节点管理',
-    nodeRegister: '节点注册',
-    healthCheck: '健康检测',
-    serviceManagement: '服务管理',
-    serviceDiscovery: '服务注册与发现',
-    userManagement: '用户管理',
-    userAuth: '用户注册与登录',
-    chainInteraction: '链交互',
-    heroDataManagement: '英雄数据管理',
-    contractManagement: '合约管理',
-    contracts: {
-        token: '代币合约',
-        stakeManager: '质押管理合约',
-        nodeRegistry: '节点注册合约'
-    },
-    language: '语言',
-    registeredNodes: '已注册节点',
-    // Node Register Page
-    nodeRegisterTitle: '节点注册',
-    registerNewNode: '注册新节点',
-    backToHome: '返回首页',
-    nodeAddress: '节点地址',
-    ipOrDomain: 'IP/域名',
-    apiServices: 'API 服务',
-    register: '注册',
-    // Node Registry Info Page
-    nodeRegistryInfoTitle: '节点注册信息',
-    queryNodeInfo: '查询节点信息',
-    enterNodeAddress: '输入节点地址',
-    query: '查询',
-    contractAddress: '合约地址',
-    status: '状态',
-    minStakeAmount: '最低质押金额',
-    totalNodes: '节点总数',
-    registrationTime: '注册时间',
-    active: '活跃',
-    // Service Management Page
-    serviceManageTitle: '服务管理',
-    selectNode: '选择节点',
-    serviceIndex: '服务索引',
-    serviceName: '服务名称',
-    serviceUrl: '服务地址',
-    serviceDescription: '描述',
-    serviceType: '类型',
-    loading: '加载中...',
-    noServices: '暂无可用服务',
-    basic: '基础服务',
-    extend: '扩展服务'
-};  extend: '扩展'
-}; 
-    %% City Service connections
-    M1 --> MP1
-    M1 --> MP2
-    M2 --> MP1
-    M2 --> MP2
-
-    %% Chain Layer connections
-    E --> F
-    F --> G
-
-    %% Service Discovery and Recovery
-    C1 -.->|Health Check| D1
-    C1 -.->|Health Check| D2
-    D1 -.->|Health Check| M1
-    D1 -.->|Health Check| M2
-
-    classDef primary fill:#f96,stroke:#333,stroke-width:2px
-    classDef backup fill:#69f,stroke:#333,stroke-width:2px
-    classDef compute fill:#9f6,stroke:#333,stroke-width:2px
-    
-    class C1 primary
-    class C2 backup
-    class D2 compute
-```
-
-## Service Components
-
-1. **节点注册/节点验证组件**：依赖链上合约注册和节点提供 API。
-2. **服务注册/服务发现组件**：依赖节点运行此服务。
-3. **用户注册/登录组件**：处理用户的注册和认证。
-4. **链交互组件**：负责与区块链的交互。
-
-### 可选服务组件
-
-- 至少运行一个可选的业务组件
-- **游戏服务组件**：处理游戏逻辑和数据。
-- **内容评论组件**：管理用户评论。
-- **物品交易组件**：处理物品的买卖。
-- **资产发行组件**：管理数字资产的发行。
-- **更多组件**：根据需求添加。
-
-### 架构设计
-
-- **API 服务**：所有服务组件通过 API 提供对外服务。
-- **服务组件间通信**：主要通过 API 通信，部分采用进程内通信。
-- **服务发现**：通过服务发现组件获取依赖服务。
-- **节点**：运行服务组件的服务器，每个节点可选择运行相关组件。
-
-## Service Discovery and Recovery
-
-### Health Check Protocol
-1. Each service registers with Auth Service
-2. Regular heartbeat signals
-3. Service state monitoring
-4. Automatic failover triggers
-
-### Service Recovery Process
-1. Detection: Auth Service detects node failure
-2. Election: Backup nodes participate in election
-3. Promotion: Selected node becomes primary
-4. State Recovery: Load state from blockchain
-5. Service Resumption: New node takes over
-
-### Permissionless Node Participation
-1. Node Registration
-   - Generate keypair
-   - Register on chain
-   - Obtain node address
-   - Join service network
-
-2. Role Assignment
-   - Capability declaration
-   - State synchronization
-   - Service integration
-
-3. Monitoring and Validation
-   - Performance monitoring
-   - State validation
-   - Reputation tracking
-
-4. Graceful Exit
-   - State handover
-   - Network notification
-   - Chain record update
-
 ## API 设计
 
 ### 1. 节点 API
@@ -375,3 +238,828 @@ Node 从物理上来看，是社区计算节点，从逻辑上来看，是去中
 
 
 
+
+### 插件 discuss
+add post
+curl -X POST http://localhost:3017/api/v1/discuss/posts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "First Post",
+    "content": "Hello World!",
+    "author": "0x123...",
+    "category": "General",
+    "tags": ["hello", "test"]
+  }'
+
+  get post
+  curl http://localhost:3017/api/v1/discuss/posts
+
+  filter
+  curl http://localhost:3017/api/v1/discuss/posts?category=General
+
+  comment
+  curl -X POST http://localhost:3017/api/v1/discuss/posts/[CID]/comments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Great post!",
+    "author": "0x456..."
+  }'
+
+
+  server/
+  plugins/
+    example-discuss/
+      index.js          # 插件后端入口
+      public/           # 插件前端资源
+        index.html      # 论坛前端入口
+        styles/         # 样式文件
+        scripts/        # 前端脚本
+      package.json      # 插件依赖
+      plugin.json       # 插件配置
+
+      
+
+### ENS 域名系统
+是的，在 ENS (Ethereum Name Service) 域名系统中，你可以为一级、二级和三级域名设置 text（TXT）记录。Text 记录可以用于存储各种额外的信息，比如：
+
+个人简介
+社交媒体账号
+网站链接
+电子邮件
+联系方式
+其他自定义信息
+设置 text 记录的语法通常是这样的：
+
+ini
+key1=value1, key2=value2, key3=value3  
+例如：
+
+twitter=@username, github=yourprofile, email=contact@example.com
+website=https://example.com, description=Blockchain developer
+注意事项：
+
+使用逗号和空格分隔不同的 key-value 对
+确保使用有效的键值对
+记录长度和数量可能有限制
+你可以通过 ENS 管理界面或使用支持 ENS 的钱包来设置这些 text 记录。
+
+
+
+## ServerTypeScript 迁移补充分析
+
+### 服务端文件分析
+1. 核心服务文件
+   - server/index.js -> index.ts
+   - server/core/*.js -> core/*.ts
+   - server/utils/*.js -> utils/*.ts
+   - server/middleware/*.js -> middleware/*.ts
+
+2. 插件系统相关
+   - server/plugins/plugin-manager.js -> plugins/plugin-manager.ts
+   - server/plugins/plugin-loader.js -> plugins/plugin-loader.ts
+   - server/plugins/types.ts (新增，定义插件相关类型)
+
+3. API 路由
+   - server/routes/*.js -> routes/*.ts
+   - server/controllers/*.js -> controllers/*.ts
+
+### 类型定义补充
+```typescript
+// types/plugin.d.ts
+interface PluginMetadata {
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  homepage?: string;
+  repository?: string;
+}
+
+interface PluginHealth {
+  status: 'healthy' | 'unhealthy';
+  message?: string;
+  details?: Record<string, any>;
+  timestamp: number;
+}
+
+interface PluginAPI {
+  path: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  handler: (req: Request, res: Response) => Promise<void>;
+  middleware?: Array<(req: Request, res: Response, next: NextFunction) => void>;
+}
+
+interface PluginLifecycle {
+  onInstall?: () => Promise<void>;
+  onUninstall?: () => Promise<void>;
+  onUpdate?: (fromVersion: string) => Promise<void>;
+  onEnable?: () => Promise<void>;
+  onDisable?: () => Promise<void>;
+}
+```
+
+### 构建工具链补充
+1. 开发环境
+   ```json
+   {
+     "scripts": {
+       "dev": "ts-node-dev --respawn src/index.ts",
+       "build": "tsc",
+       "start": "node dist/index.js",
+       "type-check": "tsc --noEmit",
+       "lint": "eslint . --ext .ts",
+       "test": "jest"
+     }
+   }
+   ```
+
+2. ESLint 配置补充
+   ```json
+   {
+     "extends": [
+       "eslint:recommended",
+       "plugin:@typescript-eslint/recommended",
+       "plugin:@typescript-eslint/recommended-requiring-type-checking"
+     ],
+     "rules": {
+       "@typescript-eslint/explicit-function-return-type": "error",
+       "@typescript-eslint/no-explicit-any": "warn",
+       "@typescript-eslint/no-unused-vars": "error"
+     }
+   }
+   ```
+
+### 插件系统类型安全
+```typescript
+// plugins/plugin-manager.ts
+class PluginManager {
+  private plugins: Map<string, Plugin> = new Map();
+  private health: Map<string, PluginHealth> = new Map();
+
+  async loadPlugin(name: string): Promise<void> {
+    const plugin = await this.validateAndLoad(name);
+    this.plugins.set(name, plugin);
+    await this.startHealthCheck(name);
+  }
+
+  private async validateAndLoad(name: string): Promise<Plugin> {
+    const config = await this.loadConfig(name);
+    this.validateConfig(config);
+    return this.createPluginInstance(config);
+  }
+
+  private async startHealthCheck(name: string): Promise<void> {
+    const plugin = this.plugins.get(name);
+    if (!plugin) return;
+
+    setInterval(async () => {
+      try {
+        const health = await plugin.healthCheck();
+        this.health.set(name, {
+          ...health,
+          timestamp: Date.now()
+        });
+      } catch (error) {
+        this.health.set(name, {
+          status: 'unhealthy',
+          message: error.message,
+          timestamp: Date.now()
+        });
+      }
+    }, 30000); // 每 30 秒检查一次
+  }
+}
+```
+
+### 迁移风险补充
+1. 插件兼容性
+   - 需要为现有的 JS 插件提供类型定义
+   - 可能需要修改插件加载机制以支持 TypeScript
+   - 考虑向后兼容性
+
+2. 运行时性能
+   - TypeScript 编译后的代码可能略微增加
+   - 需要优化类型检查的性能开销
+   - 考虑增量编译策略
+
+3. 开发体验
+   - 需要更新开发文档
+   - 提供插件开发模板
+   - 完善类型提示和自动补全
+
+### 迁移策略补充
+1. 渐进式迁移
+   - 先迁移核心功能
+   - 保持插件系统的向后兼容
+   - 逐步更新插件
+
+2. 测试策略
+   - 单元测试覆盖核心功能
+   - 集成测试确保插件系统正常
+   - 性能测试对比迁移前后
+
+3. 文档更新
+   - 更新开发指南
+   - 提供 TypeScript 最佳实践
+   - 编写插件开发教程
+
+----------
+
+## Chain service
+
+### 链服务的背景
+
+1. 不同业务，针对不同链，有不同合约依赖和服务
+2. 核心是通过 API 方式给上层应用提供基础服务
+3. 本次先支持 Etherum OP，Aptos 后续支持更多链
+4. 本次服务目标是 Game 业务的链数据服务
+5. 未来提供资产发行，资产流通 Swap，资产 stake 等管理服务
+
+### Game 业务链服务基础诉求
+
+1. Create hero：在脸上英雄合约创建新记录
+2. Load hero：从链上合约读取英雄数据
+3. Save hero：将英雄数据保存到链上合约
+4. more
+
+### Hero data structure
+游戏是众包运行，虽然协议会有开发自己游戏，因此合约是由社区开发和维护的，不是无主合约。
+合约发布者唯一可以操作的是新增 NFT 合约地址，则此合约地址下的 NFT 都可以注册英雄记录。
+此外，合约发布者不能删除、修改合约的任何数据。
+因此，新增英雄需要提供你购买的 NFT 合约地址和 NFTID（默认是 Ethereum EIP721）
+
+依赖链上数据表合约：
+1.依赖技能组合表，此表格默认是{Spring, Summer, Autumn, Winter}四种天赋，每个对应的五种技能的数据特征 //https://whimsical.com/attribute-7Wjz8qDJJzjQbcffNdpUSm
+2.依赖种族表，此表格默认是{Human, Elf, Dwarf, Orc, Undead}五种种族
+3.依赖职业表，此表格默认是{Warrior, Mage, Archer, Rogue, Priest}五种职业
+4.依赖属性表，此表格默认是{Agility, Attack, Health, Defense}四种属性
+5.依赖装备表，此表格默认是{Weapon, Armor, Accessory}三种装备，可以对应不同合约地址
+6.依赖物品表，此表格默认是{Item}一种物品，可以对应不同合约地址
+7.每日能量和积分限制：默认每日能量是 100，积分获得上限是 1000，而进入一个副本，消耗不同能量
+
+所有客户端会下载和缓存此数据结构，用来显示和计算英雄数据。
+
+#### 使用示例
+
+JSON 结构
+```
+{
+    "name": "Hero Name",
+    "race": "Human", // default is Human
+    "gender": "Male", // default is Male
+    "level": 1, // default is 1
+    "energy": 100, // default is 100 //进入一次游戏，会扣除一次能量，每次扣除30-100不等，不足则无法进入副本
+    "skills": ["Spring":{1,0,0,0,0}, "Summer":{0,1,0,0,0}, "Autumn":{0,0,1,0,0}, "Winter":{0,0,0,1,0}], // 英雄加点的表格或者技能数,例如春天有五个技能，加点在不同技能，有不同级别，每个级别有不同效果（不同的计算数据，存储在依赖表）
+    "equipment": ["Weapon 1", "Armor 1", "Accessory 1"], // default is [] //装备的表格，可以对应不同合约地址+NFTid,初期先不管
+}
+```
+
+## 合约设计
+
+### 元数据表：
+1. 依赖技能组合表，此表格默认是{Spring, Summer, Autumn, Winter}四种天赋，每个对应的五种技能的数据特征 //https://whimsical.com/attribute-7Wjz8qDJJzjQbcffNdpUSm
+表格和升级使用的积分参考：https://docs.google.com/spreadsheets/d/1MkFvPSKSyondS1gYzdeXYThyXUmEgJhBSjiTPWERlkk/edit?usp=sharing
+2. 依赖种族表，此表格默认是{Human, Elf, Dwarf, Orc, Undead}五种种族
+3. 依赖职业表，此表格默认是{Warrior, Mage, Archer, Rogue, Priest}五种职业
+4. 依赖属性表，此表格默认是{Agility, Attack, Health, Defense}四种属性
+5. 依赖装备表，此表格默认是{Weapon, Armor, Accessory}三种装备，可以对应不同合约地址
+6. 依赖物品表，此表格默认是{Item}一种物品，可以对应不同合约地址
+7. 每日能量和积分限制：默认每日能量是 100，积分获得上限是 1000，而进入一个副本，消耗不同能量
+
+Hero 合约：
+支持如下功能：
+依赖传入的 NFT 合约地址和 NFTID，来创建英雄记录
+数据包括基础的以太坊交易需要的地址，交易签名等
+
+0. 创建依赖数据
+   读取链上的依赖合约，缓存到本地，用来做各种业务校验和显示（链上依然会验证一次，但联系对比，失败则快速失败）
+   例如技能是{1,0,0,0,0}，则表示春天第一个技能一级，其他技能都是 0 级
+   目前包括：
+   - 技能组合表 //必须
+   - 种族表 //必须
+   - 职业表 //必须
+   - 属性表 //
+   - 装备表 //
+   - 物品表 //
+   - 每日能量和积分限制 //必须
+   - 支持 NFT 合约地址列表 //必须
+
+### 创建英雄
+   hero 数据
+  ```
+  {
+    "hero":{
+      "name": "Hero Name", //用户输入
+      "race": 1, //用户界面选择
+      "gender": 1, //用户界面选择
+      "level": 1, //新用户强制 1 级，不可修改
+      "energy": 100, //用户界面显示，不可修改
+      "skills": [{1,0,0,0,0}, {0,1,0,0,0}, {0,0,1,0,0}, {0,0,0,1,0}], //这个要随机生成一个天赋么？ 
+      "equipment": []
+    },
+    "hash": "hash" //本地使用私钥对 hero 数据 hash 后进行签名,初始化是空
+  }
+  ```
+
+### 读取英雄
+   根据登录账户绑定的 wallet address 读取英雄数据，默认根据网络选择来选择网络（不同网络选择，有不同 wallet address）
+   1.读取英雄 wallet address 名下的 NFT，和本地缓存的允许注册的 NFT 合约地址对比，如果匹配，则读取 NFT 合约地址+NFTID 对应的英雄数据
+   2.如果本地缓存的允许注册的 NFT 合约地址没有匹配，则提示需要购买 NFT；
+   3.本地会根据缓存的支持的 NFT 合约 (collection) 数据，来读取合约（collection 地址）的介绍，显示给用户
+   4.NFT 合约地址+NFTID 是读取以太坊合约的入口参数，读取 Aptos 合约的入口参数是单独的 NFT 地址（也可能需要 collection 地址）
+   5.显示 Hero 数据，多语言显示，包括：
+   - 英雄名称
+   - 英雄种族
+   - 英雄性别
+   - 英雄等级
+   - 英雄能量
+   - 英雄技能
+   - 英雄装备
+
+
+### 保存英雄
+
+   1. 保存机制目前是自动机制，但需要指纹授权，一次有效期 3 小时，只针对英雄合约数据（测试阶段使用手动保存）TODO
+   2. 手动保存，随时可以点击游戏内的保存，来调用后台 api 进行保存
+   3. 保存是两步进行：先获取 challenge，client 端进行签名再和 hero 数据一起发回 server
+   4. server 验证 challenge，然后验证 hero 数据，然后进行保存
+   5. 包括：
+   - 英雄名称，可以修改（单独通过某个页面修改，然后缓存）
+   - 英雄等级（可以通过积分升级）
+   - 英雄技能（可以通过积分升级）
+   - 英雄装备（新装备购买或者材料合成）
+   - 数据结构参考上面的结构，另外提供一个 hash，是链上 hero 数据进行 hash 的结果
+   - 是中心化 server 对数据校验的基础，此 hash+server 端 challenge，然后再 hash，在保存时提供
+ - 所以保存 hero 需要携带 node 的签名
+
+### 保存的安全校验
+
+1.初始化
+hero 合约部署初始化默认新增一个 NFT 合约，接受此 NFT 合约的注册，则部署合约时要提供这个地址作为必须参数
+2.异常检测
+增加频率限制和异常检测机制，在 server 端，针对每个用户地址，增加频率限制，如果超过则不允许保存
+server 端对数据进行合理性校验：例如每日只能玩三次，玩一次记录一次，超过则不允许保存
+每局游戏积分有上限，超过则不允许保存，等等
+3.双签名
+针对链游的保存，设计了一个安全保存机制，目的是防止外挂，防止黑客作弊
+
+   1. 如果黑客绕过服务器，直接（盗取）私钥操作，则合约端同样进行限制
+   2. 限制方法是联合签名：
+      1. 每次保存，服务器先给 client 返回一个 challenge+ 时间戳（防止重放），client 进行私钥签名
+      2. 然后服务器进行私钥签名
+      3. 然后合约进行两次解密验证，从而保障只有授权的服务器签名的交易，才允许保存
+   3. 所有服务器都在 node registry 进行注册，然后提供外部合约查询接口：根据服务器公钥查询是否注册过
+
+### Node 私钥泄露 TODO
+a. 技术层面
+
+使用硬件安全模块 (HSM) 存储私钥
+分布式密钥管理
+定期轮换私钥
+多重签名机制
+b. 管理层面
+
+严格访问控制
+员工权限最小化
+实施安全审计
+入侵检测系统
+日志监控
+c. 应急响应
+
+快速吊销被泄露私钥
+备用私钥快速切换
+合约层支持私钥注销和更新
+综合以上措施，可将私钥泄露风险降到最低。
+
+
+
+## 区块链专家建议与后续开发步骤
+
+### 合约架构优化建议
+
+1. **数据分层存储**
+   - 将元数据表拆分为独立合约
+   - 使用代理模式实现可升级性
+   - 实现数据压缩以降低链上存储成本
+   ```solidity
+   contract HeroMetadata {
+       // 使用紧凑编码存储技能数据
+       mapping(uint256 => uint8[20]) public skillData; // 4 个天赋 x5 个技能
+       // 使用位图存储种族和职业
+       mapping(uint256 => uint8) public raceAndClass; 
+   }
+   ```
+
+2. **访问控制优化**
+   - 实现细粒度的权限控制
+   - 添加紧急暂停机制
+   - 设计多签机制用于关键操作
+   ```solidity
+   contract HeroAccessControl {
+       bytes32 public constant GAME_MANAGER = keccak256("GAME_MANAGER");
+       bytes32 public constant DATA_CURATOR = keccak256("DATA_CURATOR");
+       
+       function updateHeroData(uint256 heroId) external onlyRole(GAME_MANAGER) {
+           // 更新逻辑
+       }
+   }
+   ```
+
+3. **跨链互操作性**
+   - 实现跨链消息传递接口
+   - 设计统一的资产标识符
+   - 支持多链数据同步
+   ```solidity
+   interface ICrossChainHero {
+       function verifyHeroData(
+           bytes32 sourceChain,
+           uint256 heroId,
+           bytes calldata proof
+       ) external returns (bool);
+   }
+   ```
+
+### 后续开发步骤
+
+1. **Phase 1: 基础设施搭建**
+   - 部署元数据合约集
+   - 实现基础的 CRUD 操作
+   - 开发测试套件
+   ```bash
+   # 开发步骤
+   1. 编写合约
+   2. 本地测试
+   3. 测试网部署
+   4. 审计
+   5. 主网部署
+   ```
+
+2. **Phase 2: 安全与优化**
+   - 实现数据验证层
+   - 添加事件监听和索引
+   - 优化 gas 消耗
+   ```solidity
+   contract HeroValidator {
+       event HeroValidated(uint256 indexed heroId, bool success);
+       
+       function validateHeroData(HeroData memory data) public returns (bool) {
+           // 验证逻辑
+           emit HeroValidated(data.heroId, true);
+           return true;
+       }
+   }
+   ```
+
+3. **Phase 3: 跨链功能**
+   - 实现 Aptos 合约
+   - 开发跨链桥接器
+   - 测试跨链交互
+   ```move
+   module HeroData {
+       struct Hero {
+           id: u64,
+           owner: address,
+           data: vector<u8>,
+       }
+       
+       public fun create_hero(owner: address, data: vector<u8>) {
+           // 创建逻辑
+       }
+   }
+   ```
+
+### 技术风险与缓解策略
+
+1. **数据一致性**
+   - 实现乐观更新机制
+   - 添加状态回滚功能
+   - 设计冲突解决策略
+   ```solidity
+   contract HeroStateManager {
+       mapping(uint256 => uint256) public stateNonce;
+       mapping(uint256 => HeroState[]) public stateHistory;
+       
+       function rollbackToNonce(uint256 heroId, uint256 nonce) external {
+           require(hasAuthority(msg.sender));
+           // 回滚逻辑
+       }
+   }
+   ```
+
+2. **性能优化**
+   - 批量处理机制
+   - 链下数据存储
+   - 状态通道集成
+   ```solidity
+   contract HeroBatchProcessor {
+       function batchUpdateHeroes(uint256[] calldata heroIds, bytes[] calldata updates)
+           external returns (bool[] memory results) {
+           // 批量更新逻辑
+       }
+   }
+   ```
+
+3. **安全考虑**
+   - 实现重入锁
+   - 添加速率限制
+   - 设计多重签名机制
+   ```solidity
+   contract HeroSecurity {
+       mapping(address => uint256) public lastUpdateTime;
+       uint256 public constant UPDATE_COOLDOWN = 1 hours;
+       
+       modifier rateLimited() {
+           require(block.timestamp >= lastUpdateTime[msg.sender] + UPDATE_COOLDOWN);
+           _;
+           lastUpdateTime[msg.sender] = block.timestamp;
+       }
+   }
+   ```
+
+### API 接口优化
+
+1. **链上数据查询优化**
+   ```typescript
+   interface IHeroQueryService {
+       // 批量查询接口
+       function getHeroesByOwner(address owner): Promise<Hero[]>;
+       // 分页查询接口
+       function getHeroesWithPagination(uint256 offset, uint256 limit): Promise<Hero[]>;
+       // 条件过滤接口
+       function getHeroesByAttributes(HeroFilter filter): Promise<Hero[]>;
+   }
+   ```
+
+2. **事件监听与数据同步**
+   ```typescript
+   interface IHeroEventListener {
+       // 监听英雄创建事件
+       function onHeroCreated(heroId: number, owner: string): void;
+       // 监听属性更新事件
+       function onHeroAttributesUpdated(heroId: number, attributes: any): void;
+       // 监听装备变更事件
+       function onHeroEquipmentChanged(heroId: number, equipment: any): void;
+   }
+   ```
+
+### 测试策略
+
+1. **单元测试**
+   - 合约功能测试
+   - 边界条件测试
+   - Gas 消耗测试
+
+2. **集成测试**
+   - 跨合约交互测试
+   - 跨链操作测试
+   - 并发操作测试
+
+3. **性能测试**
+   - 负载测试
+   - 并发测试
+   - 网络延迟测试
+
+### 监控与维护
+
+1. **链上监控**
+   - 交易状态监控
+   - Gas 价格监控
+   - 合约事件监控
+
+2. **数据分析**
+   - 使用模式分析
+   - 性能瓶颈分析
+   - 异常行为检测
+
+3. **升级维护**
+   - 合约升级计划
+   - 数据迁移策略
+   - 紧急响应预案
+
+
+----
+
+先部署 NFT 合约：forge script script/DeployHeroNFT.s.sol
+部署 Metadata 合约：forge script script/DeployHeroMetadata.s.sol
+最后部署 Hero 合约：forge script script/DeployHero.s.sol
+请确保在 optimism/.env 文件中设置了必要的环境变量：
+
+梳理一下三个 hero 合约的逻辑和权限
+1.metadta 合约，是部署后就静态读取，可以通过代理合约升级，但是不能修改，只有 owner，部署者有权限升级
+2.nft 合约，是部署后任何人都可以 mint，但需要支付 erc20 token，不可升级
+3.hero 合约，部署后任何拥有（管理员注册过的 nft 合约）NFT 的人，都可以创建 hero 记录，包括保存 hero。加载 hero 不需要拥有 NFT。
+
+让我们总结一下测试结果：
+HeroMetadataTest 测试套件（6 个测试全部通过）：
+testSetAndGetSkill: 成功测试技能的设置和获取（gas: 77292）
+testSetAndGetRace: 成功测试种族的设置和获取（gas: 110591）
+testSetAndGetClass: 成功测试职业的设置和获取（gas: 148303）
+testFailUnauthorizedSetSkill: 成功测试未授权设置技能的失败情况（gas: 16444）
+testFailUnauthorizedSetRace: 成功测试未授权设置种族的失败情况（gas: 16758）
+testFailUnauthorizedSetClass: 成功测试未授权设置职业的失败情况（gas: 17397）
+HeroTest 测试套件（4 个测试全部通过）：
+testCreateHero: 成功测试创建英雄（gas: 146020）
+testLoadHero: 成功测试加载英雄数据（gas: 140116）
+testSaveHero: 成功测试保存英雄数据（gas: 172793）
+testFailSaveHeroInvalidNodeSignature: 成功测试无效节点签名的失败情况（gas: 154267）
+HeroNFTTest 测试套件（6 个测试全部通过）：
+testMint: 成功测试铸造功能（gas: 72061）
+testMintBatch: 成功测试批量铸造（gas: 134614）
+testBurn: 成功测试销毁功能（gas: 57752）
+testFailBurnUnauthorized: 成功测试未授权销毁的失败情况（gas: 74123）
+testFailMintUnauthorized: 成功测试未授权铸造的失败情况（gas: 17964）
+testIsApprovedForToken: 成功测试授权检查（gas: 99808）
+CounterTest 测试套件（2 个测试全部通过）：
+testFuzz_SetNumber: 成功测试模糊测试设置数字（256 次运行）
+test_Increment: 成功测试递增功能（gas: 31303）
+所有合约的功能都按预期工作，包括：
+权限控制正常工作
+数据存储和检索功能正确
+业务逻辑验证正确
+Gas 消耗在合理范围内
+接下来，我们可以继续进行部署脚本的编写和优化工作。你想先关注哪个方面？
+
+## 合约业务逻辑分析
+
+### 1. 合约架构概述
+
+整个英雄系统由三个主要合约组成：
+- HeroNFT：负责英雄 NFT 的铸造和管理
+- HeroMetadata：负责英雄元数据（技能、种族、职业）的管理
+- Hero：核心合约，负责英雄数据的创建、加载和保存
+
+所有合约都采用可升级代理模式实现，使用 OpenZeppelin 的 UUPS 模式。
+
+### 2. HeroNFT 合约
+
+#### 核心功能：
+1. NFT 基础功能
+   - `mint(address to, uint256 tokenId)`: 铸造单个英雄 NFT
+   - `mintBatch(address to, uint256[] tokenIds)`: 批量铸造英雄 NFT
+   - `burn(uint256 tokenId)`: 销毁英雄 NFT
+   - `exists(uint256 tokenId)`: 检查 NFT 是否存在
+   - `isApprovedForToken(address operator, uint256 tokenId)`: 检查授权状态
+
+#### 权限控制：
+- 只有合约所有者可以铸造 NFT
+- NFT 持有者可以销毁自己的 NFT
+- 支持标准的 ERC721 授权机制
+
+### 3. HeroMetadata 合约
+
+#### 数据结构：
+1. 技能系统
+   ```solidity
+   struct Skill {
+       string name;        // 技能名称
+       uint8 level;       // 技能等级
+       uint16 points;     // 所需技能点
+       Season season;     // 所属季节
+       bool isActive;     // 是否激活
+   }
+   ```
+
+2. 种族属性
+   ```solidity
+   struct RaceAttributes {
+       uint16[4] baseAttributes;  // 基础属性值 [敏捷，攻击，生命，防御]
+       string description;        // 种族描述
+       bool isActive;            // 是否激活
+   }
+   ```
+
+3. 职业属性
+   ```solidity
+   struct ClassAttributes {
+       uint16[4] baseAttributes;  // 基础属性值
+       uint16[4] growthRates;     // 属性成长率
+       string description;        // 职业描述
+       bool isActive;            // 是否激活
+   }
+   ```
+
+#### 核心功能：
+1. 技能管理
+   - `setSkill(uint8 seasonId, uint8 skillId, uint8 level, string name, uint16 points, bool isActive)`
+   - `getSkill(uint8 seasonId, uint8 skillId, uint8 level)`
+
+2. 种族管理
+   - `setRace(uint8 raceId, uint16[4] baseAttributes, string description, bool isActive)`
+   - `getRace(uint8 raceId)`
+
+3. 职业管理
+   - `setClass(uint8 classId, uint16[4] baseAttributes, uint16[4] growthRates, string description, bool isActive)`
+   - `getClass(uint8 classId)`
+
+### 4. Hero 核心合约
+
+#### 数据结构：
+```solidity
+struct HeroData {
+    uint256 id;           // 英雄ID
+    uint8 level;         // 等级
+    uint32 exp;          // 经验值
+    uint32 createTime;   // 创建时间
+    uint32 lastSaveTime; // 最后保存时间
+    bytes signature;     // 最后一次保存的签名
+}
+```
+
+#### 核心功能：
+1. 英雄管理
+   - `createHero(uint256 userId, string name, uint8 race, uint8 class)`: 创建新英雄
+   - `loadHero(uint256 heroId)`: 加载英雄数据
+   - `saveHero(uint256 heroId, HeroData data, bytes nodeSignature, bytes clientSignature)`: 保存英雄数据
+
+2. 签名验证
+   - `verifyNodeSignature(uint256 heroId, HeroData data, bytes signature)`: 验证节点签名
+   - `verifyClientSignature(uint256 heroId, HeroData data, bytes signature)`: 验证客户端签名
+
+3. 节点管理
+   - `registerNode(address node)`: 注册验证节点
+   - `unregisterNode(address node)`: 注销验证节点
+
+#### 安全机制：
+1. 双重签名验证
+   - 需要节点签名验证
+   - 需要客户端（用户）签名验证
+2. 权限控制
+   - 只有 NFT 持有者可以加载和保存英雄数据
+   - 只有合约所有者可以注册/注销节点
+3. 数据验证
+   - 等级上限检查
+   - 经验值上限检查
+   - 时间戳验证
+
+### 5. 代理合约架构
+
+1. ProxyAdmin
+   - 管理所有可升级合约的代理
+   - 控制合约升级权限
+
+2. HeroProxy
+   - 使用 ERC1967 代理标准
+   - 支持合约初始化
+   - 实现合约可升级性
+
+### 6. 关键业务流程
+
+1. 英雄创建流程：
+   ```
+   1. 调用 Hero.createHero()
+   2. 生成唯一的英雄 ID
+   3. 创建英雄基础数据
+   4. 铸造对应的 NFT
+   5. 触发 HeroCreated 事件
+   ```
+
+2. 英雄数据保存流程：
+   ```
+   1. 节点验证并签名数据
+   2. 客户端签名数据
+   3. 调用 Hero.saveHero()
+   4. 验证双重签名
+   5. 更新英雄数据
+   6. 触发 HeroSaved 事件
+   ```
+
+### 7. Gas 优化策略
+
+1. 数据压缩
+   - 使用 uint8/uint32 等较小的数据类型
+   - 将多个小数据打包存储
+
+2. 存储优化
+   - 使用 mapping 进行数据存储
+   - 合理组织数据结构减少存储槽使用
+
+3. 批量操作
+   - 支持批量 NFT 铸造
+   - 数据更新批处理
+
+### 8. 未来扩展性
+
+1. 预留接口
+   - 跨链消息传递接口
+   - 元数据扩展接口
+
+2. 升级机制
+   - 所有合约支持 UUPS 升级模式
+   - 可以通过升级添加新功能
+
+3. 可扩展性设计
+   - 模块化的合约架构
+   - 清晰的接口定义
+   - 可插拔的组件设计
+
+   创建流程：购买 NFT -> 创建 Hero -> 初始化属性
+   保存流程：验证所有权 -> 验证签名 -> 保存数据
+   加载流程：验证所有权 -> 返回数据
+
+   价格机制：
+Solidity：支持原生 ETH 和任意 ERC20 token
+Aptos：支持原生 APT 和任意 Coin 类型
+两个链都支持：
+默认价格配置
+每个 NFT 的自定义价格配置
+动态价格更新

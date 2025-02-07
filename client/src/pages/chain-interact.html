@@ -3,9 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>链交互 - Arcadia Node</title>
+    <title>Blockchain Data - Arcadia Node</title>
     <link rel="stylesheet" href="/css/common.css">
     <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            line-height: 1.4;
+            background-color: #f5f7fa;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
+        }
+        .header {
+            background-color: #fff;
+            padding: 14px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .nav-links {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+        }
+        .nav-links a {
+            color: #2c3e50;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .nav-links a:hover {
+            background-color: #f0f2f5;
+        }
+        .language-selector {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+        }
+        .language-selector select {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
         .hero-card {
             border: 1px solid #ddd;
             border-radius: 8px;
@@ -42,8 +85,17 @@
 <body>
     <div class="header">
         <div class="container">
-            <h1>英雄数据管理</h1>
-            <a href="/" class="back-link">返回首页</a>
+            <div class="nav-links">
+                <a href="/" id="backToHome">返回首页</a>
+            </div>
+            <div class="language-selector">
+                <select id="languageSelect" onchange="changeLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                    <option value="th">ไทย</option>
+                </select>
+            </div>
+            <h1 id="pageTitle">Blockchain Data Management</h1>
         </div>
     </div>
 
@@ -52,7 +104,7 @@
         <div class="card">
             <h2>创建英雄</h2>
             <div class="form-group">
-                <label for="userId">用户ID：</label>
+                <label for="userId">用户 ID：</label>
                 <input type="text" id="userId" class="form-control" placeholder="输入用户ID">
             </div>
             <div class="form-group">
@@ -75,11 +127,11 @@
         <div class="card">
             <h2>加载英雄</h2>
             <div class="form-group">
-                <label for="loadUserId">用户ID：</label>
+                <label for="loadUserId">用户 ID：</label>
                 <input type="text" id="loadUserId" class="form-control" placeholder="输入用户ID">
             </div>
             <div class="form-group">
-                <label for="heroId">英雄ID：</label>
+                <label for="heroId">英雄 ID：</label>
                 <input type="text" id="heroId" class="form-control" placeholder="输入英雄ID">
             </div>
             <button class="btn" onclick="loadHero()">加载英雄</button>
@@ -90,11 +142,11 @@
         <div class="card">
             <h2>保存英雄数据</h2>
             <div class="form-group">
-                <label for="saveUserId">用户ID：</label>
+                <label for="saveUserId">用户 ID：</label>
                 <input type="text" id="saveUserId" class="form-control" placeholder="输入用户ID">
             </div>
             <div class="form-group">
-                <label for="saveHeroId">英雄ID：</label>
+                <label for="saveHeroId">英雄 ID：</label>
                 <input type="text" id="saveHeroId" class="form-control" placeholder="输入英雄ID">
             </div>
             <div class="form-group">
@@ -114,7 +166,44 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        // 语言配置
+        const translations = {
+            en: {
+                title: 'Chain Service Management',
+                // 其他翻译内容
+            },
+            zh: {
+                title: '链服务管理',
+                // 其他翻译内容
+            },
+            th: {
+                title: 'การจัดการข้อมูลบล็อกเชน',
+                // 其他翻译内容
+            }
+        };
+
+        // 获取保存的语言设置或使用默认语言
+        let currentLang = localStorage.getItem('language') || 'en';
+        
+        // 语言切换函数
+        window.changeLanguage = function(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            updateContent();
+        };
+
+        // 更新页面内容
+        function updateContent() {
+            const t = translations[currentLang];
+            document.getElementById('pageTitle').textContent = t.title;
+            // 更新其他内容的翻译
+        }
+
+        // 初始化语言设置
+        document.getElementById('languageSelect').value = currentLang;
+        updateContent();
+
         // 默认参数
         const defaultParams = {
             chain_hero_create: { userId: '1', name: 'Hero1' },
@@ -214,7 +303,7 @@
                 <div class="hero-card">
                     <h3>${hero.name} <span class="badge badge-primary">${hero.class}</span></h3>
                     <div>ID: ${hero.heroId}</div>
-                    <div>所有者: ${hero.userId}</div>
+                    <div>所有者：${hero.userId}</div>
                     <div class="hero-stats">
                         <div class="stat-item">
                             <div class="stat-label">等级</div>

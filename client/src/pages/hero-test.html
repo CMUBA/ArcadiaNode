@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero System Test - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script type="module">
+        import { ethers } from 'ethers';
+        import api from '../utils/api.js';
+        import { heroConfig } from '../config/hero.js';
+        import enLang from '../config/i18n/en.js';
+        import zhLang from '../config/i18n/zh.js';
+        import thLang from '../config/i18n/th.js';
+        import { heroAbi } from '../js/abi/hero.js';
+        import { heroMetadataAbi } from '../js/abi/heroMetadata.js';
+
+        const translations = {
+            en: enLang,
+            zh: zhLang,
+            th: thLang
+        };
+
+        let currentLang = localStorage.getItem('language') || 'en';
+        let provider;
+        let heroContract;
+        let heroMetadataContract;
+        let userAddress;
+        let nftContract;
+
+        // Connect wallet function
+        async function connectWallet() {
+            try {
+                // Request user authorization
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                userAddress = accounts[0];
+                console.log('Connected account:', userAddress);
+                
+                // Check network
+                const network = await provider.getNetwork();
+                console.log('Current network:', network);
+                
+                if (network.chainId !== BigInt(heroConfig.ethereum.chainId)) {
+                    // Request switch to Optimism Sepolia
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x' + heroConfig.ethereum.chainId.toString(16) }],
+                        });
+                    } catch (switchError) {
+                        // Add network if not exists
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0x' + heroConfig.ethereum.chainId.toString(16),
+                                    chainName: 'Optimism Sepolia',
+                                    nativeCurrency: {
+                                        name: 'ETH',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: [heroConfig.ethereum.nodeUrl],
+                                    blockExplorerUrls: ['https://sepolia-optimism.etherscan.io/']
+                                }],
+                            });
+                        }
+                    }
+                }
+
+                // Get signer and reinitialize contracts
+                const signer = await provider.getSigner();
+                console.log('Signer obtained');
+
+                // Initialize contracts with signer
+                heroContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.hero,
+                    heroAbi,
+                    signer
+                );
+
+                heroMetadataContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.heroMetadata,
+                    heroMetadataAbi,
+                    signer
+                );
+
+                // Initialize NFT contract
+                nftContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.heroNFT,
+                    ['function balanceOf(address) view returns (uint256)'],
+                    provider
+                );
+
+                // Check NFT ownership
+                const nftBalance = await nftContract.balanceOf(userAddress);
+                const hasNFT = nftBalance > 0;
+                
+                // Update NFT status display
+                const nftStatus = document.getElementById('nftStatus');
+                if (hasNFT) {
+                    nftStatus.innerHTML = '<span class="text-green-500">✓ You own a Hero NFT</span>';
+                    // Enable create hero button
+                    document.getElementById('createHero').disabled = false;
+                } else {
+                    nftStatus.innerHTML = '<span class="text-red-500">✗ No Hero NFT found</span> <a href="/pages/nft-mint.html" class="text-blue-600 hover:text-blue-800">Mint one now →</a>';
+                    // Disable create hero button
+                    document.getElementById('createHero').disabled = true;
+                }
+
+                console.log('Contracts reinitialized with signer');
+
+                // Update UI
+                document.getElementById('connectWallet').style.display = 'none';
+                document.getElementById('connectedWallet').style.display = 'block';
+                document.getElementById('walletAddress').textContent = userAddress;
+                
+                // Enable wallet-required buttons except create hero (which depends on NFT ownership)
+                document.querySelectorAll('.requires-wallet:not(#createHero)').forEach(button => {
+                    button.disabled = false;
+                });
+
+                console.log('Wallet connected successfully:', userAddress);
+
+                // Load NFT contracts after successful connection
+                await loadRegisteredNFTContracts();
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                alert('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        function updateContent() {
+            const t = translations[currentLang];
+            
+            // Update page title
+            document.title = t.hero.test.title;
+
+            // Update wallet section
+            if (document.getElementById('walletTitle')) {
+                document.getElementById('walletTitle').textContent = t.hero.test.wallet.title;
+            }
+            if (document.getElementById('connectWallet')) {
+                document.getElementById('connectWallet').textContent = t.hero.test.wallet.connect;
+            }
+
+            // Update race section
+            if (document.getElementById('raceTitle')) {
+                document.getElementById('raceTitle').textContent = t.hero.test.race.title;
+            }
+
+            // Update class section
+            if (document.getElementById('classTitle')) {
+                document.getElementById('classTitle').textContent = t.hero.test.class.title;
+            }
+
+            // Update skill section
+            if (document.getElementById('skillTitle')) {
+                document.getElementById('skillTitle').textContent = t.hero.test.skill.title;
+            }
+
+            // Update creation section
+            if (document.getElementById('creationTitle')) {
+                document.getElementById('creationTitle').textContent = t.hero.test.creation.title;
+            }
+
+            // Update language selector
+            if (document.getElementById('languageSelect')) {
+                document.getElementById('languageSelect').value = currentLang;
+            }
+        }
+
+        window.changeLanguage = function(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            updateContent();
+        };
+
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            try {
+                // Check MetaMask
+                if (window.ethereum) {
+                    // Initialize provider
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    console.log('Provider initialized');
+                    
+                    // Initialize contracts with provider (read-only)
+                    heroContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.hero,
+                        heroAbi,
+                        provider
+                    );
+
+                    heroMetadataContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.heroMetadata,
+                        heroMetadataAbi,
+                        provider
+                    );
+
+                    // Initialize NFT contract
+                    nftContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.heroNFT,
+                        ['function balanceOf(address) view returns (uint256)'],
+                        provider
+                    );
+
+                    console.log('Contracts initialized successfully');
+
+                    // Add wallet connect button event listener
+                    const connectWalletBtn = document.getElementById('connectWallet');
+                    if (connectWalletBtn) {
+                        connectWalletBtn.addEventListener('click', connectWallet);
+                        console.log('Wallet connect button event listener added');
+                    }
+
+                    // Check if already connected
+                    const accounts = await provider.listAccounts();
+                    if (accounts.length > 0) {
+                        console.log('Found existing connection');
+                        await connectWallet();
+                    }
+                } else {
+                    console.error('Please install MetaMask!');
+                    alert('Please install MetaMask to use this dApp');
+                }
+
+                // Update page content
+                updateContent();
+                
+                // Set up other button events
+                document.getElementById('getRaceData')?.addEventListener('click', getRaceData);
+                document.getElementById('getClassData')?.addEventListener('click', getClassData);
+                document.getElementById('getSkillData')?.addEventListener('click', getSkillData);
+                document.getElementById('createHero')?.addEventListener('click', createNewHero);
+
+                // Set up language selection event
+                document.getElementById('languageSelect')?.addEventListener('change', (e) => {
+                    changeLanguage(e.target.value);
+                });
+
+                // Load registered NFT contracts after connecting
+                if (userAddress) {
+                    await loadRegisteredNFTContracts();
+                }
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                alert('Initialization failed: ' + error.message);
+            }
+        });
+
+        // 获取种族数据
+        async function getRaceData() {
+            try {
+                const raceId = document.getElementById('raceId').value;
+                const raceData = await heroMetadataContract.getRace(raceId);
+                document.getElementById('raceResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-gray-100 rounded">
+                        <p>Base Attributes: ${raceData.baseAttributes.join(', ')}</p>
+                        <p>Description: ${raceData.description}</p>
+                        <p>Active: ${raceData.isActive}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('获取种族数据失败：', error);
+                alert('Failed to get race data: ' + error.message);
+            }
+        }
+
+        // 获取职业数据
+        async function getClassData() {
+            try {
+                const classId = document.getElementById('classId').value;
+                const classData = await heroMetadataContract.getClass(classId);
+                document.getElementById('classResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-gray-100 rounded">
+                        <p>Base Attributes: ${classData.baseAttributes.join(', ')}</p>
+                        <p>Growth Rates: ${classData.growthRates.join(', ')}</p>
+                        <p>Description: ${classData.description}</p>
+                        <p>Active: ${classData.isActive}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('获取职业数据失败：', error);
+                alert('Failed to get class data: ' + error.message);
+            }
+        }
+
+        // 获取技能数据
+        async function getSkillData() {
+            try {
+                const seasonId = document.getElementById('seasonId').value;
+                const skillId = document.getElementById('skillId').value;
+                const skillLevel = document.getElementById('skillLevel').value;
+                const skillData = await heroMetadataContract.getSkill(seasonId, skillId, skillLevel);
+                document.getElementById('skillResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-gray-100 rounded">
+                        <p>Name: ${skillData.name}</p>
+                        <p>Points: ${skillData.points}</p>
+                        <p>Active: ${skillData.isActive}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('获取技能数据失败：', error);
+                alert('Failed to get skill data: ' + error.message);
+            }
+        }
+
+        // Create new hero function
+        async function createNewHero() {
+            try {
+                // Validate input
+                const name = document.getElementById('heroName').value;
+                if (!name) {
+                    throw new Error('Please enter hero name');
+                }
+                const race = document.getElementById('createRaceId').value;
+                const classId = document.getElementById('createClassId').value;
+                
+                // Get user ID (using wallet address as user ID for now)
+                const userId = ethers.keccak256(ethers.toUtf8Bytes(userAddress));
+                
+                console.log('Creating hero with params:', {
+                    userId,
+                    name,
+                    race,
+                    classId,
+                    contractAddress: heroConfig.ethereum.contracts.hero
+                });
+
+                // Verify contract is properly initialized
+                if (!heroContract.runner?.provider?.provider?.selectedAddress) {
+                    console.log('Reconnecting contract with signer...');
+                    const signer = await provider.getSigner();
+                    heroContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.hero,
+                        heroAbi,
+                        signer
+                    );
+                }
+
+                // Calculate expected NFT token ID
+                const tokenId = ethers.keccak256(
+                    ethers.AbiCoder.defaultAbiCoder().encode(
+                        ['uint256', 'string', 'uint8', 'uint8'],
+                        [userId, name, race, classId]
+                    )
+                );
+
+                // Check if NFT exists and is owned by the user
+                const nftContract = new ethers.Contract(
+                    heroConfig.ethereum.contracts.heroNFT,
+                    ['function exists(uint256) view returns (bool)', 'function ownerOf(uint256) view returns (address)'],
+                    provider
+                );
+
+                const nftExists = await nftContract.exists(tokenId);
+                if (!nftExists) {
+                    throw new Error('Please mint the hero NFT first');
+                }
+
+                const nftOwner = await nftContract.ownerOf(tokenId);
+                if (nftOwner.toLowerCase() !== userAddress.toLowerCase()) {
+                    throw new Error('You do not own this hero NFT');
+                }
+
+                // Prepare parameters
+                const raceValue = Number(race);
+                const classValue = Number(classId);
+
+                // Encode function data for verification
+                const encodedData = heroContract.interface.encodeFunctionData('createHero', [
+                    userId,
+                    name,
+                    raceValue,
+                    classValue
+                ]);
+                console.log('Encoded transaction data:', encodedData);
+
+                // Send transaction
+                const tx = await heroContract.createHero(
+                    userId,
+                    name,
+                    raceValue,
+                    classValue,
+                    {
+                        gasLimit: 500000
+                    }
+                );
+                
+                console.log('Transaction sent:', tx);
+                
+                document.getElementById('createResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-green-100 rounded">
+                        <p>Transaction sent! Hash: ${tx.hash}</p>
+                        <p>Waiting for confirmation...</p>
+                        <p>NFT Token ID: ${tokenId}</p>
+                    </div>
+                `;
+                
+                // Wait for confirmation
+                const receipt = await tx.wait();
+                console.log('Transaction receipt:', receipt);
+                
+                if (receipt.status === 0) {
+                    throw new Error('Transaction failed');
+                }
+                
+                // Find event in logs
+                const event = receipt.logs.find(log => {
+                    try {
+                        const parsed = heroContract.interface.parseLog(log);
+                        return parsed.name === 'HeroCreated';
+                    } catch (e) {
+                        return false;
+                    }
+                });
+
+                if (event) {
+                    const parsedEvent = heroContract.interface.parseLog(event);
+                    const heroId = parsedEvent.args.heroId;
+                    
+                    document.getElementById('createResult').innerHTML = `
+                        <div class="mt-4 p-4 bg-green-100 rounded">
+                            <p>Hero created successfully!</p>
+                            <p>Hero ID: ${heroId}</p>
+                            <p>NFT Token ID: ${tokenId}</p>
+                            <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('HeroCreated event not found in transaction logs');
+                }
+            } catch (error) {
+                console.error('Create hero failure: ', error);
+                
+                // Parse error message
+                let errorMessage = error.message;
+                if (error.data) {
+                    errorMessage += `\nError data: ${JSON.stringify(error.data)}`;
+                }
+                if (error.transaction) {
+                    errorMessage += `\nTransaction: ${JSON.stringify(error.transaction)}`;
+                }
+                
+                document.getElementById('createResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-red-100 rounded">
+                        <p>Failed to create hero:</p>
+                        <pre class="mt-2 text-sm text-red-600 whitespace-pre-wrap">${errorMessage}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Add new function to get registered NFT contracts
+        async function loadRegisteredNFTContracts() {
+            try {
+                if (!heroContract) return;
+                
+                // 使用正确的函数名 getRegisteredNFTs
+                const nftContracts = await heroContract.getRegisteredNFTs();
+                const nftContractsList = document.getElementById('nftContractsList');
+                
+                if (nftContracts && nftContracts.length > 0) {
+                    nftContractsList.innerHTML = nftContracts.map(contract => `
+                        <div class="p-3 bg-gray-50 rounded">
+                            <a href="https://sepolia-optimism.etherscan.io/address/${contract}" 
+                               target="_blank" 
+                               class="text-blue-600 hover:text-blue-800 break-all">
+                                ${contract}
+                            </a>
+                        </div>
+                    `).join('');
+                } else {
+                    nftContractsList.innerHTML = '<p class="text-sm text-gray-500">No registered NFT contracts found</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load NFT contracts:', error);
+                document.getElementById('nftContractsList').innerHTML = 
+                    '<p class="text-sm text-red-500">Failed to load NFT contracts</p>';
+            }
+        }
+
+        // 将函数暴露到全局作用域
+        window.connectWallet = connectWallet;
+        window.getRaceData = getRaceData;
+        window.getClassData = getClassData;
+        window.getSkillData = getSkillData;
+        window.createNewHero = createNewHero;
+    </script>
+</head>
+<body class="bg-gray-100">
+    <div class="header">
+        <div class="container">
+            <div class="nav-links">
+                <a href="/" id="backToHome">返回首页</a>
+                <select id="languageSelect" class="language-select">
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                    <option value="th">ไทย</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-4">
+        <!-- 顶部区域：钱包连接 -->
+        <div class="mb-4 bg-white rounded-lg shadow p-4">
+            <h2 class="text-lg font-semibold mb-2">Wallet Connection</h2>
+            <div class="flex items-center space-x-4">
+                <button id="connectWallet" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
+                    Connect Wallet
+                </button>
+                <a href="/pages/nft-mint.html" class="text-blue-500 hover:text-blue-700 text-sm ml-4">
+                    Mint Hero NFT →
+                </a>
+            </div>
+            <div id="connectedWallet" class="hidden mt-2">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-green-500 text-sm">Connected:</span>
+                        <span id="walletAddress" class="ml-2 text-gray-600 text-sm"></span>
+                    </div>
+                    <div id="nftStatus" class="text-sm">
+                        <span class="text-gray-500">Checking NFT ownership...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- 左侧：数据查询区域 -->
+            <div class="space-y-4">
+                <!-- 种族数据测试 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 id="raceTitle" class="text-lg font-semibold mb-2">Race Data Test</h2>
+                    <div class="space-y-2">
+                        <div>
+                            <label for="raceId" class="block text-sm font-medium text-gray-700">Select Race</label>
+                            <select id="raceId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                <option value="0">Human</option>
+                                <option value="1">Elf</option>
+                                <option value="2">Dwarf</option>
+                                <option value="3">Orc</option>
+                                <option value="4">Undead</option>
+                            </select>
+                        </div>
+                        <button id="getRaceData" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
+                            Get Data
+                        </button>
+                        <div id="raceResult"></div>
+                    </div>
+                </div>
+
+                <!-- 职业数据测试 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 id="classTitle" class="text-lg font-semibold mb-2">Class Data Test</h2>
+                    <div class="space-y-2">
+                        <div>
+                            <label for="classId" class="block text-sm font-medium text-gray-700">Select Class</label>
+                            <select id="classId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                <option value="0">Warrior</option>
+                                <option value="1">Mage</option>
+                                <option value="2">Archer</option>
+                                <option value="3">Rogue</option>
+                                <option value="4">Priest</option>
+                            </select>
+                        </div>
+                        <button id="getClassData" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
+                            Get Data
+                        </button>
+                        <div id="classResult"></div>
+                    </div>
+                </div>
+
+                <!-- 技能数据测试 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 id="skillTitle" class="text-lg font-semibold mb-2">Skill Data Test</h2>
+                    <div class="space-y-2">
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label for="seasonId" class="block text-sm font-medium text-gray-700">Select Season</label>
+                                <select id="seasonId" class="mt-1 block w-full pl-2 pr-8 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                    <option value="0">Spring</option>
+                                    <option value="1">Summer</option>
+                                    <option value="2">Autumn</option>
+                                    <option value="3">Winter</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="skillId" class="block text-sm font-medium text-gray-700">Skill ID</label>
+                                <input type="number" id="skillId" min="0" max="4" value="0" class="mt-1 block w-full pl-2 pr-2 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                            </div>
+                            <div>
+                                <label for="skillLevel" class="block text-sm font-medium text-gray-700">Level</label>
+                                <input type="number" id="skillLevel" min="1" max="10" value="1" class="mt-1 block w-full pl-2 pr-2 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                            </div>
+                        </div>
+                        <button id="getSkillData" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
+                            Get Data
+                        </button>
+                        <div id="skillResult"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：NFT和创建英雄区域 -->
+            <div class="space-y-4">
+                <!-- NFT 区域 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-lg font-semibold mb-2">Hero NFT Contracts</h2>
+                    <div class="space-y-2">
+                        <div id="nftContractsList" class="space-y-2">
+                            <p class="text-sm text-gray-500">Loading registered NFT contracts...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 创建英雄区域 -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 id="creationTitle" class="text-lg font-semibold mb-2">Create Hero</h2>
+                    <div class="space-y-2">
+                        <div>
+                            <label for="heroName" class="block text-sm font-medium text-gray-700">Hero Name</label>
+                            <input type="text" id="heroName" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                        </div>
+                        <div>
+                            <label for="createRaceId" class="block text-sm font-medium text-gray-700">Select Race</label>
+                            <select id="createRaceId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                <option value="0">Human</option>
+                                <option value="1">Elf</option>
+                                <option value="2">Dwarf</option>
+                                <option value="3">Orc</option>
+                                <option value="4">Undead</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="createClassId" class="block text-sm font-medium text-gray-700">Select Class</label>
+                            <select id="createClassId" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                <option value="0">Warrior</option>
+                                <option value="1">Mage</option>
+                                <option value="2">Archer</option>
+                                <option value="3">Rogue</option>
+                                <option value="4">Priest</option>
+                            </select>
+                        </div>
+                        <button id="createHero" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 requires-wallet text-sm" disabled>
+                            Create Hero
+                        </button>
+                        <div id="createResult"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

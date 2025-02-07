@@ -13,7 +13,13 @@ export default {
     contracts: {
         token: '代币合约',
         stakeManager: '质押管理合约',
-        nodeRegistry: '节点注册合约'
+        nodeRegistry: '节点注册合约',
+        hero: {
+            nft: '英雄NFT合约',
+            metadata: '英雄元数据合约',
+            core: '英雄核心合约',
+            test: '英雄测试页面'
+        }
     },
     language: '语言',
     registeredNodes: '已注册节点',
@@ -66,5 +72,46 @@ export default {
     loading: '加载中...',
     noServices: '暂无可用服务',
     basic: '基础服务',
-    extend: '扩展服务'
+    extend: '扩展服务',
+    heroTestTitle: '英雄系统测试',
+    hero: {
+        test: {
+            title: '英雄系统测试 - Arcadia Node',
+            wallet: {
+                title: '钱包连接',
+                connect: '连接钱包',
+                connected: '已连接'
+            },
+            race: {
+                title: '种族数据测试',
+                select: '选择种族',
+                attributes: '基础属性',
+                description: '描述'
+            },
+            class: {
+                title: '职业数据测试',
+                select: '选择职业',
+                attributes: '基础属性',
+                growth: '成长率',
+                description: '描述'
+            },
+            skill: {
+                title: '技能数据测试',
+                season: '选择季节',
+                id: '技能 ID',
+                level: '等级',
+                name: '名称',
+                points: '所需点数'
+            },
+            creation: {
+                title: '创建英雄',
+                name: '英雄名称',
+                race: '选择种族',
+                class: '选择职业',
+                create: '创建英雄',
+                success: '英雄创建成功！',
+                error: '创建英雄失败'
+            }
+        }
+    }
 }; 

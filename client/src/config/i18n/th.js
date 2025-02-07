@@ -13,7 +13,13 @@ export default {
     contracts: {
         token: 'สัญญาโทเคน',
         stakeManager: 'สัญญาจัดการการวางเดิมพัน',
-        nodeRegistry: 'สัญญาลงทะเบียนโหนด'
+        nodeRegistry: 'สัญญาลงทะเบียนโหนด',
+        hero: {
+            nft: 'สัญญา NFT ฮีโร่',
+            metadata: 'สัญญาข้อมูลฮีโร่',
+            core: 'สัญญาหลักฮีโร่',
+            test: 'หน้าทดสอบฮีโร่'
+        }
     },
     language: 'ภาษา',
     registeredNodes: 'โหนดที่ลงทะเบียนแล้ว',
@@ -67,5 +73,36 @@ export default {
     noServices: 'ไม่มีบริการที่ใช้งานได้',
     basic: 'พื้นฐาน',
     extend: 'ขยาย',
-    availableServices: 'บริการที่มี'
+    availableServices: 'บริการที่มี',
+    hero: {
+        test: {
+            title: 'ทดสอบระบบฮีโร่',
+            wallet: {
+                title: 'เชื่อมต่อกระเป๋าเงิน',
+                connect: 'เชื่อมต่อกระเป๋าเงิน',
+                connected: 'เชื่อมต่อแล้ว'
+            },
+            race: {
+                title: 'ทดสอบข้อมูลเผ่าพันธุ์',
+                select: 'เลือกเผ่าพันธุ์'
+            },
+            class: {
+                title: 'ทดสอบข้อมูลอาชีพ',
+                select: 'เลือกอาชีพ'
+            },
+            skill: {
+                title: 'ทดสอบข้อมูลทักษะ',
+                season: 'เลือกฤดูกาล',
+                id: 'รหัสทักษะ',
+                level: 'ระดับ'
+            },
+            creation: {
+                title: 'สร้างฮีโร่',
+                name: 'ชื่อฮีโร่',
+                race: 'เลือกเผ่าพันธุ์',
+                class: 'เลือกอาชีพ',
+                create: 'สร้างฮีโร่'
+            }
+        }
+    }
 }; 

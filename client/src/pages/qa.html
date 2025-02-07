@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q&A - Arcadia Node</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            line-height: 1.4;
+            background-color: #f5f7fa;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #2c3e50;
+        }
+        .back-link {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .qa-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .qa-item {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .qa-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0 0 10px 0;
+        }
+        .qa-content {
+            color: #34495e;
+            margin: 0;
+            overflow: hidden;
+            max-height: 3.6em;
+            transition: max-height 0.3s ease-out;
+        }
+        .qa-content.expanded {
+            max-height: none;
+        }
+        .read-more {
+            background: none;
+            border: none;
+            color: #3498db;
+            padding: 5px 0;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .read-more:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="pageTitle">Q&A</h1>
+            <a href="/" class="back-link" id="backToHome">Back to Home</a>
+        </div>
+        <div class="qa-list" id="qaList">
+            <!-- Q&A items will be dynamically added here -->
+        </div>
+    </div>
+
+    <script type="module">
+        import enLang from '../config/i18n/en.js';
+        import zhLang from '../config/i18n/zh.js';
+        import thLang from '../config/i18n/th.js';
+
+        const translations = {
+            en: enLang,
+            zh: zhLang,
+            th: thLang
+        };
+
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function createQAItem(question, index) {
+            const item = document.createElement('div');
+            item.className = 'qa-item';
+            item.innerHTML = `
+                <h2 class="qa-title">${question.title}</h2>
+                <p class="qa-content">${question.content}</p>
+                <button class="read-more" onclick="toggleContent(this)" type="button">
+                    ${translations[currentLang].qa.readMore}
+                </button>
+            `;
+            return item;
+        }
+
+        function updateContent() {
+            const t = translations[currentLang];
+            document.getElementById('pageTitle').textContent = t.qa.title;
+            document.getElementById('backToHome').textContent = t.backToHome;
+
+            const qaList = document.getElementById('qaList');
+            qaList.innerHTML = '';
+            t.qa.questions.forEach((question, index) => {
+                qaList.appendChild(createQAItem(question, index));
+            });
+        }
+
+        window.toggleContent = function(button) {
+            const content = button.previousElementSibling;
+            const isExpanded = content.classList.contains('expanded');
+            content.classList.toggle('expanded');
+            button.textContent = isExpanded ? 
+                translations[currentLang].qa.readMore : 
+                translations[currentLang].qa.readLess;
+        };
+
+        updateContent();
+    </script>
+</body>
+</html> 
