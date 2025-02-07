@@ -19,3 +19,8 @@ optimism/.env.optimism-sepolia
 
 # Dotenv file
 .env
+
+aptos/build
+aptos/cache/
+aptos/out/
+

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="hero.test.title">Hero System Test - Arcadia Node</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script type="module">
+        import { ethers } from 'ethers';
+        import api from '../utils/api.js';
+        import { heroConfig } from '../config/hero.js';
+        import enLang from '../config/i18n/en.js';
+        import zhLang from '../config/i18n/zh.js';
+        import thLang from '../config/i18n/th.js';
+
+        const translations = {
+            en: enLang,
+            zh: zhLang,
+            th: thLang
+        };
+
+        let currentLang = localStorage.getItem('language') || 'en';
+        let provider;
+        let signer;
+        let heroContract;
+        let heroMetadataContract;
+        let userAddress;
+
+        // 等待所有脚本加载完成
+        window.addEventListener('load', async () => {
+            try {
+                // 初始化 provider
+                if (window.ethereum) {
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    
+                    // 初始化合约
+                    heroContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.hero,
+                        heroConfig.ethereum.abis.hero,
+                        provider
+                    );
+
+                    heroMetadataContract = new ethers.Contract(
+                        heroConfig.ethereum.contracts.heroMetadata,
+                        heroConfig.ethereum.abis.heroMetadata,
+                        provider
+                    );
+
+                    console.log('Contracts initialized successfully');
+                } else {
+                    console.error('Please install MetaMask!');
+                    alert('Please install MetaMask to use this dApp');
+                }
+
+                // 更新页面文本
+                updateContent();
+
+                // 设置连接按钮事件
+                document.getElementById('connectWallet').addEventListener('click', connectWallet);
+                
+                // 设置其他按钮事件
+                document.getElementById('getRaceData').addEventListener('click', getRaceData);
+                document.getElementById('getClassData').addEventListener('click', getClassData);
+                document.getElementById('getSkillData').addEventListener('click', getSkillData);
+                document.getElementById('createHero').addEventListener('click', createNewHero);
+
+                // 设置语言选择事件
+                document.getElementById('languageSelect').addEventListener('change', (e) => {
+                    changeLanguage(e.target.value);
+                });
+            } catch (error) {
+                console.error('初始化失败：', error);
+            }
+        });
+
+        function updateContent() {
+            const t = translations[currentLang];
+            
+            // Update page title and headers
+            document.title = t.heroTestTitle;
+            document.querySelector('h1').textContent = t.heroTestTitle;
+            document.querySelector('a[href="/"]').textContent = t.backToHome;
+
+            // Update all data-i18n elements
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (t[key]) {
+                    element.textContent = t[key];
+                }
+            });
+
+            // Update language selector
+            document.getElementById('languageSelect').value = currentLang;
+        }
+
+        window.changeLanguage = function(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            updateContent();
+        };
+
+        // 连接钱包
+        async function connectWallet() {
+            try {
+                // 请求用户授权
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                userAddress = accounts[0];
+                
+                // 获取 signer
+                signer = await provider.getSigner();
+                
+                // 使用 signer 重新连接合约
+                heroContract = heroContract.connect(signer);
+                heroMetadataContract = heroMetadataContract.connect(signer);
+                
+                // 检查网络
+                const network = await provider.getNetwork();
+                if (network.chainId !== BigInt(heroConfig.ethereum.chainId)) {
+                    // 请求切换到 Optimism Sepolia
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x' + heroConfig.ethereum.chainId.toString(16) }],
+                        });
+                    } catch (switchError) {
+                        // 如果网络不存在，添加网络
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0x' + heroConfig.ethereum.chainId.toString(16),
+                                    chainName: 'Optimism Sepolia',
+                                    nativeCurrency: {
+                                        name: 'ETH',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: [heroConfig.ethereum.nodeUrl],
+                                    blockExplorerUrls: ['https://sepolia-optimism.etherscan.io/']
+                                }],
+                            });
+                        }
+                    }
+                }
+
+                // 更新 UI
+                document.getElementById('connectWallet').style.display = 'none';
+                document.getElementById('connectedWallet').style.display = 'block';
+                document.getElementById('walletAddress').textContent = userAddress;
+                
+                // 启用所有需要钱包的按钮
+                document.querySelectorAll('.requires-wallet').forEach(button => {
+                    button.disabled = false;
+                });
+            } catch (error) {
+                console.error('连接钱包失败：', error);
+                alert('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        // 获取种族数据
+        async function getRaceData() {
+            try {
+                const raceId = document.getElementById('raceId').value;
+                const raceData = await heroMetadataContract.getRace(raceId);
+                document.getElementById('raceResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-gray-100 rounded">
+                        <p>Base Attributes: ${raceData.baseAttributes.join(', ')}</p>
+                        <p>Description: ${raceData.description}</p>
+                        <p>Active: ${raceData.isActive}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('获取种族数据失败：', error);
+                alert('Failed to get race data: ' + error.message);
+            }
+        }
+
+        // 获取职业数据
+        async function getClassData() {
+            try {
+                const classId = document.getElementById('classId').value;
+                const classData = await heroMetadataContract.getClass(classId);
+                document.getElementById('classResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-gray-100 rounded">
+                        <p>Base Attributes: ${classData.baseAttributes.join(', ')}</p>
+                        <p>Growth Rates: ${classData.growthRates.join(', ')}</p>
+                        <p>Description: ${classData.description}</p>
+                        <p>Active: ${classData.isActive}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('获取职业数据失败：', error);
+                alert('Failed to get class data: ' + error.message);
+            }
+        }
+
+        // 获取技能数据
+        async function getSkillData() {
+            try {
+                const seasonId = document.getElementById('seasonId').value;
+                const skillId = document.getElementById('skillId').value;
+                const skillLevel = document.getElementById('skillLevel').value;
+                const skillData = await heroMetadataContract.getSkill(seasonId, skillId, skillLevel);
+                document.getElementById('skillResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-gray-100 rounded">
+                        <p>Name: ${skillData.name}</p>
+                        <p>Points: ${skillData.points}</p>
+                        <p>Active: ${skillData.isActive}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('获取技能数据失败：', error);
+                alert('Failed to get skill data: ' + error.message);
+            }
+        }
+
+        // 创建新英雄
+        async function createNewHero() {
+            try {
+                const name = document.getElementById('heroName').value;
+                const race = document.getElementById('createRaceId').value;
+                const classId = document.getElementById('createClassId').value;
+                
+                const tx = await heroContract.createHero(name, race, classId);
+                document.getElementById('createResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-green-100 rounded">
+                        <p>Transaction sent! Hash: ${tx.hash}</p>
+                        <p>Waiting for confirmation...</p>
+                    </div>
+                `;
+                
+                // 等待交易确认
+                const receipt = await tx.wait();
+                
+                // 从事件中获取英雄 ID
+                const event = receipt.events.find(e => e.event === 'HeroCreated');
+                const heroId = event.args.heroId;
+                
+                document.getElementById('createResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-green-100 rounded">
+                        <p>Hero created successfully!</p>
+                        <p>Hero ID: ${heroId}</p>
+                        <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('创建英雄失败：', error);
+                document.getElementById('createResult').innerHTML = `
+                    <div class="mt-4 p-4 bg-red-100 rounded">
+                        <p>Failed to create hero: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 将函数暴露到全局作用域
+        window.connectWallet = connectWallet;
+        window.getRaceData = getRaceData;
+        window.getClassData = getClassData;
+        window.getSkillData = getSkillData;
+        window.createNewHero = createNewHero;
+    </script>
+</head>
+<body class="bg-gray-100">
+    <div class="header">
+        <div class="container">
+            <div class="nav-links">
+                <a href="/" id="backToHome" data-i18n="backToHome">返回首页</a>
+                <select id="languageSelect" class="language-select">
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                    <option value="th">ไทย</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- 钱包连接 -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.wallet.title">钱包连接</h2>
+            <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" data-i18n="hero.test.wallet.connect">
+                连接钱包
+            </button>
+            <div id="connectedWallet" class="hidden">
+                <span class="text-green-500" data-i18n="hero.test.wallet.connected">已连接</span>
+                <span id="walletAddress" class="ml-2 text-gray-600"></span>
+            </div>
+        </div>
+
+        <!-- 种族数据测试 -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.race.title">种族数据测试</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="raceId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.race.select">选择种族</label>
+                    <select id="raceId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="0">Human</option>
+                        <option value="1">Elf</option>
+                        <option value="2">Dwarf</option>
+                        <option value="3">Orc</option>
+                        <option value="4">Undead</option>
+                    </select>
+                </div>
+                <button id="getRaceData" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>
+                    获取数据
+                </button>
+                <div id="raceResult"></div>
+            </div>
+        </div>
+
+        <!-- 职业数据测试 -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.class.title">职业数据测试</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="classId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.class.select">选择职业</label>
+                    <select id="classId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="0">Warrior</option>
+                        <option value="1">Mage</option>
+                        <option value="2">Archer</option>
+                        <option value="3">Rogue</option>
+                        <option value="4">Priest</option>
+                    </select>
+                </div>
+                <button id="getClassData" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>
+                    获取数据
+                </button>
+                <div id="classResult"></div>
+            </div>
+        </div>
+
+        <!-- 技能数据测试 -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.skill.title">技能数据测试</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="seasonId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.skill.season">选择季节</label>
+                    <select id="seasonId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="0">Spring</option>
+                        <option value="1">Summer</option>
+                        <option value="2">Autumn</option>
+                        <option value="3">Winter</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="skillId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.skill.id">技能 ID</label>
+                    <input type="number" id="skillId" min="0" max="4" value="0" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                </div>
+                <div>
+                    <label for="skillLevel" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.skill.level">等级</label>
+                    <input type="number" id="skillLevel" min="1" max="10" value="1" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                </div>
+                <button id="getSkillData" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>
+                    获取数据
+                </button>
+                <div id="skillResult"></div>
+            </div>
+        </div>
+
+        <!-- 创建英雄 -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4" data-i18n="hero.test.creation.title">创建英雄</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="heroName" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.creation.name">英雄名称</label>
+                    <input type="text" id="heroName" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                </div>
+                <div>
+                    <label for="createRaceId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.creation.race">选择种族</label>
+                    <select id="createRaceId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="0">Human</option>
+                        <option value="1">Elf</option>
+                        <option value="2">Dwarf</option>
+                        <option value="3">Orc</option>
+                        <option value="4">Undead</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="createClassId" class="block text-sm font-medium text-gray-700" data-i18n="hero.test.creation.class">选择职业</label>
+                    <select id="createClassId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="0">Warrior</option>
+                        <option value="1">Mage</option>
+                        <option value="2">Archer</option>
+                        <option value="3">Rogue</option>
+                        <option value="4">Priest</option>
+                    </select>
+                </div>
+                <button id="createHero" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled data-i18n="hero.test.creation.create">
+                    创建英雄
+                </button>
+                <div id="createResult"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

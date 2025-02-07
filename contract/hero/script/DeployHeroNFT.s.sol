@@ -8,8 +8,10 @@ import "../src/proxy/ProxyAdmin.sol";
 
 contract DeployHeroNFTScript is Script {
     function run() external {
-        bytes32 privateKeyHash = vm.envBytes32("HERO_PRIVATE_KEY");
-        uint256 deployerPrivateKey = uint256(privateKeyHash);
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address paymentToken = vm.envAddress("PAYMENT_TOKEN_ADDRESS");
+        uint256 nativePrice = vm.envUint("NATIVE_PRICE");
+        uint256 tokenPrice = vm.envUint("TOKEN_PRICE");
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -19,11 +21,18 @@ contract DeployHeroNFTScript is Script {
         // 部署实现合约
         HeroNFT heroNFTImpl = new HeroNFT();
 
+        // 准备初始化数据
+        bytes memory initData = abi.encodeWithSelector(
+            HeroNFT.initialize.selector,
+            paymentToken,
+            nativePrice,
+            tokenPrice
+        );
+
         // 部署代理合约
-        bytes memory heroNFTData = abi.encodeWithSelector(HeroNFT.initialize.selector);
         HeroProxy heroNFTProxy = new HeroProxy(
             address(heroNFTImpl),
-            heroNFTData
+            initData
         );
 
         // 输出部署的地址

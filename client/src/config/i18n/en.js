@@ -17,7 +17,48 @@ export default {
         hero: {
             nft: 'Hero NFT Contract',
             metadata: 'Hero Metadata Contract',
-            core: 'Hero Core Contract'
+            core: 'Hero Core Contract',
+            test: 'Hero Test Page'
+        }
+    },
+    hero: {
+        test: {
+            title: "Hero System Test - Arcadia Node",
+            wallet: {
+                title: "Wallet Connection",
+                connect: "Connect Wallet",
+                connected: "Connected"
+            },
+            race: {
+                title: "Race Data Test",
+                select: "Select Race",
+                attributes: "Base Attributes",
+                description: "Description"
+            },
+            class: {
+                title: "Class Data Test",
+                select: "Select Class",
+                attributes: "Base Attributes",
+                growth: "Growth Rates",
+                description: "Description"
+            },
+            skill: {
+                title: "Skill Data Test",
+                season: "Select Season",
+                id: "Skill ID",
+                level: "Level",
+                name: "Name",
+                points: "Required Points"
+            },
+            creation: {
+                title: "Create Hero",
+                name: "Hero Name",
+                race: "Select Race",
+                class: "Select Class",
+                create: "Create Hero",
+                success: "Hero created successfully!",
+                error: "Failed to create hero"
+            }
         }
     },
     language: 'Language',
@@ -45,7 +86,7 @@ export default {
     // Node Register Page
     nodeRegisterTitle: 'Node Registration',
     registerNewNode: 'Register New Node',
-    backToHome: 'Back to Home',
+    backToHome: "Back to Home",
     nodeAddress: 'Node Address',
     ipOrDomain: 'IP/Domain',
     apiServices: 'API Services',
@@ -91,5 +132,20 @@ export default {
     loading: 'Loading...',
     noServices: 'No services available',
     basic: 'Basic',
-    extend: 'Extended'
+    extend: 'Extended',
+    nftMinting: 'NFT Minting',
+    nft: {
+        title: 'NFT Minting',
+        selectChain: 'Select Chain',
+        mintNFT: 'Mint NFT',
+        price: 'Price',
+        paymentMethod: 'Payment Method',
+        native: 'Native Token',
+        token: 'ERC20/Aptos Token',
+        cancel: 'Cancel',
+        confirm: 'Confirm',
+        success: 'Minting Successful',
+        failed: 'Minting Failed'
+    },
+    heroTestTitle: 'Hero System Test'
 }; 

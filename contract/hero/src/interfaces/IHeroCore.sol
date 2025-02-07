@@ -16,8 +16,9 @@ interface IHeroCore {
      * @dev 创建新英雄
      * @param userId 用户ID
      * @param name 英雄名称
-     * @param race 种族
-     * @param class 职业
+     * @param race 种族 (0-4)
+     * @param class 职业 (0-4)
+     * @notice 调用者必须拥有对应的NFT才能创建英雄
      * @return uint256 新英雄的ID
      */
     function createHero(
