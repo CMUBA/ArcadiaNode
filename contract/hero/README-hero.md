@@ -409,6 +409,8 @@ Hero合约: 7个测试用例全部通过
 HeroNFT合约: 11个测试用例全部通过
 HeroMetadata合约: 6个测试用例全部通过
 
+
+
 ### Contract deployment
 
 #### Previous Contract Addresses
@@ -490,6 +492,142 @@ Hero合约：
 
 
 
+== Logs ==
+  
+Addresses:
+  ProxyAdmin: 0x909A58593C71F2F24d7661E8aBF6eCA064b61F21
+  Hero Proxy: 0xb86236BA8D6CAb15cf7972871f246F7C8693338b
+  Hero Implementation: 0x888C56Fce47919D84CB33b7DcE322839C4Fa2173
+  Deployer: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+  
+Failed to get version
+  
+Contract owner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+  Is deployer the owner? true
+  
+Official NFT: 0xb4AE3C6B8531D97EA6146c2e7B811B8D82f9019c
+  
+Registered NFTs:
+  0xb4AE3C6B8531D97EA6146c2e7B811B8D82f9019c
+
+  VITE_HERO_PROXY=0xb86236BA8D6CAb15cf7972871f246F7C8693338b
+VITE_HERO_IMPLEMENTATION=0x888C56Fce47919D84CB33b7DcE322839C4Fa2173
+
+
+Script ran successfully.
+
+== Logs ==
+  
+Addresses:
+  ProxyAdmin: 0x909A58593C71F2F24d7661E8aBF6eCA064b61F21
+  Hero Proxy: 0xF2f3cfb02557840A1628c50032142A9575BEfCFC
+  Hero Implementation: 0x9fFAC59C6A3D49b0396F6A2F7e8012055838878c
+  Deployer: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+  
+Contract version: 2.0.0
+  
+Contract owner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+  Is deployer the owner? true
+  
+Official NFT: 0x0000000000000000000000000000000000000000
+  
+Registered NFTs:
+
+Chain 11155420
+
+Estimated gas price: 0.001000502 gwei
+
+Estimated total gas used for script: 178122
+
+Estimated amount required: 0.000000178211417244 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/broadcast/RegisterOldNFT.s.sol/11155420/run-latest.json
+
+Sensitive values saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/cache/RegisterOldNFT.s.sol/11155420/run-latest.json
+
+
+太好了！我们已经成功地：
+
+部署了新的 HeroV2 合约，它使用 reinitializer(2) 来允许重新初始化
+部署了新的代理合约，指向新的实现合约
+注册了旧的官方 NFT
+现在我们可以继续使用这个新的合约了。关于初始化的改进：
+
+在 HeroV2 中，我们使用了 reinitializer(2) 而不是 initializer，这允许我们在升级时重新初始化合约
+我们将 VERSION 从常量改为存储变量，这样它可以在代理合约中正确工作
+我们在初始化函数中设置了版本号
+这些改进使得合约更容易升级和维护。您可以继续使用这个新的合约了。如果您需要进行任何其他操作，请告诉我。
+
+Me
+
+1.请整理下，指导我后续如何升级三个主合约的步骤和调用脚本
+
+好的，我来整理一下如何升级三个主合约的步骤和脚本。
+
+1. 升级步骤概述
+对于每个合约（Hero、Arcadia、Move），升级流程基本相同：
+
+创建新版本的合约（V2）
+部署新的实现合约
+升级代理合约指向新的实现
+初始化新合约
+迁移旧数据（如果需要）
+2. 合约升级脚本模板
+让我创建一个通用的升级脚本模板：
+
+Created
+UpgradeContract.s.sol
++57
+-0
+ 0
+Open diff
+Created
+DeployNewProxy.s.sol
++54
+-0
+ 0
+Open diff
+让我继续完成升级指南：
+
+Created
+CheckState.s.sol
++65
+-0
+ 0
+Open diff
+Created
+UPGRADE_GUIDE.md
++139
+-0
+ 0
+Open diff
+我已经创建了一套完整的升级指南和模板：
+
+模板脚本（在 script/template/ 目录下）：
+UpgradeContract.s.sol：升级现有代理合约
+DeployNewProxy.s.sol：部署新的代理合约
+CheckState.s.sol：检查合约状态
+升级指南（UPGRADE_GUIDE.md）：
+详细的准备工作
+两种升级方式的说明
+步骤和注意事项
+常见问题解答
+模板使用说明
+使用这些模板和指南，您可以：
+
+根据需要选择升级方式
+复制并修改相应的模板脚本
+按照指南中的步骤执行升级
+使用检查脚本验证升级结果
+
+
 # 部署和初始化流程
 
 ## 1. 环境准备
@@ -519,6 +657,46 @@ source .env && forge script script/InitMintNFT.s.sol:InitMintNFTScript --rpc-url
 5. test run
 source .env && forge script script/TestHeroContract.s.sol:TestHeroContractScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
 
+6.reg hero
+source .env && forge script script/RegisterDeployerHero.s.sol:RegisterDeployerHeroScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+
+source .env && forge script script/UpgradeToV3.s.sol:UpgradeToV3Script --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+source .env && forge script script/RegisterHeroRecord.s.sol:RegisterHeroRecordScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+source .env && forge script script/RegisterNFTInV3.s.sol:RegisterNFTInV3Script --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+source .env && forge script script/RegisterHeroRecord.s.sol:RegisterHeroRecordScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+
+创建了 HeroV3 合约，添加了完整的英雄记录功能：
+基本信息：名称、描述
+属性系统：力量、敏捷、智力、体力、幸运
+等级系统：等级、经验值
+技能系统：剑术精通、盾牌防御、战斗战术
+升级了合约并成功初始化
+注册了 NFT 合约
+为 NFT ID 10001 创建了英雄记录：
+Hero Record:
+Name: Arcadian Warrior
+Description: A legendary warrior from the realm of Arcadia
+
+Attributes:
+Strength: 100
+Agility: 80
+Intelligence: 90
+Vitality: 85
+Luck: 70
+
+Skills:
+Sword Mastery Level: 1
+Shield Defense Level: 1
+Battle Tactics Level: 1
+
+Level Info:
+Level: 1
+Experience: 0
 
 部署了所有合约：
 ProxyAdmin
@@ -553,6 +731,31 @@ Official NFT 地址正确
 NFT 注册功能正常
 权限控制正常
 状态查询功能正常
+
+
+完成了以下工作：
+
+创建了新的 HeroV4 合约，完全按照原始设计实现：
+四季技能系统 (Spring, Summer, Autumn, Winter)，每个季节 5 个技能
+种族系统 (Human, Elf, Dwarf, Orc, Undead)
+装备系统 (Weapon, Armor, Accessory)
+能量和积分系统 (每日能量上限 100，积分上限 1000)
+创建了查询脚本 QueryHeroV4.s.sol，展示所有可读数据：
+合约基本信息（版本、官方 NFT）
+已注册的 NFT 列表
+英雄基本信息（名称、种族、性别、等级、能量、积分）
+四季技能等级
+装备信息
+系统常量
+NFT 合约已经实现了所有必要的功能：
+支持原生代币和 ERC20 代币支付
+支持单个和批量铸造
+支持自定义价格配置
+支持查询接受的支付代币
+关于 NFT 合约的 getAcceptedTokens 接口：
+当前可以通过 getDefaultPaymentToken() 获取默认支付代币
+对于特定 tokenId，可以通过 getPriceConfig(tokenId) 获取其接受的支付代币
+我们可以添加一个新的辅助函数来获取所有接受的代币：
 
 
 关于 InitRegisterNFT.s.sol 和代理合约的问题：

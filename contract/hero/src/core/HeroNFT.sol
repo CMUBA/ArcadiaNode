@@ -193,6 +193,19 @@ contract HeroNFT is
         return address(defaultPaymentToken);
     }
 
+    function getAcceptedTokens(uint256 tokenId) external view returns (address[] memory) {
+        address[] memory tokens = new address[](2);
+        tokens[0] = address(0);  // Native token (ETH)
+        
+        if (priceConfigs[tokenId].isActive) {
+            tokens[1] = priceConfigs[tokenId].tokenAddress;
+        } else {
+            tokens[1] = address(defaultPaymentToken);
+        }
+        
+        return tokens;
+    }
+
     function burn(uint256 tokenId) external override {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "Not approved");
         _burn(tokenId);
