@@ -26,6 +26,12 @@ contract Hero is
     IHeroNFT public nftContract;
     mapping(address => bool) public registeredNodes;
     mapping(uint256 => HeroData) private _heroes;
+    uint256 private _totalHeroes;
+    mapping(address => uint256[]) private _ownerHeroes;
+    
+    // NFT合约管理
+    address[] private _registeredNFTs;
+    mapping(address => bool) private _isRegisteredNFT;
     
     // 常量
     uint8 private constant _MAX_LEVEL = 100;
@@ -35,6 +41,8 @@ contract Hero is
     event NFTContractUpdated(address indexed oldContract, address indexed newContract);
     event NodeRegistered(address indexed node);
     event NodeUnregistered(address indexed node);
+    event NFTRegistered(address indexed nftContract);
+    event NFTRegistrationFailed(address indexed nftContract, string reason);
     
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -48,6 +56,45 @@ contract Hero is
     }
 
     // NFT 合约管理
+    // NFT合约管理实现
+    function addRegisteredNFT(address _nftContractAddr) external override onlyOwner {
+        if (_nftContractAddr == address(0)) {
+            emit NFTRegistrationFailed(_nftContractAddr, "Invalid NFT contract address");
+            revert("Invalid NFT contract address");
+        }
+        if (_isRegisteredNFT[_nftContractAddr]) {
+            emit NFTRegistrationFailed(_nftContractAddr, "NFT contract already registered");
+            revert("NFT contract already registered");
+        }
+        
+        _registeredNFTs.push(_nftContractAddr);
+        _isRegisteredNFT[_nftContractAddr] = true;
+        emit NFTRegistered(_nftContractAddr);
+    }
+    
+    function removeRegisteredNFT(address _nftContractAddr) external override onlyOwner {
+        require(_isRegisteredNFT[_nftContractAddr], "NFT contract not registered");
+        
+        // 从数组中移除
+        for (uint i = 0; i < _registeredNFTs.length; i++) {
+            if (_registeredNFTs[i] == _nftContractAddr) {
+                _registeredNFTs[i] = _registeredNFTs[_registeredNFTs.length - 1];
+                _registeredNFTs.pop();
+                break;
+            }
+        }
+        
+        _isRegisteredNFT[_nftContractAddr] = false;
+    }
+    
+    function getRegisteredNFTs() external view override returns (address[] memory) {
+        return _registeredNFTs;
+    }
+    
+    function isRegisteredNFT(address _nftContractAddr) external view override returns (bool) {
+        return _isRegisteredNFT[_nftContractAddr];
+    }
+
     function setNFTContract(address _nftContract) external onlyOwner {
         require(_nftContract != address(0), "Invalid NFT contract address");
         address oldContract = address(nftContract);
@@ -93,14 +140,49 @@ contract Hero is
             signature: ""
         });
 
+        // 更新状态
+        _totalHeroes++;
+        _ownerHeroes[msg.sender].push(tokenId);
+        
         emit HeroCreated(userId, tokenId, name, race, class);
         return tokenId;
+    }
+
+    // 新增read接口实现
+    function getHeroCount() external view override returns (uint256) {
+        return _totalHeroes;
+    }
+
+    function getHerosByOwner(address owner) external view override returns (uint256[] memory) {
+        return _ownerHeroes[owner];
+    }
+
+    function getHeroStats(uint256 heroId) external view override returns (
+        uint8 level,
+        uint32 exp,
+        uint32 createTime,
+        uint32 lastSaveTime
+    ) {
+        HeroData memory hero = _heroes[heroId];
+        require(hero.id != 0, "Hero does not exist");
+        
+        return (
+            hero.level,
+            hero.exp,
+            hero.createTime,
+            hero.lastSaveTime
+        );
     }
 
     function loadHero(uint256 heroId) external view override returns (HeroData memory) {
         require(_heroes[heroId].id != 0, "Hero does not exist");
         require(nftContract.ownerOf(heroId) == msg.sender, "Not hero owner");
         return _heroes[heroId];
+    }
+
+    // Debug function
+    function debug() external view returns (string memory) {
+        return "Debug: Contract is working";
     }
 
     function saveHero(

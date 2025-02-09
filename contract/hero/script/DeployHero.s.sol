@@ -12,7 +12,7 @@ contract DeployHeroScript is Script {
         uint256 deployerPrivateKey = uint256(privateKeyHash);
 
         // 从环境变量获取已部署的 NFT 合约地址
-        address heroNFTAddress = vm.envAddress("HERO_NFT_ADDRESS");
+        address heroNFTAddress = vm.envAddress("VITE_HERO_NFT_PROXY");
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -24,8 +24,7 @@ contract DeployHeroScript is Script {
 
         // 部署代理合约
         bytes memory heroData = abi.encodeWithSelector(
-            Hero.initialize.selector,
-            heroNFTAddress
+            Hero.initialize.selector
         );
         HeroProxy heroProxy = new HeroProxy(
             address(heroImpl),

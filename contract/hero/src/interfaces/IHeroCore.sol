@@ -2,6 +2,11 @@
 pragma solidity ^0.8.20;
 
 interface IHeroCore {
+    // NFT合约管理
+    function addRegisteredNFT(address nftContract) external;
+    function removeRegisteredNFT(address nftContract) external;
+    function getRegisteredNFTs() external view returns (address[] memory);
+    function isRegisteredNFT(address nftContract) external view returns (bool);
     // 英雄数据结构
     struct HeroData {
         uint256 id;           // 英雄ID
@@ -79,4 +84,14 @@ interface IHeroCore {
     event HeroCreated(uint256 indexed userId, uint256 indexed heroId, string name, uint8 race, uint8 class);
     event HeroSaved(uint256 indexed heroId, uint32 timestamp);
     event HeroLoaded(uint256 indexed heroId, uint32 timestamp);
+
+    // 新增read接口
+    function getHeroCount() external view returns (uint256);
+    function getHerosByOwner(address owner) external view returns (uint256[] memory);
+    function getHeroStats(uint256 heroId) external view returns (
+        uint8 level,
+        uint32 exp,
+        uint32 createTime,
+        uint32 lastSaveTime
+    );
 } 

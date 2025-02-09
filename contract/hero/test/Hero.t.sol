@@ -158,5 +158,95 @@ contract HeroTest is Test {
         assertEq(updatedData.exp, 1000);
     }
 
+    function testNFTRegistration() public {
+        // 测试添加NFT合约
+        address newNFTContract = address(0x123);
+        hero.addRegisteredNFT(newNFTContract);
+        
+        // 验证NFT合约已注册
+        assertTrue(hero.isRegisteredNFT(newNFTContract));
+        
+        // 验证注册列表
+        address[] memory registeredNFTs = hero.getRegisteredNFTs();
+        assertEq(registeredNFTs.length, 1);
+        assertEq(registeredNFTs[0], newNFTContract);
+        
+        // 测试移除NFT合约
+        hero.removeRegisteredNFT(newNFTContract);
+        
+        // 验证NFT合约已移除
+        assertFalse(hero.isRegisteredNFT(newNFTContract));
+        
+        // 验证注册列表为空
+        registeredNFTs = hero.getRegisteredNFTs();
+        assertEq(registeredNFTs.length, 0);
+    }
+
+    function testNFTRegistrationFailures() public {
+        // 测试添加零地址
+        vm.expectRevert("Invalid NFT contract address");
+        hero.addRegisteredNFT(address(0));
+        
+        // 测试重复添加
+        address newNFTContract = address(0x123);
+        hero.addRegisteredNFT(newNFTContract);
+        
+        vm.expectRevert("NFT contract already registered");
+        hero.addRegisteredNFT(newNFTContract);
+        
+        // 测试移除未注册的合约
+        vm.expectRevert("NFT contract not registered");
+        hero.removeRegisteredNFT(address(0x456));
+    }
+
+    function testHeroStats() public {
+        uint256 userId = 1;
+        string memory name = "Test Hero";
+        uint8 race = 0;
+        uint8 class = 0;
+        
+        // 铸造NFT并创建英雄
+        uint256 tokenId = uint256(keccak256(abi.encodePacked(userId, name, race, class)));
+        vm.prank(user);
+        heroNFT.mint{value: NATIVE_PRICE}(user, tokenId);
+        
+        vm.prank(user);
+        uint256 heroId = hero.createHero(userId, name, race, class);
+        
+        // 获取英雄状态
+        (uint8 level, uint32 exp, uint32 createTime, uint32 lastSaveTime) = hero.getHeroStats(heroId);
+        
+        // 验证初始状态
+        assertEq(level, 1);
+        assertEq(exp, 0);
+        assertEq(createTime, block.timestamp);
+        assertEq(lastSaveTime, block.timestamp);
+    }
+
+    function testGetHerosByOwner() public {
+        uint256 userId = 1;
+        string memory name = "Test Hero";
+        
+        // 铸造两个NFT并创建英雄
+        uint256 tokenId1 = uint256(keccak256(abi.encodePacked(userId, name, uint8(0), uint8(0))));
+        uint256 tokenId2 = uint256(keccak256(abi.encodePacked(userId + 1, name, uint8(1), uint8(1))));
+        
+        vm.startPrank(user);
+        heroNFT.mint{value: NATIVE_PRICE}(user, tokenId1);
+        heroNFT.mint{value: NATIVE_PRICE}(user, tokenId2);
+        
+        hero.createHero(userId, name, 0, 0);
+        hero.createHero(userId + 1, name, 1, 1);
+        vm.stopPrank();
+        
+        // 获取用户的英雄列表
+        uint256[] memory userHeroes = hero.getHerosByOwner(user);
+        
+        // 验证
+        assertEq(userHeroes.length, 2);
+        assertEq(userHeroes[0], tokenId1);
+        assertEq(userHeroes[1], tokenId2);
+    }
+
     receive() external payable {}
 } 

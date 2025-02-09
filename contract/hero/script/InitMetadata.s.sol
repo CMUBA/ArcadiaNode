@@ -54,20 +54,51 @@ contract InitMetadataScript is Script {
         );
         
         // Initialize skills for each season
-        // Season 0 skills
-        metadata.setSkill(0, 0, 1, "Eagle Eye", 2, true);
-        metadata.setSkill(0, 1, 2, "Spider Sense", 3, true);
-        metadata.setSkill(0, 2, 3, "Holy Counter", 4, true);
+        // Spring (Season 0) skills
+        metadata.setSkill(0, 0, 1, "鹰眼", 2, true);
+        metadata.setSkill(0, 0, 2, "鹰眼", 4, true);
+        metadata.setSkill(0, 0, 3, "鹰眼", 6, true);
+        metadata.setSkill(0, 0, 4, "鹰眼", 8, true);
+        metadata.setSkill(0, 0, 5, "鹰眼", 10, true);
         
-        // Season 1 skills
-        metadata.setSkill(1, 0, 1, "Weapon Sharpen", 2, true);
-        metadata.setSkill(1, 1, 2, "Critical Strike", 3, true);
-        metadata.setSkill(1, 2, 3, "Body Enhancement", 4, true);
+        metadata.setSkill(0, 1, 1, "蜘蛛感应", 1, true);
+        metadata.setSkill(0, 1, 2, "蜘蛛感应", 3, true);
+        metadata.setSkill(0, 1, 3, "蜘蛛感应", 5, true);
         
-        // Season 2 skills
-        metadata.setSkill(2, 0, 1, "Block", 2, true);
-        metadata.setSkill(2, 1, 2, "Defense Mastery", 3, true);
-        metadata.setSkill(2, 2, 3, "Blood Strike", 4, true);
+        metadata.setSkill(0, 2, 1, "圣灵反击", 1, true);
+        metadata.setSkill(0, 2, 2, "圣灵反击", 3, true);
+        
+        // Summer (Season 1) skills
+        metadata.setSkill(1, 0, 1, "磨刀", 5, true);
+        metadata.setSkill(1, 0, 2, "磨刀", 10, true);
+        metadata.setSkill(1, 0, 3, "磨刀", 15, true);
+        metadata.setSkill(1, 0, 4, "磨刀", 20, true);
+        metadata.setSkill(1, 0, 5, "磨刀", 25, true);
+        
+        metadata.setSkill(1, 1, 1, "暴击", 1, true);
+        metadata.setSkill(1, 1, 2, "暴击", 2, true);
+        metadata.setSkill(1, 1, 3, "暴击", 3, true);
+        
+        // Autumn (Season 2) skills
+        metadata.setSkill(2, 0, 1, "强化身体", 5, true);
+        metadata.setSkill(2, 0, 2, "强化身体", 10, true);
+        metadata.setSkill(2, 0, 3, "强化身体", 15, true);
+        metadata.setSkill(2, 0, 4, "强化身体", 20, true);
+        metadata.setSkill(2, 0, 5, "强化身体", 25, true);
+        
+        metadata.setSkill(2, 1, 1, "格挡", 1, true);
+        metadata.setSkill(2, 1, 2, "格挡", 2, true);
+        metadata.setSkill(2, 1, 3, "格挡", 3, true);
+        
+        // Winter (Season 3) skills
+        metadata.setSkill(3, 0, 1, "防御专精", 5, true);
+        metadata.setSkill(3, 0, 2, "防御专精", 10, true);
+        metadata.setSkill(3, 0, 3, "防御专精", 15, true);
+        metadata.setSkill(3, 0, 4, "防御专精", 20, true);
+        metadata.setSkill(3, 0, 5, "防御专精", 25, true);
+        
+        metadata.setSkill(3, 1, 1, "鲜血打击", 1, true);
+        metadata.setSkill(3, 1, 2, "鲜血打击", 2, true);
         
         vm.stopBroadcast();
     }

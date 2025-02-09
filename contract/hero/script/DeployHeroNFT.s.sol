@@ -9,9 +9,9 @@ import "../src/proxy/ProxyAdmin.sol";
 contract DeployHeroNFTScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address paymentToken = vm.envAddress("PAYMENT_TOKEN_ADDRESS");
-        uint256 nativePrice = vm.envUint("NATIVE_PRICE");
-        uint256 tokenPrice = vm.envUint("TOKEN_PRICE");
+        address paymentToken = vm.envAddress("VITE_PAYMENT_TOKEN_ADDRESS");
+        uint256 nativePrice = vm.envUint("VITE_NATIVE_PRICE");
+        uint256 tokenPrice = vm.envUint("VITE_ERC20_TOKEN_PRICE");
 
         vm.startBroadcast(deployerPrivateKey);
 

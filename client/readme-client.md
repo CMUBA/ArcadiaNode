@@ -5,7 +5,7 @@ client目录是基于nodejs开发的一个对不同合约进行交互测试和�
 根目录的.env,使用vite来加载和使用变量
 
 目前在开发页面：http://localhost:3008/pages/hero-test.html
-我们有nft，metadata和hero合约已经部署（本次测试使用solidity开发的合约，后续会有aptos move合约），地址在env中。
+nft，metadata和hero合约已经部署（本次测试使用solidity开发的合约，后续会有aptos move合约），地址变量在env中。
 页面要实现
 1.查询hero合约中，允许注册hero记录的nft合约列表，显示在页面上
 2.如果当前登录钱包地址，经过检查，没有拥有任何nft合约列表中的nft
