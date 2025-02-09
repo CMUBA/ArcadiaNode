@@ -39,7 +39,7 @@ contract HeroNFT is
         address defaultToken,
         uint256 nativePrice,
         uint256 tokenPrice
-    ) public initializer {
+    ) public reinitializer(2) {
         __ERC721_init("Hero NFT", "HERO");
         __Ownable_init();
         __Pausable_init();
@@ -50,6 +50,8 @@ contract HeroNFT is
         defaultNativePrice = nativePrice;
         defaultTokenPrice = tokenPrice;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function mint(address to, uint256 tokenId) external payable override nonReentrant whenNotPaused {
         uint256 price = priceConfigs[tokenId].isActive ? 
@@ -193,6 +195,22 @@ contract HeroNFT is
         return address(defaultPaymentToken);
     }
 
+    function burn(uint256 tokenId) external override {
+        require(_isApprovedOrOwner(_msgSender(), tokenId), "Not approved");
+        _burn(tokenId);
+    }
+
+    function exists(uint256 tokenId) external view override returns (bool) {
+        return _exists(tokenId);
+    }
+
+    function isApprovedForToken(
+        address operator,
+        uint256 tokenId
+    ) external view override returns (bool) {
+        return _isApprovedOrOwner(operator, tokenId);
+    }
+
     function getAcceptedTokens(uint256 tokenId) external view returns (address[] memory) {
         address[] memory tokens = new address[](2);
         tokens[0] = address(0);  // Native token (ETH)
@@ -206,19 +224,6 @@ contract HeroNFT is
         return tokens;
     }
 
-    function burn(uint256 tokenId) external override {
-        require(_isApprovedOrOwner(_msgSender(), tokenId), "Not approved");
-        _burn(tokenId);
-    }
-
-    function exists(uint256 tokenId) external view override returns (bool) {
-        return _exists(tokenId);
-    }
-
-    function isApprovedForToken(address operator, uint256 tokenId) external view override returns (bool) {
-        return _isApprovedOrOwner(operator, tokenId);
-    }
-
     function pause() external onlyOwner {
         _pause();
     }
@@ -226,6 +231,4 @@ contract HeroNFT is
     function unpause() external onlyOwner {
         _unpause();
     }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
-} 
+}

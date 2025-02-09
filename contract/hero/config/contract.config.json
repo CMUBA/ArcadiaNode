@@ -1,0 +1,28 @@
+{
+    "contracts": {
+        "hero": {
+            "implementation": "0x888C56Fce47919D84CB33b7DcE322839C4Fa2173",
+            "proxy": "0xb86236BA8D6CAb15cf7972871f246F7C8693338b",
+            "proxyAdmin": "0x909A58593C71F2F24d7661E8aBF6eCA064b61F21"
+        },
+        "heroNFT": {
+            "implementation": "",
+            "proxy": "",
+            "proxyAdmin": "0x909A58593C71F2F24d7661E8aBF6eCA064b61F21"
+        },
+        "heroMetadata": {
+            "implementation": "0x86a8649e9a1c533Cb7432C7067BDA5A5CD1c9128",
+            "proxy": "0x7603DdBcC4c998C7aB8DE7F91768c0ACd9CE2377",
+            "proxyAdmin": "0x909A58593C71F2F24d7661E8aBF6eCA064b61F21"
+        }
+    },
+    "tokens": {
+        "erc20": {
+            "address": "0xBda48255DA1ed61a209641144Dd24696926aF3F0",
+            "price": "100000000000000000000"
+        }
+    },
+    "prices": {
+        "nativePrice": "100000000000000000"
+    }
+}

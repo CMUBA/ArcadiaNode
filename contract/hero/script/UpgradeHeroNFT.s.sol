@@ -2,9 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
-import "../src/core/HeroNFT.sol";
-import "../src/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import "../src/nft/HeroNFT.sol";
 
 contract UpgradeHeroNFTScript is Script {
     function run() external {
@@ -13,25 +13,44 @@ contract UpgradeHeroNFTScript is Script {
         address proxyAdmin = vm.envAddress("VITE_PROXY_ADMIN");
         address heroNFTProxy = vm.envAddress("VITE_HERO_NFT_PROXY");
         
+        // 验证部署者身份
+        address deployer = vm.addr(deployerPrivateKey);
+        console.log("\nDeployer address:", deployer);
+        
+        // 验证代理管理员
+        ProxyAdmin admin = ProxyAdmin(proxyAdmin);
+        address owner = admin.owner();
+        require(owner == deployer, "Deployer is not the proxy admin owner");
+        console.log("Proxy admin owner verified");
+        
         vm.startBroadcast(deployerPrivateKey);
-
+        
         // 1. 部署新的实现合约
         HeroNFT newImplementation = new HeroNFT();
         console.log("New HeroNFT implementation deployed to:", address(newImplementation));
-
-        // 2. 升级代理合约指向新的实现
-        ProxyAdmin admin = ProxyAdmin(proxyAdmin);
-        admin.upgrade(ITransparentUpgradeableProxy(heroNFTProxy), address(newImplementation));
-        console.log("HeroNFT proxy upgraded to new implementation");
-
-        // 3. 验证升级
-        address currentImpl = admin.getProxyImplementation(ITransparentUpgradeableProxy(heroNFTProxy));
-        require(currentImpl == address(newImplementation), "Upgrade verification failed");
+        
+        // 2. 升级代理合约
+        try admin.upgrade(ITransparentUpgradeableProxy(heroNFTProxy), address(newImplementation)) {
+            console.log("Proxy upgraded to new implementation");
+        } catch Error(string memory reason) {
+            console.log("Upgrade failed:", reason);
+            vm.stopBroadcast();
+            revert("Upgrade failed");
+        }
+        
+        // 3. 初始化新版本
+        HeroNFT hero = HeroNFT(heroNFTProxy);
+        try hero.initialize() {
+            console.log("New version initialized");
+        } catch Error(string memory reason) {
+            // 如果已经初始化过，这是预期的错误
+            console.log("Initialize failed (expected if already initialized):", reason);
+        }
         
         vm.stopBroadcast();
         
-        // 输出新地址用于更新 .env
-        console.log("\nUpdate your .env file with:");
-        console.log("VITE_HERO_NFT_IMPLEMENTATION=%s", address(newImplementation));
+        // 4. 输出更新建议
+        console.log("\nPlease update your config/contract.config.json with:");
+        console.log("heroNFT.implementation: %s", address(newImplementation));
     }
 }
