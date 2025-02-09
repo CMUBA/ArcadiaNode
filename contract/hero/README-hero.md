@@ -463,9 +463,70 @@ Hero合约：
 代理管理合约：0x67dDB6e30314286E0a9B7b5831b1a8F0b780278a
 所有合约都已经在Optimism Sepolia测试网上成功部署和验证
 
+### 2024-02-09 合约优化
+1. 简化接口设计
+   - 合并 `setNFTContract` 和 `addRegisteredNFT` 为单个 `registerNFT` 函数
+   - 使用 `isOfficial` 参数统一处理官方和社区NFT注册
+
+2. 增强安全性
+   - 添加地址有效性检查
+   - 防止NFT重复注册
+   - 保护官方NFT不被取消注册
+
+3. 提升可维护性
+   - 添加事件日志：`NFTRegistered`, `NFTUnregistered`
+   - 完善函数注释
+   - 优化状态变量组织
+
+4. 增加查询功能
+   - `isNFTRegistered`: 检查NFT注册状态
+   - `getRegisteredNFTs`: 获取所有注册的NFT
+   - `getOfficialNFT`: 获取官方NFT
+   - `getRegisteredNFTCount`: 获取注册数量
+
+5. 保持可升级性
+   - 继承 `Initializable` 和 `OwnableUpgradeable`
+   - 使用初始化函数替代构造函数
 
 
 
+# 部署和初始化流程
+
+## 1. 环境准备
+1. 确保 .env 文件配置正确：
+   - HERO_PRIVATE_KEY: 部署账户私钥
+   - OPTIMISM_SEPOLIA_RPC_URL: RPC URL
+   - VITE_HERO_PROXY: Hero合约代理地址
+   - VITE_HERO_NFT_PROXY: HeroNFT合约代理地址
+
+## 2. 合约部署
+按照以下顺序执行部署脚本：
+
+1. 部署 HeroNFT 合约：
+```bash
+source .env && forge script script/DeployHeroNFT.s.sol:DeployHeroNFTScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+
+2 hero
+source .env && forge script script/DeployHero.s.sol:DeployHeroScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+3. meta init
+source .env && forge script script/InitMetadata.s.sol:InitMetadataScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+4. init nft
+source .env && forge script script/InitMintNFT.s.sol:InitMintNFTScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+5. test run
+source .env && forge script script/TestHeroContract.s.sol:TestHeroContractScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+由于使用了代理合约架构：
+合约逻辑更新时，只需要部署新的实现合约
+不需要重新部署代理合约
+所有状态都保存在代理合约中
+初始化顺序很重要：
+必须先完成 Metadata 初始化
+再进行 NFT 的铸造
+最后进行合约测试
 
 ## Winsurf
 
@@ -490,6 +551,13 @@ Initiate contracts
 4. 请生成一个脚本，注册一个hero记录，使用contract owner（私钥在env）作为user，默认nft合约地址请参考env
 
 
+ 查看账户余额
+cast balance $VITE_HERO_NFT_PROXY
+
+如果需要，可以发送一些测试网 ETH 到合约地址
+cast send --value 1ether $VITE_HERO_NFT_PROXY
+
+source .env && forge script script/TestHeroContract.s.sol:TestHeroContractScript --fork-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
 
 1.如果hero合约修改逻辑，因为我们有proxy代理，是否就不需要全部重新部署，
 只需要部署hero合约？还是继续运行部署脚本

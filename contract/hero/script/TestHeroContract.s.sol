@@ -4,9 +4,14 @@ pragma solidity ^0.8.20;
 import "forge-std/Script.sol";
 
 interface IHero {
+    function initialize() external;
+    function registerNFT(address nftContract, bool isOfficial) external;
+    function unregisterNFT(address nftContract) external;
+    function getRegisteredNFTs() external view returns (address[] memory);
+    function isNFTRegistered(address nftContract) external view returns (bool);
+    function getOfficialNFT() external view returns (address);
+    function getRegisteredNFTCount() external view returns (uint256);
     function owner() external view returns (address);
-    function nftContract() external view returns (address);
-    function setNFTContract(address _nftContract) external;
 }
 
 contract TestHeroContractScript is Script {
@@ -18,26 +23,56 @@ contract TestHeroContractScript is Script {
         
         IHero hero = IHero(heroProxy);
         
-        // 1. 检查当前状态
-        console.log("====== Current State ======");
-        console.log("Contract owner:", hero.owner());
-        console.log("Current NFT contract:", hero.nftContract());
-        console.log("Target NFT contract:", heroNFTProxy);
+        console.log("====== Initial Contract State ======");
+        console.log("Hero Proxy:", heroProxy);
+        console.log("Hero NFT Proxy:", heroNFTProxy);
+        console.log("Owner:", hero.owner());
+        console.log("Official NFT:", hero.getOfficialNFT());
+        console.log("Registered NFT Count:", hero.getRegisteredNFTCount());
         
-        // 2. 设置NFT合约
-        console.log("\n====== Setting NFT Contract ======");
         vm.startBroadcast(deployerPrivateKey);
         
-        try hero.setNFTContract(heroNFTProxy) {
-            console.log("Successfully set NFT contract");
+        // 测试注册官方NFT
+        console.log("\n====== Register Official NFT ======");
+        try hero.registerNFT(heroNFTProxy, true) {
+            console.log("Successfully registered official NFT");
+            
+            try hero.isNFTRegistered(heroNFTProxy) returns (bool isRegistered) {
+                console.log("Official NFT registration status:", isRegistered);
+            } catch Error(string memory reason) {
+                console.log("Failed to check official NFT registration:", reason);
+            }
         } catch Error(string memory reason) {
-            console.log("Failed to set NFT contract:", reason);
+            console.log("Failed to register official NFT:", reason);
+        }
+        
+        // 测试注册社区NFT
+        console.log("\n====== Register Community NFT ======");
+        address testNFT = address(0x1234567890123456789012345678901234567890);
+        
+        try hero.registerNFT(testNFT, false) {
+            console.log("Successfully registered community NFT");
+            
+            try hero.isNFTRegistered(testNFT) returns (bool isRegistered) {
+                console.log("Community NFT registration status:", isRegistered);
+            } catch Error(string memory reason) {
+                console.log("Failed to check community NFT registration:", reason);
+            }
+        } catch Error(string memory reason) {
+            console.log("Failed to register community NFT:", reason);
+        }
+        
+        // 获取所有注册的NFT
+        console.log("\n====== Registered NFTs ======");
+        try hero.getRegisteredNFTs() returns (address[] memory nfts) {
+            console.log("Total registered NFTs:", nfts.length);
+            for (uint i = 0; i < nfts.length; i++) {
+                console.log("NFT", i, ":", nfts[i]);
+            }
+        } catch Error(string memory reason) {
+            console.log("Failed to get registered NFTs:", reason);
         }
         
         vm.stopBroadcast();
-        
-        // 3. 验证结果
-        console.log("\n====== Final State ======");
-        console.log("Updated NFT contract:", hero.nftContract());
     }
 }

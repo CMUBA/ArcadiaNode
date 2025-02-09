@@ -1,34 +1,25 @@
-天赋,技能,技能级别,所需技能点  
-春,鹰眼,1,2  
-春,鹰眼,2,4  
-春,鹰眼,3,6  
-春,鹰眼,4,8  
-春,鹰眼,5,10  
-春,蜘蛛感应,1,1  
-春,蜘蛛感应,2,3  
-春,蜘蛛感应,3,5  
-春,圣灵反击,1,1  
-春,圣灵反击,2,3  
-夏,磨刀,1,5  
-夏,磨刀,2,10  
-夏,磨刀,3,15  
-夏,磨刀,4,20  
-夏,磨刀,5,25  
-夏,暴击,1,1  
-夏,暴击,2,2  
-夏,暴击,3,3  
-秋,强化身体,1,5  
-秋,强化身体,2,10  
-秋,强化身体,3,15  
-秋,强化身体,4,20  
-秋,强化身体,5,25  
-秋,格挡,1,1  
-秋,格挡,2,2  
-秋,格挡,3,3  
-冬,防御专精,1,5  
-冬,防御专精,2,10  
-冬,防御专精,3,15  
-冬,防御专精,4,20  
-冬,防御专精,5,25  
-冬,鲜血打击,1,1  
-冬,鲜血打击,2,2
+Talent,Skill,Level,Required Points
+Spring,Eagle Eye,1,2
+Spring,Eagle Eye,2,4
+Spring,Eagle Eye,3,6
+Spring,Eagle Eye,4,8
+Spring,Eagle Eye,5,10
+Spring,Spider Sense,1,1
+Spring,Spider Sense,2,3
+Spring,Spider Sense,3,5
+Spring,Holy Counter,1,1
+Spring,Holy Counter,2,3
+Summer,Sharpen,1,5
+Summer,Sharpen,2,10
+Summer,Sharpen,3,15
+Summer,Sharpen,4,20
+Summer,Sharpen,5,25
+Summer,Critical Strike,1,1
+Summer,Critical Strike,2,2
+Summer,Critical Strike,3,3
+Autumn,Body Enhancement,1,5
+Autumn,Body Enhancement,2,10
+Autumn,Body Enhancement,3,15
+Autumn,Body Enhancement,4,20
+Autumn,Body Enhancement,5,25
+Autumn,Block,1,1
