@@ -33,6 +33,7 @@ contract HeroNFT is
     uint256 public defaultNativePrice;
     IERC20Upgradeable public defaultPaymentToken;
     uint256 public defaultTokenPrice;
+    string public constant VERSION = "1.0.1";
 
     function initialize(
         address defaultToken,

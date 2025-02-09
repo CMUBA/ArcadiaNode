@@ -11,6 +11,8 @@ contract HeroMetadata is IHeroMetadata, Initializable, UUPSUpgradeable, OwnableU
     mapping(uint8 => RaceAttributes) private _races;
     mapping(uint8 => ClassAttributes) private _classes;
 
+    string public constant VERSION = "1.0.1";
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();

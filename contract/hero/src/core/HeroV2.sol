@@ -4,24 +4,20 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract Hero is Initializable, OwnableUpgradeable {
+contract HeroV2 is Initializable, OwnableUpgradeable {
     // 状态变量
     address public officialNFT;                    // 官方NFT合约地址
     mapping(address => bool) public isRegistered;  // NFT注册状态
     address[] private registeredNFTs;              // 已注册的NFT列表
-    string public constant VERSION = "1.0.1";      // 版本号
+    string public VERSION;                         // 版本号
 
     // 事件
     event NFTRegistered(address indexed nftContract, bool isOfficial);
     event NFTUnregistered(address indexed nftContract);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize() public initializer {
+    function initialize() public reinitializer(2) {
         __Ownable_init();
+        VERSION = "2.0.0";
     }
 
     /**
@@ -50,7 +46,7 @@ contract Hero is Initializable, OwnableUpgradeable {
         
         isRegistered[nftContract] = false;
         
-        // 从数组中移除
+        // 从列表中移除
         for (uint i = 0; i < registeredNFTs.length; i++) {
             if (registeredNFTs[i] == nftContract) {
                 registeredNFTs[i] = registeredNFTs[registeredNFTs.length - 1];
@@ -63,29 +59,26 @@ contract Hero is Initializable, OwnableUpgradeable {
     }
 
     /**
-     * @dev 获取官方NFT合约地址
-     */
-    function getOfficialNFT() external view returns (address) {
-        require(officialNFT != address(0), "Official NFT not set");
-        return officialNFT;
-    }
-
-    /**
-     * @dev 获取所有已注册的NFT合约地址
+     * @dev 获取已注册的NFT列表
+     * @return 已注册的NFT地址列表
      */
     function getRegisteredNFTs() external view returns (address[] memory) {
-        return registeredNFTs;
-    }
-
-    // get Count
-    function getRegisteredNFTCount() external view returns (uint256) {
-        return registeredNFTs.length;
-    }
-
-    /**
-     * @dev 检查NFT是否已注册
-     */
-    function isNFTRegistered(address nft) external view returns (bool) {
-        return isRegistered[nft];
+        uint256 count = 0;
+        for (uint256 i = 0; i < registeredNFTs.length; i++) {
+            if (isRegistered[registeredNFTs[i]]) {
+                count++;
+            }
+        }
+        
+        address[] memory activeNFTs = new address[](count);
+        uint256 index = 0;
+        for (uint256 i = 0; i < registeredNFTs.length; i++) {
+            if (isRegistered[registeredNFTs[i]]) {
+                activeNFTs[index] = registeredNFTs[i];
+                index++;
+            }
+        }
+        
+        return activeNFTs;
     }
 }

@@ -519,6 +519,108 @@ source .env && forge script script/InitMintNFT.s.sol:InitMintNFTScript --rpc-url
 5. test run
 source .env && forge script script/TestHeroContract.s.sol:TestHeroContractScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
 
+
+部署了所有合约：
+ProxyAdmin
+HeroNFT 实现和代理
+Hero 实现和代理
+HeroMetadata 实现和代理
+初始化了基础数据：
+设置了初始技能
+注册了 NFT 合约
+成功铸造了第一个 NFT
+输出了所有合约地址，格式化为 .env 格式
+
+测试脚本执行结果分析：
+
+初始状态检查正常：
+Hero Proxy 和 NFT Proxy 地址正确
+Owner 地址正确
+Official NFT 地址正确
+已注册 NFT 数量为 1
+测试注册 Official NFT：
+失败，原因是 NFT 已经注册（这是预期的，因为我们在部署时已经注册过）
+测试注册社区 NFT：
+成功注册了一个新的社区 NFT
+验证注册状态为 true
+总注册 NFT 数量增加到 2
+最终状态正确：
+可以看到两个注册的 NFT 地址
+包括官方 NFT 和新注册的社区 NFT
+总结：所有功能都按预期工作，包括：
+
+合约部署和初始化成功
+NFT 注册功能正常
+权限控制正常
+状态查询功能正常
+
+
+关于 InitRegisterNFT.s.sol 和代理合约的问题：
+使用代理合约是因为我们采用了可升级合约模式。所有的状态都存储在代理合约中，而不是实现合约中。
+当我们调用 IHero(heroProxy) 时，调用会被代理合约转发到实现合约，但状态会保存在代理合约中。
+如果直接调用实现合约，状态会保存在错误的地方，而且会导致合约状态不一致。
+
+
+ProxyAdmin 合约：负责管理代理合约的升级权限，通常不需要更改
+三个代理合约（Hero、NFT、Metadata）：是状态的存储位置，通常也不需要更改
+实现合约：是可以更改的部分，当需要升级功能时，只需要部署新的实现合约并通过代理指向它
+
+升级过程中的注意事项：
+
+新的实现合约必须保持存储布局兼容性
+如果需要初始化新的存储变量，需要在升级脚本中调用初始化函数
+确保升级不会影响现有的合约状态和数据
+
+升级合约：
+source .env && forge script script/UpgradeHero.s.sol:UpgradeHeroScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL --broadcast -vvvv
+
+
+
+#### deploy 9th Feb afternoon
+  ProxyAdmin deployed to: 0x338D4A093ABF7eD0C1D8FeD759e96429D158e2c5
+  HeroNFT Implementation deployed to: 0xEd05eb3ABe4EDAc6B676a5eA1547cF7f6E32f695
+  HeroNFT Proxy deployed to: 0x078C6C1c996FB8e4C15B13D23904C7D7bAa47724
+
+
+
+  ProxyAdmin deployed to: 0xCD34e5a0870671BB5DCE61BabA575e373144a12f
+  Hero Implementation deployed to: 0x997e839Dc05EfA96519eCF28457ed0534462360F
+  Hero Proxy deployed to: 0xbdbA2372103EE713D96532347830ECA4f2450ed3
+
+
+  ProxyAdmin deployed to: 0x277a45761f749743E3c2b7220561c7f3e87D0824
+  HeroMetadata Implementation deployed to: 0x478b25E797ffee89602A0832085c60aa1E277488
+  HeroMetadata Proxy deployed to: 0x51E84E5C51E83DCcbbe3244e57088B5876AAE4c9
+
+
+脚本来检查所有合约的所有权状态：
+source .env && forge script script/CheckOwnership.s.sol:CheckOwnershipScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL -vvvv
+
+
+CheckDeployer 脚本来验证部署账户
+source .env && forge script script/CheckDeployer.s.sol:CheckDeployerScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL -vvvv
+
+查看proxy
+source .env && forge script script/CheckProxy.s.sol:CheckProxyScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL -vvvv
+
+权限
+source .env && forge script script/CheckPermissions.s.sol:CheckPermissionsScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL -vvvv
+
+state
+source .env && forge script script/CheckState.s.sol:CheckStateScript --rpc-url $OPTIMISM_SEPOLIA_RPC_URL -vvvv
+
+
+部署了新的 HeroV2 合约，它使用 reinitializer(2) 来允许重新初始化
+部署了新的代理合约，指向新的实现合约
+注册了旧的官方 NFT
+现在我们可以继续使用这个新的合约了。关于初始化的改进：
+
+在 HeroV2 中，我们使用了 reinitializer(2) 而不是 initializer，这允许我们在升级时重新初始化合约
+我们将 VERSION 从常量改为存储变量，这样它可以在代理合约中正确工作
+我们在初始化函数中设置了版本号
+这些改进使得合约更容易升级和维护。您可以继续使用这个新的合约了。如果您需要进行任何其他操作，请告诉我。
+
+
 由于使用了代理合约架构：
 合约逻辑更新时，只需要部署新的实现合约
 不需要重新部署代理合约
