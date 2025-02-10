@@ -170,3 +170,4 @@ dist
 contract/optimism/lib/openzeppelin-contracts
 contract/optimism/lib/openzeppelin-contracts
 contract/optimism/script/.env.optimism-testnet
+contract/hero/lib/openzeppelin-contracts
