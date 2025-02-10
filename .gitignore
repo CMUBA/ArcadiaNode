@@ -1,3 +1,6 @@
+contract/hero/lib/openzeppelin-contracts-upgradeable/
+contract/hero/lib/openzeppelin-contracts/
+
 contract/aptos/build
 “`
 *.env
