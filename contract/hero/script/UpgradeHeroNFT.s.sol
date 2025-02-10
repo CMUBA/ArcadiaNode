@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Script.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import "../src/nft/HeroNFT.sol";
+import "../src/core/HeroV4.sol";
 
 contract UpgradeHeroNFTScript is Script {
     function run() external {
@@ -26,8 +26,8 @@ contract UpgradeHeroNFTScript is Script {
         vm.startBroadcast(deployerPrivateKey);
         
         // 1. 部署新的实现合约
-        HeroNFT newImplementation = new HeroNFT();
-        console.log("New HeroNFT implementation deployed to:", address(newImplementation));
+        HeroV4 newImplementation = new HeroV4();
+        console.log("New HeroV4 implementation deployed to:", address(newImplementation));
         
         // 2. 升级代理合约
         try admin.upgrade(ITransparentUpgradeableProxy(heroNFTProxy), address(newImplementation)) {
@@ -39,7 +39,7 @@ contract UpgradeHeroNFTScript is Script {
         }
         
         // 3. 初始化新版本
-        HeroNFT hero = HeroNFT(heroNFTProxy);
+        HeroV4 hero = HeroV4(heroNFTProxy);
         try hero.initialize() {
             console.log("New version initialized");
         } catch Error(string memory reason) {
@@ -48,9 +48,6 @@ contract UpgradeHeroNFTScript is Script {
         }
         
         vm.stopBroadcast();
-        
-        // 4. 输出更新建议
-        console.log("\nPlease update your config/contract.config.json with:");
-        console.log("heroNFT.implementation: %s", address(newImplementation));
+        console.log("\nUpgrade completed successfully!");
     }
 }

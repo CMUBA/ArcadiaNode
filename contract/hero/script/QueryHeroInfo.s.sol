@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
-import "../src/core/HeroV2.sol";
+import "../src/core/HeroV3.sol";
 import "../src/core/HeroNFT.sol";
 
 contract QueryHeroInfoScript is Script {
@@ -12,7 +12,7 @@ contract QueryHeroInfoScript is Script {
         uint256 tokenId = 10001; // 我们刚刚铸造的 NFT ID
         
         // 1. 获取合约实例
-        HeroV2 hero = HeroV2(heroProxy);
+        HeroV3 hero = HeroV3(heroProxy);
         HeroNFT nft = HeroNFT(officialNFT);
         
         // 2. 显示基本信息
@@ -45,13 +45,19 @@ contract QueryHeroInfoScript is Script {
             console.log("\nNo hero record found or function not available");
         }
         
-        // 5. 显示其他可能的信息
-        try hero.getHeroLevel(officialNFT, tokenId) returns (uint256 level) {
-            console.log("\nHero Level:", level);
+        // 5. 显示等级和经验
+        try hero.getHeroLevel(officialNFT, tokenId) returns (
+            uint256 level,
+            uint256 experience
+        ) {
+            console.log("\nHero Level Info:");
+            console.log("Level:", level);
+            console.log("Experience:", experience);
         } catch {
             console.log("\nLevel information not available");
         }
         
+        // 6. 显示技能信息
         try hero.getHeroSkills(officialNFT, tokenId) returns (
             string[] memory skills,
             uint256[] memory levels

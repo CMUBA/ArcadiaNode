@@ -1,0 +1,2 @@
+forge clean
+forge build

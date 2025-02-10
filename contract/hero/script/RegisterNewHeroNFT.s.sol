@@ -43,7 +43,7 @@ contract RegisterNewHeroNFTScript is Script {
         require(officialNFT == nftProxy, "NFT registration failed");
         
         // 验证 NFT 是否已注册
-        bool isRegistered = hero.isNFTRegistered(nftProxy);
+        bool isRegistered = hero.isRegistered(nftProxy);
         console.log("Is NFT registered:", isRegistered);
         require(isRegistered, "NFT not registered");
         

@@ -6,7 +6,7 @@
 此外，合约发布者不能删除、修改合约的任何数据。
 因此，新增英雄需要提供你购买的 NFT 合约地址和 NFTID（默认是 Ethereum EIP721）
 
-依赖链上数据表合约：
+依赖链上数据表合约：****
 1.依赖技能组合表，此表格默认是{Spring, Summer, Autumn, Winter}四种天赋，每个对应的五种技能的数据特征 //https://whimsical.com/attribute-7Wjz8qDJJzjQbcffNdpUSm
 2.依赖种族表，此表格默认是{Human, Elf, Dwarf, Orc, Undead}五种种族
 3.依赖职业表，此表格默认是{Warrior, Mage, Archer, Rogue, Priest}五种职业
