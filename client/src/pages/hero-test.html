@@ -104,7 +104,7 @@
                 // Update NFT status display
                 const nftStatus = document.getElementById('nftStatus');
                 if (hasNFT) {
-                    nftStatus.innerHTML = '<span class="text-green-500">✓ You own a Hero NFT</span>';
+                    nftStatus.innerHTML = `<span class="text-green-500">✓ You own a Hero NFT</span> <a href="https://sepolia-optimism.etherscan.io/token/${heroConfig.ethereum.contracts.heroNFT}?a=${userAddress}" target="_blank" class="text-blue-600 hover:text-blue-800 ml-2">(View on Etherscan)</a>`;
                     // Enable create hero button
                     document.getElementById('createHero').disabled = false;
                 } else {
@@ -322,17 +322,6 @@
                 const race = document.getElementById('createRaceId').value;
                 const classId = document.getElementById('createClassId').value;
                 
-                // Get user ID (using wallet address as user ID for now)
-                const userId = ethers.keccak256(ethers.toUtf8Bytes(userAddress));
-                
-                console.log('Creating hero with params:', {
-                    userId,
-                    name,
-                    race,
-                    classId,
-                    contractAddress: heroConfig.ethereum.contracts.hero
-                });
-
                 // Verify contract is properly initialized
                 if (!heroContract.runner?.provider?.provider?.selectedAddress) {
                     console.log('Reconnecting contract with signer...');
@@ -344,50 +333,47 @@
                     );
                 }
 
-                // Calculate expected NFT token ID
-                const tokenId = ethers.keccak256(
-                    ethers.AbiCoder.defaultAbiCoder().encode(
-                        ['uint256', 'string', 'uint8', 'uint8'],
-                        [userId, name, race, classId]
-                    )
-                );
+                // Get registered NFT contracts
+                const registeredNFTs = await heroContract.getRegisteredNFTs();
+                console.log('Registered NFTs:', registeredNFTs);
 
-                // Check if NFT exists and is owned by the user
-                const nftContract = new ethers.Contract(
-                    heroConfig.ethereum.contracts.heroNFT,
-                    heroNFTAbi,
-                    provider
-                );
-
-                const nftExists = await nftContract.exists(tokenId);
-                if (!nftExists) {
-                    throw new Error('Please mint the hero NFT first');
+                // Check if user owns any NFTs from registered contracts
+                let userNFTs = [];
+                for (const nftAddress of registeredNFTs) {
+                    const nftContract = new ethers.Contract(
+                        nftAddress,
+                        heroNFTAbi,
+                        provider
+                    );
+                    
+                    const balance = await nftContract.balanceOf(userAddress);
+                    if (balance > 0) {
+                        // Get all token IDs owned by user
+                        for (let i = 0; i < balance; i++) {
+                            const tokenId = await nftContract.tokenOfOwnerByIndex(userAddress, i);
+                            userNFTs.push({
+                                contract: nftAddress,
+                                tokenId: tokenId
+                            });
+                        }
+                    }
                 }
 
-                const nftOwner = await nftContract.ownerOf(tokenId);
-                if (nftOwner.toLowerCase() !== userAddress.toLowerCase()) {
-                    throw new Error('You do not own this hero NFT');
+                if (userNFTs.length === 0) {
+                    throw new Error('You need to own an NFT from a registered contract to create a hero');
                 }
 
-                // Prepare parameters
-                const raceValue = Number(race);
-                const classValue = Number(classId);
-
-                // Encode function data for verification
-                const encodedData = heroContract.interface.encodeFunctionData('createHero', [
-                    userId,
-                    name,
-                    raceValue,
-                    classValue
-                ]);
-                console.log('Encoded transaction data:', encodedData);
+                // Use the first available NFT
+                const nftToUse = userNFTs[0];
+                console.log('Using NFT for hero creation:', nftToUse);
 
                 // Send transaction
                 const tx = await heroContract.createHero(
-                    userId,
+                    nftToUse.contract,  // NFT contract address
+                    nftToUse.tokenId,   // NFT token ID
                     name,
-                    raceValue,
-                    classValue,
+                    race,
+                    classId,
                     {
                         gasLimit: 500000
                     }
@@ -399,7 +385,8 @@
                     <div class="mt-4 p-4 bg-green-100 rounded">
                         <p>Transaction sent! Hash: ${tx.hash}</p>
                         <p>Waiting for confirmation...</p>
-                        <p>NFT Token ID: ${tokenId}</p>
+                        <p>Using NFT Contract: ${nftToUse.contract}</p>
+                        <p>Token ID: ${nftToUse.tokenId.toString()}</p>
                     </div>
                 `;
                 
@@ -423,13 +410,12 @@
 
                 if (event) {
                     const parsedEvent = heroContract.interface.parseLog(event);
-                    const heroId = parsedEvent.args.heroId;
                     
                     document.getElementById('createResult').innerHTML = `
                         <div class="mt-4 p-4 bg-green-100 rounded">
                             <p>Hero created successfully!</p>
-                            <p>Hero ID: ${heroId}</p>
-                            <p>NFT Token ID: ${tokenId}</p>
+                            <p>NFT Contract: ${nftToUse.contract}</p>
+                            <p>Token ID: ${nftToUse.tokenId.toString()}</p>
                             <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
                         </div>
                     `;
@@ -467,12 +453,113 @@
                 // Update UI to show that NFT contracts are being loaded
                 document.getElementById('nftContractsStatus').innerHTML = 'Loading NFT contracts...';
 
-                // Get NFT balance instead of registered contracts
-                const balance = await nftContract.balanceOf(userAddress);
-                document.getElementById('nftContractsStatus').innerHTML = `NFT Balance: ${balance}`;
+                // Get registered NFT contracts
+                const registeredNFTs = await heroContract.getRegisteredNFTs();
+                console.log('Registered NFTs:', registeredNFTs);
+
+                // Create HTML for each registered NFT contract
+                let html = '<div class="space-y-4">';
+                
+                for (const nftAddress of registeredNFTs) {
+                    // Create NFT contract instance
+                    const nftContract = new ethers.Contract(
+                        nftAddress,
+                        heroNFTAbi,
+                        provider
+                    );
+
+                    // Get user's NFT balance for this contract
+                    const balance = await nftContract.balanceOf(userAddress);
+                    
+                    // Check if this is the official NFT
+                    const isOfficial = await heroContract.officialNFT() === nftAddress;
+
+                    html += `
+                        <div class="bg-white rounded-lg p-4 shadow">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="font-medium">${isOfficial ? 'Official' : 'Community'} NFT Contract:</span>
+                                    <a href="https://sepolia-optimism.etherscan.io/address/${nftAddress}" 
+                                       target="_blank" 
+                                       class="text-blue-600 hover:text-blue-800 ml-2">
+                                        ${nftAddress}
+                                    </a>
+                                </div>
+                                <div>
+                                    <button onclick="mintNFT('${nftAddress}')" 
+                                            class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm">
+                                        Mint NFT
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <span class="text-gray-600">Your NFT Balance: ${balance.toString()}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += '</div>';
+                document.getElementById('nftContractsStatus').innerHTML = html;
+
             } catch (error) {
                 console.error('Load NFT contracts error:', error);
                 document.getElementById('nftContractsStatus').innerHTML = 'Failed to load NFT contracts: ' + error.message;
+            }
+        }
+
+        // Add function to mint NFT
+        async function mintNFT(nftAddress) {
+            try {
+                if (!userAddress) {
+                    throw new Error('Please connect wallet first');
+                }
+
+                const nftContract = new ethers.Contract(
+                    nftAddress,
+                    heroNFTAbi,
+                    await provider.getSigner()
+                );
+
+                // Get mint price
+                const nativePrice = await nftContract.defaultNativePrice();
+                
+                // Mint NFT
+                const tx = await nftContract.mint(userAddress, {
+                    value: nativePrice
+                });
+
+                // Show pending status
+                document.getElementById('mintStatus').innerHTML = `
+                    <div class="mt-4 p-4 bg-blue-100 rounded">
+                        <p>Minting in progress...</p>
+                        <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
+                    </div>
+                `;
+
+                // Wait for confirmation
+                const receipt = await tx.wait();
+                
+                if (receipt.status === 1) {
+                    document.getElementById('mintStatus').innerHTML = `
+                        <div class="mt-4 p-4 bg-green-100 rounded">
+                            <p>NFT minted successfully!</p>
+                            <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
+                        </div>
+                    `;
+
+                    // Refresh NFT contracts display
+                    await loadRegisteredNFTContracts();
+                } else {
+                    throw new Error('Transaction failed');
+                }
+            } catch (error) {
+                console.error('Mint NFT error:', error);
+                document.getElementById('mintStatus').innerHTML = `
+                    <div class="mt-4 p-4 bg-red-100 rounded">
+                        <p>Failed to mint NFT: ${error.message}</p>
+                    </div>
+                `;
             }
         }
 
@@ -643,6 +730,7 @@
                     <h2 class="text-lg font-semibold mb-2">Hero NFT Contracts</h2>
                     <div class="space-y-2">
                         <div id="nftContractsStatus" class="text-sm text-gray-500">Loading registered NFT contracts...</div>
+                        <div id="mintStatus"></div>
                     </div>
                 </div>
 
