@@ -15,6 +15,8 @@
         import thLang from '../config/i18n/th.js';
         import { heroAbi } from '../js/abi/hero.js';
         import { heroMetadataAbi } from '../js/abi/heroMetadata.js';
+        import { heroNFTAbi } from '../js/abi/heroNFT.js';
+        import { heroInteractions } from '../js/heroInteractions.js';
 
         const translations = {
             en: enLang,
@@ -91,8 +93,8 @@
                 // Initialize NFT contract
                 nftContract = new ethers.Contract(
                     heroConfig.ethereum.contracts.heroNFT,
-                    ['function balanceOf(address) view returns (uint256)'],
-                    provider
+                    heroNFTAbi,
+                    signer
                 );
 
                 // Check NFT ownership
@@ -204,7 +206,7 @@
                     // Initialize NFT contract
                     nftContract = new ethers.Contract(
                         heroConfig.ethereum.contracts.heroNFT,
-                        ['function balanceOf(address) view returns (uint256)'],
+                        heroNFTAbi,
                         provider
                     );
 
@@ -353,7 +355,7 @@
                 // Check if NFT exists and is owned by the user
                 const nftContract = new ethers.Contract(
                     heroConfig.ethereum.contracts.heroNFT,
-                    ['function exists(uint256) view returns (bool)', 'function ownerOf(uint256) view returns (address)'],
+                    heroNFTAbi,
                     provider
                 );
 
@@ -458,38 +460,65 @@
         // Add new function to get registered NFT contracts
         async function loadRegisteredNFTContracts() {
             try {
-                if (!heroContract) return;
-                
-                // 使用正确的函数名 getRegisteredNFTs
-                const nftContracts = await heroContract.getRegisteredNFTs();
-                const nftContractsList = document.getElementById('nftContractsList');
-                
-                if (nftContracts && nftContracts.length > 0) {
-                    nftContractsList.innerHTML = nftContracts.map(contract => `
-                        <div class="p-3 bg-gray-50 rounded">
-                            <a href="https://sepolia-optimism.etherscan.io/address/${contract}" 
-                               target="_blank" 
-                               class="text-blue-600 hover:text-blue-800 break-all">
-                                ${contract}
-                            </a>
-                        </div>
-                    `).join('');
-                } else {
-                    nftContractsList.innerHTML = '<p class="text-sm text-gray-500">No registered NFT contracts found</p>';
+                if (!heroContract) {
+                    throw new Error('Hero contract not initialized');
                 }
+
+                // Update UI to show that NFT contracts are being loaded
+                document.getElementById('nftContractsStatus').innerHTML = 'Loading NFT contracts...';
+
+                // Get NFT balance instead of registered contracts
+                const balance = await nftContract.balanceOf(userAddress);
+                document.getElementById('nftContractsStatus').innerHTML = `NFT Balance: ${balance}`;
             } catch (error) {
-                console.error('Failed to load NFT contracts:', error);
-                document.getElementById('nftContractsList').innerHTML = 
-                    '<p class="text-sm text-red-500">Failed to load NFT contracts</p>';
+                console.error('Load NFT contracts error:', error);
+                document.getElementById('nftContractsStatus').innerHTML = 'Failed to load NFT contracts: ' + error.message;
             }
         }
 
-        // 将函数暴露到全局作用域
-        window.connectWallet = connectWallet;
-        window.getRaceData = getRaceData;
-        window.getClassData = getClassData;
-        window.getSkillData = getSkillData;
-        window.createNewHero = createNewHero;
+        async function consumeEnergy() {
+            try {
+                const tokenId = document.getElementById('energyTokenId').value;
+                const amount = document.getElementById('energyAmount').value;
+
+                if (!tokenId || !amount) {
+                    throw new Error('Token ID and amount are required');
+                }
+
+                const tx = await heroContract.consumeEnergy(
+                    heroConfig.ethereum.contracts.heroNFT,
+                    tokenId,
+                    amount
+                );
+                await tx.wait();
+                document.getElementById('energyResult').innerHTML = 'Energy consumed successfully';
+            } catch (error) {
+                console.error('Consume energy error:', error);
+                document.getElementById('energyResult').innerHTML = 'Error: ' + error.message;
+            }
+        }
+
+        async function addDailyPoints() {
+            try {
+                const tokenId = document.getElementById('energyTokenId').value;
+                const amount = document.getElementById('energyAmount').value;
+
+                if (!tokenId || !amount) {
+                    throw new Error('Token ID and amount are required');
+                }
+
+                const tx = await heroContract.addDailyPoints(
+                    heroConfig.ethereum.contracts.heroNFT,
+                    tokenId,
+                    amount
+                );
+                await tx.wait();
+                document.getElementById('energyResult').innerHTML = 'Daily points added successfully';
+            } catch (error) {
+                console.error('Add daily points error:', error);
+                document.getElementById('energyResult').innerHTML = 'Error: ' + error.message;
+            }
+        }
     </script>
 </head>
 <body class="bg-gray-100">
@@ -613,9 +642,7 @@
                 <div class="bg-white rounded-lg shadow p-4">
                     <h2 class="text-lg font-semibold mb-2">Hero NFT Contracts</h2>
                     <div class="space-y-2">
-                        <div id="nftContractsList" class="space-y-2">
-                            <p class="text-sm text-gray-500">Loading registered NFT contracts...</p>
-                        </div>
+                        <div id="nftContractsStatus" class="text-sm text-gray-500">Loading registered NFT contracts...</div>
                     </div>
                 </div>
 
@@ -656,5 +683,33 @@
             </div>
         </div>
     </div>
+
+    <!-- Energy & Points Management -->
+    <div class="container mx-auto px-4 py-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-lg font-semibold mb-2">Energy & Points Management</h2>
+                <div class="space-y-2">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Token ID</label>
+                        <input type="number" id="energyTokenId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Amount</label>
+                        <input type="number" id="energyAmount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="consumeEnergy()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                            Consume Energy
+                        </button>
+                        <button onclick="addDailyPoints()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                            Add Daily Points
+                        </button>
+                    </div>
+                    <div id="energyResult" class="mt-2 text-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
-</html> 
+</html>

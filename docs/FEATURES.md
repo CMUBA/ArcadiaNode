@@ -111,7 +111,11 @@ sequenceDiagram
 5. ArcaidaNode：社区节点体系，你可以不使用Cos72,但是提供Cos72的计算服务。
 6. 更多的产品，已插件形式嵌入在COS72中。
 
-本次我们重点是GameX插件。
+### Client端核心feature
+http://localhost:3008/pages/hero-test.html
+1. 配合合约，用户可以创建Hero，加载Hero数据，保存Hero数据。
+2. 未来此页面逻辑会嵌入到server端，成为API，而部分交互逻辑会提炼成为客户端交互的模板。
+3. 
 
 ### GameX: Create, Save and Load
 1. 基础参数：chainId, userOperations(long signature include tx and fingerprint), nodeSignature

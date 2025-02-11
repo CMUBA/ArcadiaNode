@@ -8,9 +8,15 @@ export const heroConfig = {
         nodeUrl: 'https://sepolia.optimism.io',
         chainId: 11155420, // Optimism Sepolia testnet
         contracts: {
-            hero: '0x5aEe59c7D6434eC6f83066C388E6fe76959F9ec1',
-            heroMetadata: '0xb6A58680db8ffA71B8eb219e11A8B1d267D01095',
-            heroNFT: '0x5915c1D71bDfA5276A98FC9FE9074370721807c2'
+            hero: '0xb86236BA8D6CAb15cf7972871f246F7C8693338b',  // VITE_HERO_PROXY
+            heroMetadata: '0x7603DdBcC4c998C7aB8DE7F91768c0ACd9CE2377',  // VITE_HERO_METADATA_PROXY
+            heroNFT: '0xb4AE3C6B8531D97EA6146c2e7B811B8D82f9019c',  // VITE_HERO_NFT_PROXY
+            paymentToken: '0x0000000000000000000000000000000000000000',  // VITE_PAYMENT_TOKEN_ADDRESS
+            erc20Token: '0xBda48255DA1ed61a209641144Dd24696926aF3F0'    // VITE_ERC20_CONTRACT_ADDRESS
+        },
+        prices: {
+            nativePrice: '100000000000000000',    // VITE_NATIVE_PRICE
+            tokenPrice: '100000000000000000000'   // VITE_ERC20_TOKEN_PRICE
         },
         abis: {
             hero: heroAbi,
