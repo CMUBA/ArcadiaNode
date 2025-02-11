@@ -2,13 +2,18 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "../src/proxy/ProxyAdmin.sol";
 
 // 注意：使用此模板时，需要：
-// 1. 替换 ContractV2 为实际的合约
+// 1. 导入实际的合约
 // 2. 修改环境变量名称
 // 3. 添加需要检查的状态变量
+
+interface IVersionedContract {
+    function VERSION() external view returns (string memory);
+    function owner() external view returns (address);
+}
 
 contract CheckStateScript is Script {
     function run() external view {
@@ -24,17 +29,17 @@ contract CheckStateScript is Script {
         console.log("Deployer:", deployer);
         
         // 检查合约状态
-        ContractV2 contract = ContractV2(proxy);
+        IVersionedContract versionedContract = IVersionedContract(proxy);
         
         // 1. 检查版本
-        try contract.VERSION() returns (string memory version) {
+        try versionedContract.VERSION() returns (string memory version) {
             console.log("\nContract version:", version);
         } catch {
             console.log("\nFailed to get version");
         }
         
         // 2. 检查所有者
-        try contract.owner() returns (address owner) {
+        try versionedContract.owner() returns (address owner) {
             console.log("\nContract owner:", owner);
             console.log("Is deployer the owner?", owner == deployer);
         } catch {
@@ -43,7 +48,7 @@ contract CheckStateScript is Script {
         
         // 3. 检查代理合约的管理员
         ProxyAdmin admin = ProxyAdmin(proxyAdmin);
-        try admin.getProxyAdmin(ITransparentUpgradeableProxy(proxy)) returns (address proxyAdminAddr) {
+        try admin.getProxyAdmin(TransparentUpgradeableProxy(payable(proxy))) returns (address proxyAdminAddr) {
             console.log("\nProxy admin address:", proxyAdminAddr);
             console.log("Is ProxyAdmin the admin?", proxyAdminAddr == proxyAdmin);
         } catch {
@@ -51,7 +56,7 @@ contract CheckStateScript is Script {
         }
         
         // 4. 检查代理合约的实现
-        try admin.getProxyImplementation(ITransparentUpgradeableProxy(proxy)) returns (address currentImpl) {
+        try admin.getProxyImplementation(TransparentUpgradeableProxy(payable(proxy))) returns (address currentImpl) {
             console.log("\nProxy implementation:", currentImpl);
             console.log("Implementation matches env?", currentImpl == implementation);
         } catch {
