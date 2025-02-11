@@ -129,6 +129,9 @@
 
                 // Load NFT contracts after successful connection
                 await loadRegisteredNFTContracts();
+
+                // Load hero records after successful connection
+                await loadHeroRecords();
             } catch (error) {
                 console.error('Wallet connection failed:', error);
                 alert('Failed to connect wallet: ' + error.message);
@@ -248,6 +251,11 @@
                 if (userAddress) {
                     await loadRegisteredNFTContracts();
                 }
+
+                // Load hero records after connecting
+                if (userAddress) {
+                    await loadHeroRecords();
+                }
             } catch (error) {
                 console.error('Initialization failed:', error);
                 alert('Initialization failed: ' + error.message);
@@ -348,13 +356,29 @@
                     
                     const balance = await nftContract.balanceOf(userAddress);
                     if (balance > 0) {
-                        // Get all token IDs owned by user
-                        for (let i = 0; i < balance; i++) {
-                            const tokenId = await nftContract.tokenOfOwnerByIndex(userAddress, i);
-                            userNFTs.push({
-                                contract: nftAddress,
-                                tokenId: tokenId
-                            });
+                        // Try to find the first NFT owned by the user
+                        try {
+                            // Get total supply
+                            const totalSupply = await nftContract.totalSupply();
+                            
+                            // Check each token until we find one owned by the user
+                            for (let i = 0; i < totalSupply; i++) {
+                                try {
+                                    const owner = await nftContract.ownerOf(i);
+                                    if (owner.toLowerCase() === userAddress.toLowerCase()) {
+                                        userNFTs.push({
+                                            contract: nftAddress,
+                                            tokenId: i
+                                        });
+                                        break; // Found one NFT, that's enough
+                                    }
+                                } catch (e) {
+                                    continue; // Skip if token doesn't exist or other error
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Error checking NFT ownership:', e);
+                            continue;
                         }
                     }
                 }
@@ -606,6 +630,103 @@
                 document.getElementById('energyResult').innerHTML = 'Error: ' + error.message;
             }
         }
+
+        // Add new function to load hero records
+        async function loadHeroRecords() {
+            try {
+                if (!heroContract) {
+                    throw new Error('Hero contract not initialized');
+                }
+
+                // Get registered NFT contracts
+                const registeredNFTs = await heroContract.getRegisteredNFTs();
+                let totalHeroes = 0;
+                let heroList = [];
+
+                // For each NFT contract, try to get heroes
+                for (const nftContract of registeredNFTs) {
+                    try {
+                        // Try first 100 token IDs (we can adjust this number)
+                        for (let tokenId = 0; tokenId < 100; tokenId++) {
+                            try {
+                                const heroInfo = await heroContract.getHeroInfo(nftContract, tokenId);
+                                if (heroInfo && heroInfo.name) {
+                                    totalHeroes++;
+                                    heroList.push({
+                                        nftContract,
+                                        tokenId: tokenId.toString(),
+                                        name: heroInfo.name,
+                                        race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Undead'][heroInfo.race] || 'Unknown',
+                                        level: heroInfo.level.toString()
+                                    });
+                                }
+                            } catch (e) {
+                                // If hero doesn't exist at this token ID, continue to next
+                                continue;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error processing NFT contract:', nftContract, e);
+                        continue;
+                    }
+                }
+
+                // Sort heroes by level (descending)
+                heroList.sort((a, b) => parseInt(b.level) - parseInt(a.level));
+
+                // Create HTML for hero records
+                let html = `
+                    <div class="mb-4">
+                        <p class="text-lg font-medium">Total Heroes: ${totalHeroes}</p>
+                    </div>
+                `;
+
+                if (heroList.length > 0) {
+                    html += '<div class="overflow-x-auto"><table class="min-w-full table-auto">';
+                    html += `
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="px-4 py-2 text-left">Name</th>
+                                <th class="px-4 py-2 text-left">Race</th>
+                                <th class="px-4 py-2 text-left">Level</th>
+                                <th class="px-4 py-2 text-left">NFT Contract</th>
+                                <th class="px-4 py-2 text-left">Token ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                    `;
+
+                    heroList.forEach(hero => {
+                        html += `
+                            <tr class="border-t hover:bg-gray-50">
+                                <td class="px-4 py-2">${hero.name}</td>
+                                <td class="px-4 py-2">${hero.race}</td>
+                                <td class="px-4 py-2">${hero.level}</td>
+                                <td class="px-4 py-2">
+                                    <a href="https://sepolia-optimism.etherscan.io/address/${hero.nftContract}" 
+                                       target="_blank" 
+                                       class="text-blue-600 hover:text-blue-800">
+                                        ${hero.nftContract.substring(0, 6)}...${hero.nftContract.substring(38)}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-2">${hero.tokenId}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table></div>';
+                } else {
+                    html += '<p class="text-gray-500">No heroes found</p>';
+                }
+
+                document.getElementById('heroRecordsStatus').innerHTML = html;
+
+            } catch (error) {
+                console.error('Load hero records error:', error);
+                document.getElementById('heroRecordsStatus').innerHTML = 
+                    `<div class="text-red-500">Failed to load hero records: ${error.message}</div>`;
+            }
+        }
     </script>
 </head>
 <body class="bg-gray-100">
@@ -767,6 +888,18 @@
                         </button>
                         <div id="createResult"></div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Records Section -->
+    <div class="container mx-auto px-4 py-4">
+        <div class="grid grid-cols-1 gap-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-lg font-semibold mb-2">Hero Records</h2>
+                <div class="space-y-2">
+                    <div id="heroRecordsStatus" class="text-sm text-gray-500">Loading hero records...</div>
                 </div>
             </div>
         </div>

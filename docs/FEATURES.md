@@ -120,309 +120,6 @@ http://localhost:3008/pages/hero-test.html
 4. 页面需要显示hero有几个允许的nft合约列表（需要在hero-test页面新增这个显示，请检查ABI是否具备这个接口）
 5. 注册hero需要检查你是否拥有注册过合约内的NFT，如果有且没有注册过，则注册
 
-我来帮你修改 hero-test 页面，以实现这个完整的逻辑流程。首先让我检查一下相关合约的 ABI 和现有代码。
-
-Search files...
-
-
-根据搜索结果，我看到 HeroV4 合约提供了以下相关功能：
-1. `getRegisteredNFTs()` - 获取所有已注册的 NFT 合约地址列表
-2. `isRegistered(address)` - 检查某个 NFT 合约是否已注册
-3. `officialNFT()` - 获取官方 NFT 合约地址
-
-让我修改 hero-test.html 页面，添加这些功能：
-
-```html:client/src/pages/hero-test.html
-// Add new function to get registered NFT contracts
-async function loadRegisteredNFTContracts() {
-    try {
-        if (!heroContract) {
-            throw new Error('Hero contract not initialized');
-        }
-
-        // Update UI to show that NFT contracts are being loaded
-        document.getElementById('nftContractsStatus').innerHTML = 'Loading NFT contracts...';
-
-        // Get registered NFT contracts
-        const registeredNFTs = await heroContract.getRegisteredNFTs();
-        console.log('Registered NFTs:', registeredNFTs);
-
-        // Create HTML for each registered NFT contract
-        let html = '<div class="space-y-4">';
-        
-        for (const nftAddress of registeredNFTs) {
-            // Create NFT contract instance
-            const nftContract = new ethers.Contract(
-                nftAddress,
-                heroNFTAbi,
-                provider
-            );
-
-            // Get user's NFT balance for this contract
-            const balance = await nftContract.balanceOf(userAddress);
-            
-            // If user has NFTs, get their token IDs
-            let tokenIds = [];
-            if (balance > 0) {
-                for (let i = 0; i < balance; i++) {
-                    const tokenId = await nftContract.tokenOfOwnerByIndex(userAddress, i);
-                    tokenIds.push(tokenId.toString());
-                }
-            }
-
-            // Check if this is the official NFT
-            const isOfficial = await heroContract.officialNFT() === nftAddress;
-
-            html += `
-                <div class="bg-white rounded-lg p-4 shadow">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <span class="font-medium">${isOfficial ? 'Official' : 'Community'} NFT Contract:</span>
-                            <a href="https://sepolia-optimism.etherscan.io/address/${nftAddress}" 
-                               target="_blank" 
-                               class="text-blue-600 hover:text-blue-800 ml-2">
-                                ${nftAddress}
-                            </a>
-                        </div>
-                        <div>
-                            <button onclick="mintNFT('${nftAddress}')" 
-                                    class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm">
-                                Mint NFT
-                            </button>
-                        </div>
-                    </div>
-                    <div class="mt-2">
-                        <span class="text-gray-600">Your NFT Balance: ${balance.toString()}</span>
-                        ${tokenIds.length > 0 ? 
-                            `<div class="mt-1">
-                                <span class="text-gray-600">Your Token IDs: ${tokenIds.join(', ')}</span>
-                            </div>` 
-                            : ''
-                        }
-                    </div>
-                </div>
-            `;
-        }
-
-        html += '</div>';
-        document.getElementById('nftContractsStatus').innerHTML = html;
-
-    } catch (error) {
-        console.error('Load NFT contracts error:', error);
-        document.getElementById('nftContractsStatus').innerHTML = 'Failed to load NFT contracts: ' + error.message;
-    }
-}
-
-// Add function to mint NFT
-async function mintNFT(nftAddress) {
-    try {
-        if (!userAddress) {
-            throw new Error('Please connect wallet first');
-        }
-
-        const nftContract = new ethers.Contract(
-            nftAddress,
-            heroNFTAbi,
-            await provider.getSigner()
-        );
-
-        // Get mint price
-        const nativePrice = await nftContract.defaultNativePrice();
-        
-        // Mint NFT
-        const tx = await nftContract.mint(userAddress, {
-            value: nativePrice
-        });
-
-        // Show pending status
-        document.getElementById('mintStatus').innerHTML = `
-            <div class="mt-4 p-4 bg-blue-100 rounded">
-                <p>Minting in progress...</p>
-                <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
-            </div>
-        `;
-
-        // Wait for confirmation
-        const receipt = await tx.wait();
-        
-        if (receipt.status === 1) {
-            document.getElementById('mintStatus').innerHTML = `
-                <div class="mt-4 p-4 bg-green-100 rounded">
-                    <p>NFT minted successfully!</p>
-                    <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
-                </div>
-            `;
-
-            // Refresh NFT contracts display
-            await loadRegisteredNFTContracts();
-        } else {
-            throw new Error('Transaction failed');
-        }
-    } catch (error) {
-        console.error('Mint NFT error:', error);
-        document.getElementById('mintStatus').innerHTML = `
-            <div class="mt-4 p-4 bg-red-100 rounded">
-                <p>Failed to mint NFT: ${error.message}</p>
-            </div>
-        `;
-    }
-}
-```
-
-
-现在让我修改创建英雄的逻辑，确保在创建英雄之前验证用户拥有已注册的 NFT：
-
-```html:client/src/pages/hero-test.html
-async function createNewHero() {
-    try {
-        // Validate input
-        const name = document.getElementById('heroName').value;
-        if (!name) {
-            throw new Error('Please enter hero name');
-        }
-        const race = document.getElementById('createRaceId').value;
-        const classId = document.getElementById('createClassId').value;
-        
-        // Verify contract is properly initialized
-        if (!heroContract.runner?.provider?.provider?.selectedAddress) {
-            console.log('Reconnecting contract with signer...');
-            const signer = await provider.getSigner();
-            heroContract = new ethers.Contract(
-                heroConfig.ethereum.contracts.hero,
-                heroAbi,
-                signer
-            );
-        }
-
-        // Get registered NFT contracts
-        const registeredNFTs = await heroContract.getRegisteredNFTs();
-        console.log('Registered NFTs:', registeredNFTs);
-
-        // Check if user owns any NFTs from registered contracts
-        let userNFTs = [];
-        for (const nftAddress of registeredNFTs) {
-            const nftContract = new ethers.Contract(
-                nftAddress,
-                heroNFTAbi,
-                provider
-            );
-            
-            const balance = await nftContract.balanceOf(userAddress);
-            if (balance > 0) {
-                // Get all token IDs owned by user
-                for (let i = 0; i < balance; i++) {
-                    const tokenId = await nftContract.tokenOfOwnerByIndex(userAddress, i);
-                    userNFTs.push({
-                        contract: nftAddress,
-                        tokenId: tokenId
-                    });
-                }
-            }
-        }
-
-        if (userNFTs.length === 0) {
-            throw new Error('You need to own an NFT from a registered contract to create a hero');
-        }
-
-        // Use the first available NFT
-        const nftToUse = userNFTs[0];
-        console.log('Using NFT for hero creation:', nftToUse);
-
-        // Send transaction
-        const tx = await heroContract.createHero(
-            nftToUse.contract,  // NFT contract address
-            nftToUse.tokenId,   // NFT token ID
-            name,
-            race,
-            classId,
-            {
-                gasLimit: 500000
-            }
-        );
-        
-        console.log('Transaction sent:', tx);
-        
-        document.getElementById('createResult').innerHTML = `
-            <div class="mt-4 p-4 bg-green-100 rounded">
-                <p>Transaction sent! Hash: ${tx.hash}</p>
-                <p>Waiting for confirmation...</p>
-                <p>Using NFT Contract: ${nftToUse.contract}</p>
-                <p>Token ID: ${nftToUse.tokenId.toString()}</p>
-            </div>
-        `;
-        
-        // Wait for confirmation
-        const receipt = await tx.wait();
-        console.log('Transaction receipt:', receipt);
-        
-        if (receipt.status === 0) {
-            throw new Error('Transaction failed');
-        }
-        
-        // Find event in logs
-        const event = receipt.logs.find(log => {
-            try {
-                const parsed = heroContract.interface.parseLog(log);
-                return parsed.name === 'HeroCreated';
-            } catch (e) {
-                return false;
-            }
-        });
-
-        if (event) {
-            const parsedEvent = heroContract.interface.parseLog(event);
-            
-            document.getElementById('createResult').innerHTML = `
-                <div class="mt-4 p-4 bg-green-100 rounded">
-                    <p>Hero created successfully!</p>
-                    <p>NFT Contract: ${nftToUse.contract}</p>
-                    <p>Token ID: ${nftToUse.tokenId.toString()}</p>
-                    <p>Transaction: <a href="https://sepolia-optimism.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-600 hover:text-blue-800">View on Etherscan</a></p>
-                </div>
-            `;
-        } else {
-            throw new Error('HeroCreated event not found in transaction logs');
-        }
-    } catch (error) {
-        console.error('Create hero failure: ', error);
-        
-        // Parse error message
-        let errorMessage = error.message;
-        if (error.data) {
-            errorMessage += `\nError data: ${JSON.stringify(error.data)}`;
-        }
-        if (error.transaction) {
-            errorMessage += `\nTransaction: ${JSON.stringify(error.transaction)}`;
-        }
-        
-        document.getElementById('createResult').innerHTML = `
-            <div class="mt-4 p-4 bg-red-100 rounded">
-                <p>Failed to create hero:</p>
-                <pre class="mt-2 text-sm text-red-600 whitespace-pre-wrap">${errorMessage}</pre>
-            </div>
-        `;
-    }
-}
-```
-
-
-现在我还需要在页面中添加一个区域来显示铸造 NFT 的状态：
-
-```html:client/src/pages/hero-test.html
-<!-- NFT 区域 -->
-                <div class="bg-white rounded-lg shadow p-4">
-                    <h2 class="text-lg font-semibold mb-2">Hero NFT Contracts</h2>
-                    <div class="space-y-2">
-                        <div id="nftContractsStatus" class="text-sm text-gray-500">Loading registered NFT contracts...</div>
-                        <div id="mintStatus"></div>
-                    </div>
-                </div>
-
-                // ... existing code ...
-```
-
-
-我已经完成了所有必要的修改。现在页面的功能如下：
 
 1. NFT 合约显示区域：
    - 显示所有已注册的 NFT 合约列表
@@ -455,6 +152,60 @@ async function createNewHero() {
 4. 使用已有的 NFT 创建英雄
 
 需要注意的是，每个 NFT 只能用于创建一个英雄，系统会自动选择用户拥有的第一个可用 NFT。如果需要创建多个英雄，用户需要拥有多个 NFT。
+
+
+添加了一个新的 Hero Records 区域，它会显示：
+总英雄数量
+前10个英雄的详细信息，包括：
+英雄名称
+种族
+等级
+NFT 合约地址（带 Etherscan 链接）
+Token ID
+这个区域会在以下情况下自动更新：
+页面初始加载时（如果钱包已连接）
+2. 连接钱包时
+创建新英雄后
+该实现通过遍历所有已注册的 NFT 合约，并检查每个合约的前10个 token ID 来获取英雄信息。如果某个 token ID 不存在英雄，会自动跳过。
+
+列出所有功能和描述：
+常量和状态变量：
+VERSION: 合约版本号
+MAX_DAILY_ENERGY: 每日最大能量值
+MAX_DAILY_POINTS: 每日最大积分
+ENERGY_RECOVERY_RATE: 能量恢复速率
+officialNFT: 官方 NFT 合约地址
+英雄相关功能：
+createHero: 创建英雄，需要指定 NFT 合约、代币 ID、名称、种族和性别
+getHeroInfo: 获取英雄基本信息，包括名称、种族、性别、等级、能量和每日积分
+getHeroSkills: 获取英雄技能等级
+getHeroEquipment: 获取英雄装备信息
+updateSkill: 更新英雄技能等级
+
+updateEquipment: 更新英雄装备
+consumeEnergy: 消耗英雄能量
+addDailyPoints: 增加每日积分
+3. NFT 合约管理：
+registerNFT: 注册 NFT 合约
+isRegistered: 检查 NFT 合约是否已注册
+getRegisteredNFTs: 获取所有已注册的 NFT 合约列表
+getRegisteredNFTCount: 获取已注册的 NFT 合约数量
+
+HeroV5 改造成了一个独立的合约，它具有以下特点：
+不再继承 HeroV4，而是复制了所有必要的功能
+保持了所有原有的数据结构和函数
+添加了新的英雄计数功能：
+heroCount 映射：记录每个 NFT 合约的英雄数量
+totalHeroCount：记录总英雄数量
+在 createHero 函数中增加计数逻辑
+新增 getHeroCount 函数用于查询特定 NFT 合约的英雄数量
+主要改动包括：
+移除了对 HeroV4 的继承
+将 initialize 函数改为 initializer 而不是 reinitializer
+简化了 _authorizeUpgrade 函数的 override
+移除了 createHero 函数的 override 修饰符
+复制了所有必要的数据结构、事件和函数定义
+
 
 
 ### GameX: Create, Save and Load

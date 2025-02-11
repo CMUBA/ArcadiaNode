@@ -39,7 +39,7 @@ contract HeroNFT is
         address defaultToken,
         uint256 nativePrice,
         uint256 tokenPrice
-    ) public reinitializer(2) {
+    ) public initializer {
         __ERC721_init("Hero NFT", "HERO");
         __Ownable_init();
         __Pausable_init();

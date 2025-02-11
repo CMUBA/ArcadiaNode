@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import "../src/core/Hero.sol";
 import "../src/core/HeroNFT.sol";
 import "../src/core/HeroMetadata.sol";
-import "../src/proxy/ProxyAdmin.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract CheckOwnershipScript is Script {
@@ -32,9 +32,9 @@ contract CheckOwnershipScript is Script {
         console.log("HeroMetadata Contract Owner:", metadata.owner());
         
         // 检查当前实现合约地址
-        address heroImpl = admin.getProxyImplementation(ITransparentUpgradeableProxy(heroProxy));
-        address nftImpl = admin.getProxyImplementation(ITransparentUpgradeableProxy(heroNFTProxy));
-        address metadataImpl = admin.getProxyImplementation(ITransparentUpgradeableProxy(heroMetadataProxy));
+        address heroImpl = admin.getProxyImplementation(TransparentUpgradeableProxy(payable(heroProxy)));
+        address nftImpl = admin.getProxyImplementation(TransparentUpgradeableProxy(payable(heroNFTProxy)));
+        address metadataImpl = admin.getProxyImplementation(TransparentUpgradeableProxy(payable(heroMetadataProxy)));
         
         console.log("\nCurrent Implementation Addresses:");
         console.log("Hero Implementation:", heroImpl);
