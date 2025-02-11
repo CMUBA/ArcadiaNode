@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-interface IHeroNFT is IERC721Upgradeable {
+interface IHeroNFT is IERC721 {
     // 价格配置结构
     struct PriceConfig {
         address tokenAddress;  // 支付代币地址

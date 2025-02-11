@@ -8,6 +8,14 @@ import "../src/core/HeroMetadata.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+interface ITransparentUpgradeableProxy {
+    function admin() external returns (address);
+    function implementation() external returns (address);
+    function changeAdmin(address newAdmin) external;
+    function upgradeTo(address newImplementation) external;
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
+}
+
 contract CheckOwnershipScript is Script {
     function run() external view {
         address proxyAdmin = vm.envAddress("VITE_PROXY_ADMIN");
@@ -32,9 +40,9 @@ contract CheckOwnershipScript is Script {
         console.log("HeroMetadata Contract Owner:", metadata.owner());
         
         // 检查当前实现合约地址
-        address heroImpl = admin.getProxyImplementation(TransparentUpgradeableProxy(payable(heroProxy)));
-        address nftImpl = admin.getProxyImplementation(TransparentUpgradeableProxy(payable(heroNFTProxy)));
-        address metadataImpl = admin.getProxyImplementation(TransparentUpgradeableProxy(payable(heroMetadataProxy)));
+        address heroImpl = admin.getProxyImplementation(ITransparentUpgradeableProxy(heroProxy));
+        address nftImpl = admin.getProxyImplementation(ITransparentUpgradeableProxy(heroNFTProxy));
+        address metadataImpl = admin.getProxyImplementation(ITransparentUpgradeableProxy(heroMetadataProxy));
         
         console.log("\nCurrent Implementation Addresses:");
         console.log("Hero Implementation:", heroImpl);

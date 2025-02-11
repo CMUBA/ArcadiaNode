@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-contract HeroV5 {
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract HeroV5 is Ownable {
     // 状态变量
-    address public owner;                          // 合约所有者
     address public officialNFT;                    // 官方NFT合约地址
     mapping(address => bool) public isRegistered;  // NFT注册状态
     address[] private registeredNFTs;              // 已注册的NFT列表
@@ -60,23 +61,8 @@ contract HeroV5 {
     event HeroEquipmentUpdated(address indexed nftContract, uint256 indexed tokenId, uint8 slot, address equipContract, uint256 equipTokenId);
     event HeroEnergyUpdated(address indexed nftContract, uint256 indexed tokenId, uint256 newEnergy);
     event HeroPointsUpdated(address indexed nftContract, uint256 indexed tokenId, uint256 newPoints);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    constructor() {
-        owner = msg.sender;
-        emit OwnershipTransferred(address(0), msg.sender);
-    }
-
-    modifier onlyOwner() {
-        require(owner == msg.sender, "Caller is not the owner");
-        _;
-    }
-
-    function transferOwnership(address newOwner) public onlyOwner {
-        require(newOwner != address(0), "New owner is the zero address");
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
-    }
+    constructor() Ownable() {}
 
     /**
      * @dev 注册NFT合约

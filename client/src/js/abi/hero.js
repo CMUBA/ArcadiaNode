@@ -3,27 +3,33 @@ export const heroAbi = [
         "inputs": [
             {
                 "internalType": "address",
-                "name": "nftContract",
+                "name": "heroNFT",
                 "type": "address"
             },
+            {
+                "internalType": "address",
+                "name": "heroMetadata",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [
             {
                 "internalType": "uint256",
                 "name": "tokenId",
                 "type": "uint256"
             },
             {
-                "internalType": "string",
-                "name": "name",
-                "type": "string"
-            },
-            {
-                "internalType": "enum HeroV4.Race",
-                "name": "race",
+                "internalType": "uint8",
+                "name": "raceId",
                 "type": "uint8"
             },
             {
-                "internalType": "enum HeroV4.Gender",
-                "name": "gender",
+                "internalType": "uint8",
+                "name": "classId",
                 "type": "uint8"
             }
         ],
@@ -33,145 +39,66 @@ export const heroAbi = [
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "getRegisteredNFTs",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "",
-                "type": "address[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
         "inputs": [
-            {
-                "internalType": "address",
-                "name": "nftContract",
-                "type": "address"
-            },
             {
                 "internalType": "uint256",
                 "name": "tokenId",
                 "type": "uint256"
             }
         ],
-        "name": "getHeroInfo",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "name",
-                "type": "string"
-            },
-            {
-                "internalType": "enum HeroV4.Race",
-                "name": "race",
-                "type": "uint8"
-            },
-            {
-                "internalType": "enum HeroV4.Gender",
-                "name": "gender",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint256",
-                "name": "level",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "energy",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "dailyPoints",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "nftContract",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "tokenId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "enum HeroV4.Season",
-                "name": "season",
-                "type": "uint8"
-            }
-        ],
-        "name": "getHeroSkills",
-        "outputs": [
-            {
-                "internalType": "uint8[5]",
-                "name": "",
-                "type": "uint8[5]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "nftContract",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "tokenId",
-                "type": "uint256"
-            }
-        ],
-        "name": "getHeroEquipment",
+        "name": "getHero",
         "outputs": [
             {
                 "components": [
                     {
-                        "internalType": "address",
-                        "name": "contractAddress",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "tokenId",
-                        "type": "uint256"
+                        "internalType": "uint8",
+                        "name": "raceId",
+                        "type": "uint8"
                     },
                     {
                         "internalType": "uint8",
-                        "name": "slot",
+                        "name": "classId",
                         "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "level",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint16[4]",
+                        "name": "attributes",
+                        "type": "uint16[4]"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "experience",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "energy",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "lastEnergyUpdateTime",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "skillPoints",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "attributePoints",
+                        "type": "uint16"
                     }
                 ],
-                "internalType": "struct HeroV4.Equipment[]",
+                "internalType": "struct IHero.Hero",
                 "name": "",
-                "type": "tuple[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "officialNFT",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
+                "type": "tuple"
             }
         ],
         "stateMutability": "view",
@@ -180,45 +107,236 @@ export const heroAbi = [
     {
         "inputs": [
             {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "isRegistered",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "nftContract",
-                "type": "address"
-            },
-            {
-                "indexed": true,
                 "internalType": "uint256",
                 "name": "tokenId",
                 "type": "uint256"
             },
             {
-                "indexed": false,
-                "internalType": "string",
-                "name": "name",
-                "type": "string"
+                "internalType": "uint8",
+                "name": "seasonId",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint8",
+                "name": "skillId",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint8",
+                "name": "level",
+                "type": "uint8"
             }
         ],
-        "name": "HeroCreated",
-        "type": "event"
+        "name": "setSkill",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "seasonId",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint8",
+                "name": "skillId",
+                "type": "uint8"
+            }
+        ],
+        "name": "getSkill",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "attributeId",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint16",
+                "name": "value",
+                "type": "uint16"
+            }
+        ],
+        "name": "setAttribute",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "attributeId",
+                "type": "uint8"
+            }
+        ],
+        "name": "getAttribute",
+        "outputs": [
+            {
+                "internalType": "uint16",
+                "name": "",
+                "type": "uint16"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint16",
+                "name": "experience",
+                "type": "uint16"
+            }
+        ],
+        "name": "addExperience",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getExperience",
+        "outputs": [
+            {
+                "internalType": "uint16",
+                "name": "",
+                "type": "uint16"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getLevel",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getEnergy",
+        "outputs": [
+            {
+                "internalType": "uint16",
+                "name": "",
+                "type": "uint16"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint16",
+                "name": "energy",
+                "type": "uint16"
+            }
+        ],
+        "name": "consumeEnergy",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getSkillPoints",
+        "outputs": [
+            {
+                "internalType": "uint16",
+                "name": "",
+                "type": "uint16"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getAttributePoints",
+        "outputs": [
+            {
+                "internalType": "uint16",
+                "name": "",
+                "type": "uint16"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
     }
 ]; 

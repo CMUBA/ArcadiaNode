@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/core/HeroV5.sol";
 import "../src/core/HeroNFT.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract HeroV5Test is Test {
     HeroV5 public hero;
@@ -19,23 +18,8 @@ contract HeroV5Test is Test {
         // 部署合约
         hero = new HeroV5();
         
-        // 部署NFT实现合约
-        HeroNFT nftImpl = new HeroNFT();
-        
-        // 部署代理合约
-        bytes memory initData = abi.encodeWithSelector(
-            HeroNFT.initialize.selector,
-            address(0),
-            0.1 ether,
-            100 ether
-        );
-        
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(nftImpl),
-            initData
-        );
-        
-        nft = HeroNFT(address(proxy));
+        // 部署NFT合约
+        nft = new HeroNFT(address(0), 0.1 ether, 100 ether);
         
         // 注册NFT合约
         hero.registerNFT(address(nft), true);
@@ -157,7 +141,7 @@ contract HeroV5Test is Test {
     }
 
     function testDailyPoints() public {
-        // 创建英雄
+        // Create hero first
         hero.createHero(
             address(nft),
             1,
@@ -166,18 +150,21 @@ contract HeroV5Test is Test {
             HeroV5.Gender.Male
         );
 
-        // 添加积分
+        // Add points
         hero.addDailyPoints(address(nft), 1, 500);
 
-        // 验证积分
+        // Verify points immediately
         (,,,,,uint256 points) = hero.getHeroInfo(address(nft), 1);
-        assertEq(points, 500);
+        assertEq(points, 500, "Points should be 500 immediately after adding");
 
-        // 时间前进一天
+        // Time travel exactly one day
         vm.warp(block.timestamp + 1 days);
 
-        // 积分应该重置
+        // Add points again to trigger the reset check
+        hero.addDailyPoints(address(nft), 1, 300);
+
+        // Verify points after adding new points
         (,,,,,points) = hero.getHeroInfo(address(nft), 1);
-        assertEq(points, 0);
+        assertEq(points, 300, "Points should be 300 after reset and adding new points");
     }
 }

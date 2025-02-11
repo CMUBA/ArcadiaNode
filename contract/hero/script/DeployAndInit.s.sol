@@ -26,46 +26,35 @@ contract DeployAndInitScript is Script {
         proxyAdmin = new ProxyAdmin();
         console.log("ProxyAdmin deployed to:", address(proxyAdmin));
 
-        heroNFTImpl = new HeroNFT();
-        heroImpl = new Hero();
-        heroMetadataImpl = new HeroMetadata();
-
-        // 2. Deploy and initialize proxies
-        // Deploy HeroNFT Proxy
-        address defaultToken = address(0); // 使用零地址作为默认代币
-        uint256 nativePrice = 0.01 ether;  // 设置默认原生代币价格
-        uint256 tokenPrice = 100 * 10**18; // 设置默认代币价格
+        // Deploy implementation contracts with required parameters
+        address defaultToken = address(0); // Use zero address as default token
+        uint256 nativePrice = 0.01 ether;  // Set default native token price
+        uint256 tokenPrice = 100 * 10**18; // Set default token price
         
-        bytes memory heroNFTData = abi.encodeWithSelector(
-            HeroNFT.initialize.selector,
+        heroNFTImpl = new HeroNFT(
             defaultToken,
             nativePrice,
             tokenPrice
         );
+        heroImpl = new Hero();
+        heroMetadataImpl = new HeroMetadata();
+
+        // Deploy proxies without initialization
         heroNFTProxy = new HeroProxy(
             address(heroNFTImpl),
-            heroNFTData
+            ""  // Empty data since we don't need initialization
         );
         console.log("HeroNFT Proxy deployed to:", address(heroNFTProxy));
 
-        // Deploy Hero Proxy
-        bytes memory heroData = abi.encodeWithSelector(
-            Hero.initialize.selector,
-            address(heroNFTProxy)
-        );
         heroProxy = new HeroProxy(
             address(heroImpl),
-            heroData
+            ""  // Empty data since we don't need initialization
         );
         console.log("Hero Proxy deployed to:", address(heroProxy));
 
-        // Deploy HeroMetadata Proxy
-        bytes memory heroMetadataData = abi.encodeWithSelector(
-            HeroMetadata.initialize.selector
-        );
         heroMetadataProxy = new HeroProxy(
             address(heroMetadataImpl),
-            heroMetadataData
+            ""  // Empty data since we don't need initialization
         );
         console.log("HeroMetadata Proxy deployed to:", address(heroMetadataProxy));
 

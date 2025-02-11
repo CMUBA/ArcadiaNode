@@ -3,42 +3,18 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {HeroMetadata} from "../src/core/HeroMetadata.sol";
-import {HeroProxy} from "../src/proxy/HeroProxy.sol";
-import {ProxyAdmin} from "../src/proxy/ProxyAdmin.sol";
 import {IHeroMetadata} from "../src/interfaces/IHeroMetadata.sol";
 
 contract HeroMetadataTest is Test {
     HeroMetadata public heroMetadata;
-    HeroMetadata public implementation;
-    ProxyAdmin public proxyAdmin;
     address public owner;
 
     function setUp() public {
         owner = address(this);
         
-        // 部署合约
+        // Deploy contract
         vm.startPrank(owner);
-        
-        // 部署代理管理合约
-        proxyAdmin = new ProxyAdmin();
-        
-        // 部署实现合约
-        implementation = new HeroMetadata();
-        
-        // 准备初始化数据
-        bytes memory initData = abi.encodeWithSelector(
-            HeroMetadata.initialize.selector
-        );
-        
-        // 部署代理合约
-        HeroProxy proxy = new HeroProxy(
-            address(implementation),
-            initData
-        );
-        
-        // 将代理合约包装为 HeroMetadata
-        heroMetadata = HeroMetadata(address(proxy));
-        
+        heroMetadata = new HeroMetadata();
         vm.stopPrank();
     }
 

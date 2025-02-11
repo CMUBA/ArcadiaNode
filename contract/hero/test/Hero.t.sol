@@ -19,61 +19,65 @@ contract HeroTest is Test {
     function setUp() public {
         owner = address(this);
         
+        // Deploy contracts
+        vm.startPrank(owner);
+        
         // Deploy payment token
         paymentToken = new MockERC20("Test Token", "TEST");
         
-        // Deploy HeroNFT with proxy
-        HeroNFT nftImpl = new HeroNFT();
-        bytes memory nftInitData = abi.encodeWithSelector(
-            HeroNFT.initialize.selector,
-            address(paymentToken),
-            NATIVE_PRICE,
-            TOKEN_PRICE
+        // Deploy HeroNFT
+        heroNFT = new HeroNFT(
+            address(0),  // default token
+            0.1 ether,  // native price
+            100 ether   // token price
         );
-        HeroProxy nftProxy = new HeroProxy(
-            address(nftImpl),
-            nftInitData
-        );
-        heroNFT = HeroNFT(address(nftProxy));
         
-        // Deploy Hero with proxy
-        Hero heroImpl = new Hero();
-        bytes memory heroInitData = abi.encodeWithSelector(
-            Hero.initialize.selector
-        );
-        HeroProxy heroProxy = new HeroProxy(
-            address(heroImpl),
-            heroInitData
-        );
-        hero = Hero(address(heroProxy));
+        // Deploy Hero and transfer ownership
+        hero = new Hero();
         
-        // Register HeroNFT as official NFT
-        hero.registerNFT(address(heroNFT), true);
+        vm.stopPrank();
     }
     
     function testNFTRegistration() public {
+        vm.startPrank(owner);
+        hero.registerNFT(address(heroNFT), true);
+        vm.stopPrank();
+        
         assertTrue(hero.isNFTRegistered(address(heroNFT)));
         assertEq(hero.getOfficialNFT(), address(heroNFT));
     }
     
     function testRegisterCommunityNFT() public {
+        // First register the official NFT
+        vm.startPrank(owner);
+        hero.registerNFT(address(heroNFT), true);
+        
+        // Then register a community NFT
         address communityNFT = address(0x1234);
         hero.registerNFT(communityNFT, false);
+        vm.stopPrank();
         
         assertTrue(hero.isNFTRegistered(communityNFT));
         assertNotEq(hero.getOfficialNFT(), communityNFT);
+        assertEq(hero.getOfficialNFT(), address(heroNFT));
     }
     
     function testUnregisterNFT() public {
         address communityNFT = address(0x1234);
+        
+        vm.startPrank(owner);
         hero.registerNFT(communityNFT, false);
         hero.unregisterNFT(communityNFT);
+        vm.stopPrank();
         
         assertFalse(hero.isNFTRegistered(communityNFT));
     }
     
     function testCannotUnregisterOfficialNFT() public {
+        vm.startPrank(owner);
+        hero.registerNFT(address(heroNFT), true);
         vm.expectRevert("Cannot unregister official NFT");
         hero.unregisterNFT(address(heroNFT));
+        vm.stopPrank();
     }
 }

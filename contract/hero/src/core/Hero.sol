@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Hero is Initializable, OwnableUpgradeable {
+contract Hero is Ownable {
     // 状态变量
     address public officialNFT;                    // 官方NFT合约地址
     mapping(address => bool) public isRegistered;  // NFT注册状态
@@ -15,14 +14,7 @@ contract Hero is Initializable, OwnableUpgradeable {
     event NFTRegistered(address indexed nftContract, bool isOfficial);
     event NFTUnregistered(address indexed nftContract);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize() public initializer {
-        __Ownable_init();
-    }
+    constructor() Ownable() {}
 
     /**
      * @dev 注册NFT合约

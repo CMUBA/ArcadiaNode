@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Script.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/transparent/ITransparentUpgradeableProxy.sol";
 import "../src/core/Hero.sol";
 
 contract CheckPermissionsScript is Script {
@@ -29,7 +30,7 @@ contract CheckPermissionsScript is Script {
         
         // 2. 检查代理合约的管理员
         ProxyAdmin admin = ProxyAdmin(proxyAdmin);
-        try admin.getProxyAdmin(TransparentUpgradeableProxy(payable(heroProxy))) returns (address proxyAdminAddr) {
+        try admin.getProxyAdmin(ITransparentUpgradeableProxy(heroProxy)) returns (address proxyAdminAddr) {
             console.log("\nProxy admin address:", proxyAdminAddr);
             console.log("Is ProxyAdmin the admin?", proxyAdminAddr == proxyAdmin);
         } catch {
@@ -37,7 +38,7 @@ contract CheckPermissionsScript is Script {
         }
         
         // 3. 检查代理合约的实现
-        try admin.getProxyImplementation(TransparentUpgradeableProxy(payable(heroProxy))) returns (address implementation) {
+        try admin.getProxyImplementation(ITransparentUpgradeableProxy(heroProxy)) returns (address implementation) {
             console.log("\nProxy implementation:", implementation);
         } catch {
             console.log("\nFailed to get proxy implementation");
