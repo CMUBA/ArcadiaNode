@@ -9,6 +9,12 @@ let signer;
 let heroNFTContract;
 let heroMetadataContract;
 let heroContract;
+let connectedAddress;
+
+// 移除环境变量引用，直接使用 heroConfig
+const heroContractAddress = heroConfig.ethereum.contracts.hero;
+const nftContractAddress = heroConfig.ethereum.contracts.heroNFT;
+const metadataContractAddress = heroConfig.ethereum.contracts.heroMetadata;
 
 // Event logging
 function logEvent(message) {
@@ -19,377 +25,317 @@ function logEvent(message) {
     eventLog.scrollTop = eventLog.scrollHeight;
 }
 
+// Utility Functions
+function showMessage(message) {
+    console.log(message);
+    // Add UI notification if needed
+}
+
+function showError(message, error) {
+    console.error(message, error);
+    // Add UI error notification if needed
+}
+
 // Wallet connection
 async function connectWallet() {
     try {
-        if (typeof window.ethereum === 'undefined') {
+        if (!window.ethereum) {
             throw new Error('MetaMask is not installed');
         }
 
-        // Request account access
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        
-        // Setup ethers
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
-        
-        // Initialize contracts
-        heroNFTContract = new ethers.Contract(heroConfig.heroNFT, heroNFTAbi, signer);
-        heroMetadataContract = new ethers.Contract(heroConfig.heroMetadata, heroMetadataAbi, signer);
-        heroContract = new ethers.Contract(heroConfig.hero, heroAbi, signer);
+        connectedAddress = await signer.getAddress();
 
-        // Update UI
-        document.getElementById('walletAddress').textContent = accounts[0];
-        document.getElementById('connectWallet').textContent = 'Connected';
+        // Initialize contracts
+        heroNFTContract = new ethers.Contract(nftContractAddress, heroNFTAbi, signer);
+        heroMetadataContract = new ethers.Contract(metadataContractAddress, heroMetadataAbi, signer);
+        heroContract = new ethers.Contract(heroContractAddress, heroAbi, signer);
+
+        document.getElementById('walletAddress').textContent = connectedAddress;
+        document.getElementById('connectedWallet').classList.remove('hidden');
         
-        logEvent('Wallet connected successfully');
-        
-        // Enable all buttons
-        const buttons = document.querySelectorAll('.requires-wallet');
-        for (const button of buttons) {
+        // Enable wallet-required buttons
+        document.querySelectorAll('.requires-wallet').forEach(button => {
             button.disabled = false;
-        }
+        });
+
+        showMessage('Wallet connected successfully');
     } catch (error) {
-        logEvent(`Error connecting wallet: ${error.message}`);
+        showError('Failed to connect wallet:', error);
     }
 }
 
 // NFT Management Functions
-async function mintNFT() {
+async function mintNFT(useToken = false) {
+    const tokenId = document.getElementById('mintTokenId').value;
+    
     try {
-        const tokenId = document.getElementById('mintTokenId').value;
-        const tx = await heroNFTContract.mint(signer.address, tokenId);
+        let tx;
+        if (useToken) {
+            const defaultToken = await heroNFTContract.getDefaultPaymentToken();
+            tx = await heroNFTContract.mintWithToken(connectedAddress, tokenId, defaultToken);
+        } else {
+            const price = await heroNFTContract.getDefaultNativePrice();
+            tx = await heroNFTContract.mint(connectedAddress, tokenId, { value: price });
+        }
         await tx.wait();
-        logEvent(`NFT minted successfully: Token ID ${tokenId}`);
+        showMessage('NFT minted successfully');
     } catch (error) {
-        logEvent(`Error minting NFT: ${error.message}`);
+        showError('Failed to mint NFT:', error);
     }
 }
 
-async function batchMintNFT() {
+async function batchMintNFT(useToken = false) {
+    const tokenIds = document.getElementById('batchTokenIds').value.split(',').map(id => id.trim());
+    
     try {
-        const tokenIds = document.getElementById('batchMintTokenIds').value.split(',').map(id => id.trim());
-        const tx = await heroNFTContract.mintBatch(signer.address, tokenIds);
+        let tx;
+        if (useToken) {
+            const defaultToken = await heroNFTContract.getDefaultPaymentToken();
+            tx = await heroNFTContract.mintBatchWithToken(connectedAddress, tokenIds, defaultToken);
+        } else {
+            const price = await heroNFTContract.getDefaultNativePrice();
+            const totalPrice = price * BigInt(tokenIds.length);
+            tx = await heroNFTContract.mintBatch(connectedAddress, tokenIds, { value: totalPrice });
+        }
         await tx.wait();
-        logEvent(`Batch NFT minting successful: Token IDs ${tokenIds.join(', ')}`);
+        showMessage('Batch NFT minting successful');
     } catch (error) {
-        logEvent(`Error batch minting NFTs: ${error.message}`);
-    }
-}
-
-async function mintWithToken() {
-    try {
-        const tokenId = document.getElementById('mintWithTokenId').value;
-        const paymentToken = document.getElementById('mintPaymentToken').value;
-        const tx = await heroNFTContract.mintWithToken(signer.address, tokenId, paymentToken);
-        await tx.wait();
-        logEvent(`NFT minted with token successfully: Token ID ${tokenId}`);
-    } catch (error) {
-        logEvent(`Error minting NFT with token: ${error.message}`);
+        showError('Failed to mint batch NFTs:', error);
     }
 }
 
 async function burnNFT() {
+    const tokenId = document.getElementById('burnTokenId').value;
+    
     try {
-        const tokenId = document.getElementById('burnTokenId').value;
         const tx = await heroNFTContract.burn(tokenId);
         await tx.wait();
-        logEvent(`NFT burned successfully: Token ID ${tokenId}`);
+        showMessage('NFT burned successfully');
     } catch (error) {
-        logEvent(`Error burning NFT: ${error.message}`);
+        showError('Failed to burn NFT:', error);
     }
 }
 
-async function setPrice() {
+// Price Configuration Functions
+async function setPriceConfig() {
+    const tokenId = document.getElementById('priceConfigTokenId').value;
+    const tokenAddress = document.getElementById('priceConfigTokenAddress').value;
+    const price = document.getElementById('priceConfigAmount').value;
+    
     try {
-        const token = document.getElementById('priceToken').value;
-        const price = document.getElementById('tokenPrice').value;
-        const tx = await heroNFTContract.setPrice(token, price);
+        const tx = await heroNFTContract.setPriceConfig(tokenId, tokenAddress, price);
         await tx.wait();
-        logEvent(`Price set successfully: ${price} for token ${token}`);
+        showMessage('Price configuration updated successfully');
     } catch (error) {
-        logEvent(`Error setting price: ${error.message}`);
+        showError('Failed to set price config:', error);
     }
 }
 
-async function addPaymentToken() {
+async function getPriceConfig() {
+    const tokenId = document.getElementById('priceConfigTokenId').value;
+    
     try {
-        const token = document.getElementById('paymentTokenAddress').value;
-        const tx = await heroNFTContract.addPaymentToken(token);
-        await tx.wait();
-        logEvent(`Payment token added successfully: ${token}`);
+        const config = await heroNFTContract.getPriceConfig(tokenId);
+        showMessage(`Price Config: ${JSON.stringify(config)}`);
     } catch (error) {
-        logEvent(`Error adding payment token: ${error.message}`);
-    }
-}
-
-async function removePaymentToken() {
-    try {
-        const token = document.getElementById('paymentTokenAddress').value;
-        const tx = await heroNFTContract.removePaymentToken(token);
-        await tx.wait();
-        logEvent(`Payment token removed successfully: ${token}`);
-    } catch (error) {
-        logEvent(`Error removing payment token: ${error.message}`);
+        showError('Failed to get price config:', error);
     }
 }
 
 // Hero Management Functions
 async function createHero() {
+    const name = document.getElementById('heroName').value;
+    const race = document.getElementById('heroRace').value;
+    const gender = document.getElementById('heroGender').value;
+    const tokenId = document.getElementById('heroTokenId').value;
+    
     try {
-        const tokenId = document.getElementById('createHeroTokenId').value;
-        const raceId = document.getElementById('createHeroRaceId').value;
-        const classId = document.getElementById('createHeroClassId').value;
-        const tx = await heroContract.createHero(tokenId, raceId, classId);
+        const tx = await heroContract.createHero(nftContractAddress, tokenId, name, race, gender);
         await tx.wait();
-        logEvent(`Hero created successfully: Token ID ${tokenId}`);
+        showMessage('Hero created successfully');
     } catch (error) {
-        logEvent(`Error creating hero: ${error.message}`);
+        showError('Failed to create hero:', error);
     }
 }
 
-async function setHeroSkill() {
+async function getHeroInfo() {
+    const tokenId = document.getElementById('heroTokenId').value;
+    
     try {
-        const tokenId = document.getElementById('heroSkillTokenId').value;
-        const seasonId = document.getElementById('heroSkillSeasonId').value;
-        const skillId = document.getElementById('heroSkillId').value;
-        const level = document.getElementById('heroSkillLevel').value;
-        const tx = await heroContract.setSkill(tokenId, seasonId, skillId, level);
+        const info = await heroContract.getHeroInfo(nftContractAddress, tokenId);
+        document.getElementById('heroInfo').textContent = JSON.stringify(info, null, 2);
+    } catch (error) {
+        showError('Failed to get hero info:', error);
+    }
+}
+
+async function updateHeroSkill() {
+    const tokenId = document.getElementById('updateSkillTokenId').value;
+    const season = document.getElementById('updateSkillSeason').value;
+    const skillIndex = document.getElementById('updateSkillIndex').value;
+    const level = document.getElementById('updateSkillLevel').value;
+    
+    try {
+        const tx = await heroContract.updateSkill(nftContractAddress, tokenId, season, skillIndex, level);
         await tx.wait();
-        logEvent(`Hero skill set successfully: Token ID ${tokenId}, Skill ID ${skillId}`);
+        showMessage('Hero skill updated successfully');
     } catch (error) {
-        logEvent(`Error setting hero skill: ${error.message}`);
-    }
-}
-
-async function getHeroSkill() {
-    try {
-        const tokenId = document.getElementById('heroSkillTokenId').value;
-        const seasonId = document.getElementById('heroSkillSeasonId').value;
-        const skillId = document.getElementById('heroSkillId').value;
-        const level = await heroContract.getSkill(tokenId, seasonId, skillId);
-        logEvent(`Hero skill level: ${level}`);
-    } catch (error) {
-        logEvent(`Error getting hero skill: ${error.message}`);
-    }
-}
-
-async function setHeroAttribute() {
-    try {
-        const tokenId = document.getElementById('heroAttributeTokenId').value;
-        const attributeId = document.getElementById('heroAttributeId').value;
-        const value = document.getElementById('heroAttributeValue').value;
-        const tx = await heroContract.setAttribute(tokenId, attributeId, value);
-        await tx.wait();
-        logEvent(`Hero attribute set successfully: Token ID ${tokenId}, Attribute ID ${attributeId}`);
-    } catch (error) {
-        logEvent(`Error setting hero attribute: ${error.message}`);
-    }
-}
-
-async function getHeroAttribute() {
-    try {
-        const tokenId = document.getElementById('heroAttributeTokenId').value;
-        const attributeId = document.getElementById('heroAttributeId').value;
-        const value = await heroContract.getAttribute(tokenId, attributeId);
-        logEvent(`Hero attribute value: ${value}`);
-    } catch (error) {
-        logEvent(`Error getting hero attribute: ${error.message}`);
-    }
-}
-
-async function addHeroExp() {
-    try {
-        const tokenId = document.getElementById('heroExpTokenId').value;
-        const experience = document.getElementById('heroExpValue').value;
-        const tx = await heroContract.addExperience(tokenId, experience);
-        await tx.wait();
-        logEvent(`Hero experience added successfully: Token ID ${tokenId}, Experience ${experience}`);
-    } catch (error) {
-        logEvent(`Error adding hero experience: ${error.message}`);
-    }
-}
-
-async function getHeroExp() {
-    try {
-        const tokenId = document.getElementById('heroExpTokenId').value;
-        const experience = await heroContract.getExperience(tokenId);
-        logEvent(`Hero experience: ${experience}`);
-    } catch (error) {
-        logEvent(`Error getting hero experience: ${error.message}`);
-    }
-}
-
-async function getHeroLevel() {
-    try {
-        const tokenId = document.getElementById('heroExpTokenId').value;
-        const level = await heroContract.getLevel(tokenId);
-        logEvent(`Hero level: ${level}`);
-    } catch (error) {
-        logEvent(`Error getting hero level: ${error.message}`);
-    }
-}
-
-async function consumeHeroEnergy() {
-    try {
-        const tokenId = document.getElementById('heroEnergyTokenId').value;
-        const energy = document.getElementById('heroEnergyValue').value;
-        const tx = await heroContract.consumeEnergy(tokenId, energy);
-        await tx.wait();
-        logEvent(`Hero energy consumed successfully: Token ID ${tokenId}, Energy ${energy}`);
-    } catch (error) {
-        logEvent(`Error consuming hero energy: ${error.message}`);
-    }
-}
-
-async function getHeroEnergy() {
-    try {
-        const tokenId = document.getElementById('heroEnergyTokenId').value;
-        const energy = await heroContract.getEnergy(tokenId);
-        logEvent(`Hero energy: ${energy}`);
-    } catch (error) {
-        logEvent(`Error getting hero energy: ${error.message}`);
-    }
-}
-
-// Metadata Management Functions
-async function setSkillMetadata() {
-    try {
-        const seasonId = document.getElementById('skillSeasonId').value;
-        const skillId = document.getElementById('skillId').value;
-        const level = document.getElementById('skillLevel').value;
-        const name = document.getElementById('skillName').value;
-        const points = document.getElementById('skillPoints').value;
-        const tx = await heroMetadataContract.setSkill(seasonId, skillId, level, name, points, true);
-        await tx.wait();
-        logEvent(`Skill metadata set successfully: Season ${seasonId}, Skill ID ${skillId}`);
-    } catch (error) {
-        logEvent(`Error setting skill metadata: ${error.message}`);
-    }
-}
-
-async function getSkillMetadata() {
-    try {
-        const seasonId = document.getElementById('skillSeasonId').value;
-        const skillId = document.getElementById('skillId').value;
-        const level = document.getElementById('skillLevel').value;
-        const skill = await heroMetadataContract.getSkill(seasonId, skillId, level);
-        logEvent(`Skill metadata: ${JSON.stringify(skill)}`);
-    } catch (error) {
-        logEvent(`Error getting skill metadata: ${error.message}`);
-    }
-}
-
-async function setRaceMetadata() {
-    try {
-        const raceId = document.getElementById('raceId').value;
-        const baseAttributes = document.getElementById('raceBaseAttributes').value.split(',').map(attr => attr.trim());
-        const description = document.getElementById('raceDescription').value;
-        const tx = await heroMetadataContract.setRace(raceId, baseAttributes, description, true);
-        await tx.wait();
-        logEvent(`Race metadata set successfully: Race ID ${raceId}`);
-    } catch (error) {
-        logEvent(`Error setting race metadata: ${error.message}`);
-    }
-}
-
-async function getRaceMetadata() {
-    try {
-        const raceId = document.getElementById('raceId').value;
-        const race = await heroMetadataContract.getRace(raceId);
-        logEvent(`Race metadata: ${JSON.stringify(race)}`);
-    } catch (error) {
-        logEvent(`Error getting race metadata: ${error.message}`);
-    }
-}
-
-async function setClassMetadata() {
-    try {
-        const classId = document.getElementById('classId').value;
-        const baseAttributes = document.getElementById('classBaseAttributes').value.split(',').map(attr => attr.trim());
-        const growthRates = document.getElementById('classGrowthRates').value.split(',').map(rate => rate.trim());
-        const description = document.getElementById('classDescription').value;
-        const tx = await heroMetadataContract.setClass(classId, baseAttributes, growthRates, description, true);
-        await tx.wait();
-        logEvent(`Class metadata set successfully: Class ID ${classId}`);
-    } catch (error) {
-        logEvent(`Error setting class metadata: ${error.message}`);
-    }
-}
-
-async function getClassMetadata() {
-    try {
-        const classId = document.getElementById('classId').value;
-        const classData = await heroMetadataContract.getClass(classId);
-        logEvent(`Class metadata: ${JSON.stringify(classData)}`);
-    } catch (error) {
-        logEvent(`Error getting class metadata: ${error.message}`);
-    }
-}
-
-async function mintBatchWithToken() {
-    try {
-        const tokenIds = document.getElementById('batchTokenIds').value.split(',').map(id => id.trim());
-        const paymentToken = document.getElementById('priceConfigTokenAddress').value;
-        const tx = await heroNFTContract.mintBatchWithToken(signer.address, tokenIds, paymentToken);
-        await tx.wait();
-        logEvent(`Batch NFT minting with token successful: Token IDs ${tokenIds.join(', ')}`);
-    } catch (error) {
-        logEvent(`Error batch minting NFTs with token: ${error.message}`);
-    }
-}
-
-async function addHeroPoints() {
-    try {
-        const tokenId = document.getElementById('pointsTokenId').value;
-        const amount = document.getElementById('pointsAmount').value;
-        const tx = await heroContract.addDailyPoints(tokenId, amount);
-        await tx.wait();
-        logEvent(`Daily points added successfully: Token ID ${tokenId}, Amount ${amount}`);
-    } catch (error) {
-        logEvent(`Error adding daily points: ${error.message}`);
-    }
-}
-
-async function getPriceConfig() {
-    try {
-        const tokenId = document.getElementById('priceConfigTokenId').value;
-        const config = await heroNFTContract.getPriceConfig(tokenId);
-        logEvent(`Price config: ${JSON.stringify({
-            tokenAddress: config.tokenAddress,
-            price: config.price.toString(),
-            isActive: config.isActive
-        })}`);
-    } catch (error) {
-        logEvent(`Error getting price config: ${error.message}`);
+        showError('Failed to update hero skill:', error);
     }
 }
 
 async function updateEquipment() {
+    const tokenId = document.getElementById('updateEquipTokenId').value;
+    const slot = document.getElementById('updateEquipSlot').value;
+    const equipContract = document.getElementById('updateEquipContract').value;
+    const equipTokenId = document.getElementById('updateEquipTokenIdEquip').value;
+    
     try {
-        const tokenId = document.getElementById('updateEquipTokenId').value;
-        const slot = document.getElementById('equipmentSlot').value;
-        const equipContract = document.getElementById('equipmentContract').value;
-        const equipTokenId = document.getElementById('equipmentTokenId').value;
-        
-        // Call the contract's updateEquipment function
-        const tx = await heroContract.updateEquipment(
-            heroNFTContract.address, // NFT contract address
-            tokenId,
-            slot,
-            equipContract,
-            equipTokenId
-        );
+        const tx = await heroContract.updateEquipment(nftContractAddress, tokenId, slot, equipContract, equipTokenId);
         await tx.wait();
-        
-        logEvent(`Equipment updated successfully: Token ID ${tokenId}, Slot ${slot}`);
+        showMessage('Equipment updated successfully');
     } catch (error) {
-        logEvent(`Error updating equipment: ${error.message}`);
+        showError('Failed to update equipment:', error);
+    }
+}
+
+// Daily Points and Energy Management
+async function addDailyPoints() {
+    const tokenId = document.getElementById('pointsEnergyTokenId').value;
+    const amount = document.getElementById('pointsEnergyAmount').value;
+    
+    try {
+        const tx = await heroContract.addDailyPoints(nftContractAddress, tokenId, amount);
+        await tx.wait();
+        showMessage('Daily points added successfully');
+    } catch (error) {
+        showError('Failed to add daily points:', error);
+    }
+}
+
+async function consumeEnergy() {
+    const tokenId = document.getElementById('pointsEnergyTokenId').value;
+    const amount = document.getElementById('pointsEnergyAmount').value;
+    
+    try {
+        const tx = await heroContract.consumeEnergy(nftContractAddress, tokenId, amount);
+        await tx.wait();
+        showMessage('Energy consumed successfully');
+    } catch (error) {
+        showError('Failed to consume energy:', error);
+    }
+}
+
+// Hero Skills
+async function getHeroSkills() {
+    const tokenId = document.getElementById('heroSkillsTokenId').value;
+    const season = document.getElementById('heroSkillsSeason').value;
+    
+    try {
+        const skills = await heroContract.getHeroSkills(nftContractAddress, tokenId, season);
+        document.getElementById('heroSkillsInfo').textContent = JSON.stringify(skills, null, 2);
+    } catch (error) {
+        showError('Failed to get hero skills:', error);
+    }
+}
+
+// NFT Registration
+async function checkNftRegistration() {
+    const nftAddress = document.getElementById('nftContractAddress').value;
+    
+    try {
+        const isRegistered = await heroContract.isRegistered(nftAddress);
+        document.getElementById('nftRegistrationInfo').textContent = `NFT Contract ${nftAddress} is ${isRegistered ? 'registered' : 'not registered'}`;
+    } catch (error) {
+        showError('Failed to check NFT registration:', error);
+    }
+}
+
+async function getRegisteredNFTs() {
+    try {
+        const nfts = await heroContract.getRegisteredNFTs();
+        document.getElementById('nftRegistrationInfo').textContent = JSON.stringify(nfts, null, 2);
+    } catch (error) {
+        showError('Failed to get registered NFTs:', error);
+    }
+}
+
+async function getOfficialNFT() {
+    try {
+        const officialNFT = await heroContract.officialNFT();
+        document.getElementById('nftRegistrationInfo').textContent = `Official NFT: ${officialNFT}`;
+    } catch (error) {
+        showError('Failed to get official NFT:', error);
+    }
+}
+
+// Token Existence and Approvals
+async function checkTokenExists() {
+    const tokenId = document.getElementById('tokenExistsId').value;
+    
+    try {
+        const exists = await heroNFTContract.exists(tokenId);
+        document.getElementById('tokenExistsInfo').textContent = `Token ${tokenId} ${exists ? 'exists' : 'does not exist'}`;
+    } catch (error) {
+        showError('Failed to check token existence:', error);
+    }
+}
+
+async function checkTokenApproval() {
+    const tokenId = document.getElementById('tokenExistsId').value;
+    const operator = document.getElementById('operatorAddress').value;
+    
+    try {
+        const isApproved = await heroNFTContract.isApprovedForToken(operator, tokenId);
+        document.getElementById('tokenExistsInfo').textContent = `Operator ${operator} is ${isApproved ? 'approved' : 'not approved'} for token ${tokenId}`;
+    } catch (error) {
+        showError('Failed to check token approval:', error);
+    }
+}
+
+async function getAcceptedTokens() {
+    const tokenId = document.getElementById('tokenExistsId').value;
+    
+    try {
+        const tokens = await heroNFTContract.getAcceptedTokens(tokenId);
+        document.getElementById('tokenExistsInfo').textContent = JSON.stringify(tokens, null, 2);
+    } catch (error) {
+        showError('Failed to get accepted tokens:', error);
+    }
+}
+
+// Default Payment Settings
+async function getDefaultPaymentToken() {
+    try {
+        const token = await heroNFTContract.getDefaultPaymentToken();
+        document.getElementById('defaultPaymentInfo').textContent = `Default Payment Token: ${token}`;
+    } catch (error) {
+        showError('Failed to get default payment token:', error);
+    }
+}
+
+async function getDefaultNativePrice() {
+    try {
+        const price = await heroNFTContract.getDefaultNativePrice();
+        document.getElementById('defaultPaymentInfo').textContent = `Default Native Price: ${ethers.formatEther(price)} ETH`;
+    } catch (error) {
+        showError('Failed to get default native price:', error);
+    }
+}
+
+async function getDefaultTokenPrice() {
+    try {
+        const price = await heroNFTContract.getDefaultTokenPrice();
+        document.getElementById('defaultPaymentInfo').textContent = `Default Token Price: ${ethers.formatUnits(price, 18)}`;
+    } catch (error) {
+        showError('Failed to get default token price:', error);
     }
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Disable all buttons except connect wallet
     const buttons = document.querySelectorAll('.requires-wallet');
     for (const button of buttons) {
@@ -408,28 +354,41 @@ document.addEventListener('DOMContentLoaded', () => {
     addListener('connectWallet', connectWallet);
     
     // NFT Management
-    addListener('mintWithEth', mintNFT);
-    addListener('mintWithToken', mintWithToken);
-    addListener('batchMintWithEth', batchMintNFT);
-    addListener('batchMintWithToken', mintBatchWithToken);
+    addListener('mintWithEth', () => mintNFT(false));
+    addListener('mintWithToken', () => mintNFT(true));
+    addListener('batchMintWithEth', () => batchMintNFT(false));
+    addListener('batchMintWithToken', () => batchMintNFT(true));
     addListener('burnNFT', burnNFT);
-    addListener('setPriceConfig', setPrice);
+    
+    // Price Configuration
+    addListener('setPriceConfig', setPriceConfig);
     addListener('getPriceConfig', getPriceConfig);
     
     // Hero Management
     addListener('createHero', createHero);
-    addListener('setHeroSkill', setHeroSkill);
-    addListener('getHeroSkill', getHeroSkill);
-    addListener('updateHeroSkill', setHeroSkill);
-    addListener('updateHeroEquipment', updateEquipment);
-    addListener('consumeEnergy', consumeHeroEnergy);
-    addListener('addDailyPoints', addHeroPoints);
+    addListener('getHeroInfo', getHeroInfo);
+    addListener('updateHeroSkill', updateHeroSkill);
+    addListener('updateEquipment', updateEquipment);
     
-    // Metadata Management
-    addListener('setSkill', setSkillMetadata);
-    addListener('getSkill', getSkillMetadata);
-    addListener('setRace', setRaceMetadata);
-    addListener('getRace', getRaceMetadata);
-    addListener('setClass', setClassMetadata);
-    addListener('getClass', getClassMetadata);
+    // Daily Points and Energy
+    addListener('addDailyPoints', addDailyPoints);
+    addListener('consumeEnergy', consumeEnergy);
+    
+    // Hero Skills
+    addListener('getHeroSkills', getHeroSkills);
+    
+    // NFT Registration
+    addListener('checkNftRegistration', checkNftRegistration);
+    addListener('getRegisteredNFTs', getRegisteredNFTs);
+    addListener('getOfficialNFT', getOfficialNFT);
+    
+    // Token Existence and Approvals
+    addListener('checkTokenExists', checkTokenExists);
+    addListener('checkTokenApproval', checkTokenApproval);
+    addListener('getAcceptedTokens', getAcceptedTokens);
+    
+    // Default Payment Settings
+    addListener('getDefaultPaymentToken', getDefaultPaymentToken);
+    addListener('getDefaultNativePrice', getDefaultNativePrice);
+    addListener('getDefaultTokenPrice', getDefaultTokenPrice);
 }); 

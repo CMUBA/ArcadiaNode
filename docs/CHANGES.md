@@ -86,4 +86,408 @@ ArcadiaNode
 2. 设置适当的初始参数
 3. 确保升级脚本（UpgradeHeroNFT.s.sol）正确配置
 
-你觉得这个分析和建议如何？如果你同意使用 HeroV4，我们可以继续进行后续的开发工作。
+
+### 2025-02-12
+herov5
+### 读取函数
+- `getHeroInfo(address nftContract, uint256 tokenId)` - 获取英雄基本信息（名字、种族、性别、等级、能量、每日点数）
+- `getHeroSkills(address nftContract, uint256 tokenId, Season season)` - 获取英雄在特定季节的技能等级
+- `getHeroEquipment(address nftContract, uint256 tokenId)` - 获取英雄装备信息
+- `getRegisteredNFTs()` - 获取所有已注册的 NFT 合约地址
+- `isRegistered(address)` - 检查 NFT 合约是否已注册
+- `officialNFT()` - 获取官方 NFT 合约地址
+- `owner()` - 获取合约所有者地址
+- `VERSION()` - 获取合约版本
+
+### 写入函数
+- `createHero(address nftContract, uint256 tokenId, string name, Race race, Gender gender)` - 创建新英雄
+- `updateSkill(address nftContract, uint256 tokenId, Season season, uint8 skillIndex, uint8 level)` - 更新英雄技能
+- `updateEquipment(address nftContract, uint256 tokenId, uint8 slot, address equipContract, uint256 equipTokenId)` - 更新英雄装备
+- `addDailyPoints(address nftContract, uint256 tokenId, uint256 amount)` - 增加每日点数
+- `consumeEnergy(address nftContract, uint256 tokenId, uint256 amount)` - 消耗能量
+- `registerNFT(address nftContract, bool isOfficial)` - 注册 NFT 合约
+- `unregisterNFT(address nftContract)` - 注销 NFT 合约
+- `transferOwnership(address newOwner)` - 转移合约所有权
+- `renounceOwnership()` - 放弃合约所有权
+
+### 事件
+- `HeroCreated(address indexed nftContract, uint256 indexed tokenId, string name)`
+- `HeroPointsUpdated(address indexed nftContract, uint256 indexed tokenId, uint256 newPoints)`
+- `HeroEnergyUpdated(address indexed nftContract, uint256 indexed tokenId, uint256 newEnergy)`
+- `HeroEquipmentUpdated(address indexed nftContract, uint256 indexed tokenId, uint8 slot, address equipContract, uint256 equipTokenId)`
+- `NFTRegistered(address indexed nftContract, bool isOfficial)`
+- `NFTUnregistered(address indexed nftContract)`
+- `OwnershipTransferred(address indexed previousOwner, address indexed newOwner)`
+
+metadata
+### 读取函数
+- `getSkill(uint8 seasonId, uint8 skillId, uint8 level)` - 获取技能信息
+- `getRace(uint8 raceId)` - 获取种族属性
+- `getClass(uint8 classId)` - 获取职业属性
+- `owner()` - 获取合约所有者
+- `VERSION()` - 获取合约版本
+
+### 写入函数
+- `setSkill(uint8 seasonId, uint8 skillId, uint8 level, string name, uint16 points, bool isActive)` - 设置技能
+- `setRace(uint8 raceId, uint16[4] baseAttributes, string description, bool isActive)` - 设置种族
+- `setClass(uint8 classId, uint16[4] baseAttributes, uint16[4] growthRates, string description, bool isActive)` - 设置职业
+- `transferOwnership(address newOwner)` - 转移合约所有权
+- `renounceOwnership()` - 放弃合约所有权
+
+### 事件
+- `SkillUpdated(uint8 seasonId, uint8 skillId, uint8 level, string name, uint16 points)`
+- `RaceUpdated(uint8 raceId, uint16[4] baseAttributes, string description)`
+- `ClassUpdated(uint8 classId, uint16[4] baseAttributes, uint16[4] growthRates, string description)`
+- `OwnershipTransferred(address indexed previousOwner, address indexed newOwner)`
+
+NFT
+### 读取函数
+- `balanceOf(address owner)` - 获取账户拥有的 NFT 数量
+- `ownerOf(uint256 tokenId)` - 获取 NFT 所有者
+- `name()` - 获取 NFT 名称
+- `symbol()` - 获取 NFT 符号
+- `tokenURI(uint256 tokenId)` - 获取 NFT 元数据 URI
+- `getApproved(uint256 tokenId)` - 获取 NFT 授权地址
+- `isApprovedForAll(address owner, address operator)` - 检查是否全部授权
+- `isApprovedForToken(address operator, uint256 tokenId)` - 检查特定 NFT 是否授权
+- `exists(uint256 tokenId)` - 检查 NFT 是否存在
+- `getAcceptedTokens(uint256 tokenId)` - 获取接受的支付代币
+- `getPriceConfig(uint256 tokenId)` - 获取价格配置
+- `getDefaultPaymentToken()` - 获取默认支付代币
+- `getDefaultNativePrice()` - 获取默认原生代币价格
+- `getDefaultTokenPrice()` - 获取默认代币价格
+- `owner()` - 获取合约所有者
+- `VERSION()` - 获取合约版本
+
+### 写入函数
+- `mint(address to, uint256 tokenId)` - 使用原生代币铸造 NFT
+- `mintWithToken(address to, uint256 tokenId, address paymentToken)` - 使用代币铸造 NFT
+- `mintBatch(address to, uint256[] tokenIds)` - 批量使用原生代币铸造 NFT
+- `mintBatchWithToken(address to, uint256[] tokenIds, address paymentToken)` - 批量使用代币铸造 NFT
+- `burn(uint256 tokenId)` - 销毁 NFT
+- `approve(address to, uint256 tokenId)` - 授权 NFT
+- `setApprovalForAll(address operator, bool approved)` - 设置全部授权
+- `transferFrom(address from, address to, uint256 tokenId)` - 转移 NFT
+- `safeTransferFrom(address from, address to, uint256 tokenId)` - 安全转移 NFT
+- `setPriceConfig(uint256 tokenId, address tokenAddress, uint256 price)` - 设置价格配置
+- `setDefaultPaymentToken(address token)` - 设置默认支付代币
+- `setDefaultPrices(uint256 nativePrice, uint256 tokenPrice)` - 设置默认价格
+- `transferOwnership(address newOwner)` - 转移合约所有权
+- `renounceOwnership()` - 放弃合约所有权
+
+### 事件
+- `Transfer(address indexed from, address indexed to, uint256 indexed tokenId)`
+- `Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)`
+- `ApprovalForAll(address indexed owner, address indexed operator, bool approved)`
+- `NFTMinted(address indexed to, uint256 indexed tokenId, address paymentToken, uint256 price, uint256 timestamp)`
+- `PriceConfigUpdated(uint256 indexed tokenId, address tokenAddress, uint256 price, uint256 timestamp)`
+- `OwnershipTransferred(address indexed previousOwner, address indexed newOwner)`
+用户可以通过这个测试页面完整地测试所有合约功能，包括：
+NFT 的铸造、批量铸造和销毁
+2. 价格配置的设置和查询
+英雄的创建和属性管理
+英雄技能的更新和查询
+装备的更新和查询
+每日点数和能量的管理
+NFT 合约的注册和查询
+代币的授权和查询
+默认支付设置的查询
+
+#### deploy log
+./deploy-all.sh
+[⠒] Compiling...
+No files changed, compilation skipped
+Traces:
+  [4995880] DeployAndInitScript::run()
+    ├─ [0] VM::envBytes32("HERO_PRIVATE_KEY") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← [Return] 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+    ├─ [0] VM::startBroadcast(<pk>)
+    │   └─ ← [Return]
+    ├─ [1754954] → new HeroNFT@0x776f3f1137bc5f7363EE2c25116546661d2B8131
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    │   └─ ← [Return] 8178 bytes of code
+    ├─ [0] console::log("HeroNFT deployed to:", HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [1087396] → new HeroMetadata@0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    │   └─ ← [Return] 5313 bytes of code
+    ├─ [0] console::log("HeroMetadata deployed to:", HeroMetadata: [0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [1207516] → new HeroV5@0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    │   └─ ← [Return] 5913 bytes of code
+    ├─ [0] console::log("HeroV5 deployed to:", HeroV5: [0x5B34103d15C848b9a58e311f1bC6D913395AcB1C]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [49499] HeroMetadata::setSkill(0, 0, 1, "Eagle Eye", 2, true)
+    │   ├─ emit SkillUpdated(seasonId: 0, skillId: 0, level: 1, name: "Eagle Eye", points: 2)
+    │   └─ ← [Stop]
+    ├─ [49499] HeroMetadata::setSkill(0, 1, 1, "Spider Sense", 1, true)
+    │   ├─ emit SkillUpdated(seasonId: 0, skillId: 1, level: 1, name: "Spider Sense", points: 1)
+    │   └─ ← [Stop]
+    ├─ [49499] HeroMetadata::setSkill(0, 2, 1, "Holy Counter", 1, true)
+    │   ├─ emit SkillUpdated(seasonId: 0, skillId: 2, level: 1, name: "Holy Counter", points: 1)
+    │   └─ ← [Stop]
+    ├─ [118632] HeroMetadata::setRace(0, [10, 10, 10, 10], "Human race with balanced attributes", true)
+    │   ├─ emit RaceUpdated(raceId: 0, baseAttributes: [10, 10, 10, 10], description: "Human race with balanced attributes")
+    │   └─ ← [Stop]
+    ├─ [144202] HeroMetadata::setClass(0, [12, 15, 20, 18], [2, 3, 4, 3], "Warrior class focused on strength", true)
+    │   ├─ emit ClassUpdated(classId: 0, baseAttributes: [12, 15, 20, 18], growthRates: [2, 3, 4, 3], description: "Warrior class focused on strength")
+    │   └─ ← [Stop]
+    ├─ [91119] HeroV5::registerNFT(HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], true)
+    │   ├─ emit NFTRegistered(nftContract: HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], isOfficial: true)
+    │   └─ ← [Return]
+    ├─ [0] console::log("Registered NFT contract in Hero system") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [72796] HeroNFT::mint{value: 10000000000000000}(0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, 1)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1)
+    │   ├─ emit NFTMinted(to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1, paymentToken: 0x0000000000000000000000000000000000000000, price: 10000000000000000 [1e16], timestamp: 1739327542 [1.739e9])
+    │   └─ ← [Return]
+    ├─ [0] console::log("Successfully minted first NFT to deployer") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [163703] HeroV5::createHero(HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], 1, "Genesis Hero", 0, 0)
+    │   ├─ emit HeroCreated(nftContract: HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], tokenId: 1, name: "Genesis Hero")
+    │   └─ ← [Return]
+    ├─ [0] console::log("Successfully created first hero record") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopBroadcast()
+    │   └─ ← [Return]
+    ├─ [0] console::log("\n=== Hero System Deployment Information ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Deployer Address: %s", 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\nContract Addresses:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("HeroNFT: %s", HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("HeroMetadata: %s", HeroMetadata: [0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("HeroV5: %s", HeroV5: [0x5B34103d15C848b9a58e311f1bC6D913395AcB1C]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\nInitial Setup:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Deployed core contracts") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Initialized metadata (skills, race, class)") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Registered NFT contract") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Minted first NFT (ID: 1)") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Created first hero record") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\nFor environment file (.env):") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("VITE_HERO_NFT_ADDRESS=%s", HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("VITE_HERO_METADATA_ADDRESS=%s", HeroMetadata: [0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("VITE_HERO_ADDRESS=%s", HeroV5: [0x5B34103d15C848b9a58e311f1bC6D913395AcB1C]) [staticcall]
+    │   └─ ← [Stop]
+    └─ ← [Return]
+
+
+Script ran successfully.
+
+== Logs ==
+  HeroNFT deployed to: 0x776f3f1137bc5f7363EE2c25116546661d2B8131
+  HeroMetadata deployed to: 0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
+  HeroV5 deployed to: 0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
+  Registered NFT contract in Hero system
+  Successfully minted first NFT to deployer
+  Successfully created first hero record
+
+=== Hero System Deployment Information ===
+  Deployer Address: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+
+Contract Addresses:
+  HeroNFT: 0x776f3f1137bc5f7363EE2c25116546661d2B8131
+  HeroMetadata: 0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
+  HeroV5: 0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
+
+Initial Setup:
+  - Deployed core contracts
+  - Initialized metadata (skills, race, class)
+  - Registered NFT contract
+  - Minted first NFT (ID: 1)
+  - Created first hero record
+
+For environment file (.env):
+  VITE_HERO_NFT_ADDRESS=0x776f3f1137bc5f7363EE2c25116546661d2B8131
+  VITE_HERO_METADATA_ADDRESS=0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
+  VITE_HERO_ADDRESS=0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
+
+## Setting up 1 EVM.
+==========================
+Simulated On-chain Traces:
+
+  [1754954] → new HeroNFT@0x776f3f1137bc5f7363EE2c25116546661d2B8131
+    ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    └─ ← [Return] 8178 bytes of code
+
+  [1087396] → new HeroMetadata@0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
+    ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    └─ ← [Return] 5313 bytes of code
+
+  [1207516] → new HeroV5@0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
+    ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    └─ ← [Return] 5913 bytes of code
+
+  [51499] HeroMetadata::setSkill(0, 0, 1, "Eagle Eye", 2, true)
+    ├─ emit SkillUpdated(seasonId: 0, skillId: 0, level: 1, name: "Eagle Eye", points: 2)
+    └─ ← [Stop]
+
+  [51499] HeroMetadata::setSkill(0, 1, 1, "Spider Sense", 1, true)
+    ├─ emit SkillUpdated(seasonId: 0, skillId: 1, level: 1, name: "Spider Sense", points: 1)
+    └─ ← [Stop]
+
+  [51499] HeroMetadata::setSkill(0, 2, 1, "Holy Counter", 1, true)
+    ├─ emit SkillUpdated(seasonId: 0, skillId: 2, level: 1, name: "Holy Counter", points: 1)
+    └─ ← [Stop]
+
+  [120632] HeroMetadata::setRace(0, [10, 10, 10, 10], "Human race with balanced attributes", true)
+    ├─ emit RaceUpdated(raceId: 0, baseAttributes: [10, 10, 10, 10], description: "Human race with balanced attributes")
+    └─ ← [Stop]
+
+  [146202] HeroMetadata::setClass(0, [12, 15, 20, 18], [2, 3, 4, 3], "Warrior class focused on strength", true)
+    ├─ emit ClassUpdated(classId: 0, baseAttributes: [12, 15, 20, 18], growthRates: [2, 3, 4, 3], description: "Warrior class focused on strength")
+    └─ ← [Stop]
+
+  [93119] HeroV5::registerNFT(HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], true)
+    ├─ emit NFTRegistered(nftContract: HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], isOfficial: true)
+    └─ ← [Return]
+
+  [76796] HeroNFT::mint{value: 10000000000000000}(0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, 1)
+    ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1)
+    ├─ emit NFTMinted(to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1, paymentToken: 0x0000000000000000000000000000000000000000, price: 10000000000000000 [1e16], timestamp: 1739327556 [1.739e9])
+    └─ ← [Return]
+
+  [165703] HeroV5::createHero(HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], 1, "Genesis Hero", 0, 0)
+    ├─ emit HeroCreated(nftContract: HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], tokenId: 1, name: "Genesis Hero")
+    └─ ← [Return]
+
+
+==========================
+
+Chain 11155420
+
+Estimated gas price: 0.001000502 gwei
+
+Estimated total gas used for script: 7202715
+
+Estimated amount required: 0.00000720633076293 ETH
+
+==========================
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xe41e4ccad3853cb99b118530e4b014f4adfb6169a38a1fd00b4976c1d4e26a2b
+Block: 23762512
+Paid: 0.000000078714752445 ETH (78695 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xdc562332678317898d5abf947951a666cb1905d02e623acedb4ec8b4e705ac88
+Contract Address: 0x776f3f1137bc5f7363EE2c25116546661d2B8131
+Block: 23762512
+Paid: 0.00000195470050671 ETH (1954210 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xa37541386bd69a1b3c1bacbc35f2ea62bf66d2a678e0640b4a6e8c092dee98c9
+Block: 23762512
+Paid: 0.00000014351601348 ETH (143480 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xf988b3f60221fbe7093d82d7f22a7482aa05307e3150282df6a1f38acad8fd38
+Contract Address: 0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
+Block: 23762512
+Paid: 0.000001225611551304 ETH (1225304 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x5874f1f37ae56d68bdcc58193b51ecb7b11fb648a43f228c1635c751e19dc17e
+Block: 23762512
+Paid: 0.000000073773512505 ETH (73755 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x908b882da6b990c928dc068ab14e40b54e5aa3e729162f41db1ef7972720c231
+Block: 23762512
+Paid: 0.000000073821524553 ETH (73803 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xf08eefc80284dacba0ffe0e17067cc254ab293ca008926dabaa4dfcc781d1a6f
+Block: 23762512
+Paid: 0.000000073821524553 ETH (73803 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xb9a0feb3c4c16af58b523e7ba139cf513764dfee2b2bab65245bd7cdfe6fc6c7
+Block: 23762512
+Paid: 0.000000188130208833 ETH (188083 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x9164a40f1b9add0724c3be6e47bab2001d401a3bf5148c42628f5b6500caf167
+Contract Address: 0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
+Block: 23762512
+Paid: 0.000001356768463428 ETH (1356428 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x268d66f5ad6871aac05cfbea5e992450c266582a06989388278b0e9741873aa2
+Block: 23762512
+Paid: 0.000000169640569098 ETH (169598 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x581a4a468ace6899f2bb4d7704c4ed7f6c17fd006cfdecaebf844e7914273f36
+Block: 23762512
+Paid: 0.000000114719787441 ETH (114691 gas * 0.001000251 gwei)
+
+✅ Sequence #1 on optimism-sepolia | Total Paid: 0.00000545321841435 ETH (5451850 gas * avg 0.001000251 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/broadcast/DeployAndInit.s.sol/11155420/run-latest.json
+
+Sensitive values saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/cache/DeployAndInit.s.sol/11155420/run-latest.json
+
+#### 概述部署结果
+
+成功部署了3个核心合约:
+HeroNFT: 0x776f3f1137bc5f7363EE2c25116546661d2B8131
+HeroMetadata: 0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
+HeroV5: 0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
+初始化操作成功完成：
+设置了3个初始技能：Eagle Eye(2点)、Spider Sense(1点)、Holy Counter(1点)
+设置了人类种族属性：[10,10,10,10]
+设置了战士职业属性：[12,15,20,18] 和成长率：[2,3,4,3]
+注册了HeroNFT为官方NFT合约
+为部署者铸造了第一个NFT(ID: 1)并创建了英雄记录
+
+
+## 2025-02-12
+
+### Contract Deployments
+- HeroNFT: 0x776f3f1137bc5f7363EE2c25116546661d2B8131
+- HeroMetadata: 0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
+- HeroV5: 0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
+
+### Updates
+- Updated HeroNFT payment settings
+  - Set ERC20 token (0xBda48255DA1ed61a209641144Dd24696926aF3F0) as payment token
+  - Updated native price to 0.01 ETH
+  - Updated token price to 100 tokens
+
+### Initial Setup
+- Initialized metadata (skills, race, class)
+- Registered NFT contract in Hero system
+- Minted first NFT (ID: 1) to deployer
+- Created first hero record

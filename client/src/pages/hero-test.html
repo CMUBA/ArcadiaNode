@@ -250,50 +250,110 @@
                         <input type="number" id="updateEquipTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
                     </div>
                     <div>
-                        <label class="block mb-2">Equipment Slot:</label>
-                        <input type="number" id="equipmentSlot" class="border p-2 rounded w-full" placeholder="Enter equipment slot">
+                        <label class="block mb-2">Slot:</label>
+                        <input type="number" id="updateEquipSlot" class="border p-2 rounded w-full" placeholder="Enter equipment slot">
                     </div>
                     <div>
                         <label class="block mb-2">Equipment Contract:</label>
-                        <input type="text" id="equipmentContract" class="border p-2 rounded w-full" placeholder="0x...">
+                        <input type="text" id="updateEquipContract" class="border p-2 rounded w-full" placeholder="Enter equipment contract address">
                     </div>
                     <div>
                         <label class="block mb-2">Equipment Token ID:</label>
-                        <input type="number" id="equipmentTokenId" class="border p-2 rounded w-full" placeholder="Enter equipment token ID">
+                        <input type="number" id="updateEquipTokenIdEquip" class="border p-2 rounded w-full" placeholder="Enter equipment token ID">
                     </div>
-                    <button id="updateHeroEquipment" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Update Equipment</button>
+                    <button id="updateEquipment" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Update Equipment</button>
                 </div>
             </div>
 
-            <!-- Energy Management -->
+            <!-- Daily Points and Energy -->
             <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Energy Management</h3>
+                <h3 class="text-xl font-semibold mb-3">Daily Points and Energy</h3>
                 <div class="space-y-4">
                     <div>
                         <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="energyTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                        <input type="number" id="pointsEnergyTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
                     </div>
                     <div>
                         <label class="block mb-2">Amount:</label>
-                        <input type="number" id="energyAmount" class="border p-2 rounded w-full" placeholder="Enter energy amount">
+                        <input type="number" id="pointsEnergyAmount" class="border p-2 rounded w-full" placeholder="Enter amount">
                     </div>
-                    <button id="consumeEnergy" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Consume Energy</button>
+                    <div class="flex space-x-4">
+                        <button id="addDailyPoints" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Add Daily Points</button>
+                        <button id="consumeEnergy" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 requires-wallet" disabled>Consume Energy</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Daily Points Management -->
-            <div>
-                <h3 class="text-xl font-semibold mb-3">Daily Points Management</h3>
+            <!-- Hero Skills -->
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-3">Hero Skills</h3>
                 <div class="space-y-4">
                     <div>
                         <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="pointsTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                        <input type="number" id="heroSkillsTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
                     </div>
                     <div>
-                        <label class="block mb-2">Amount:</label>
-                        <input type="number" id="pointsAmount" class="border p-2 rounded w-full" placeholder="Enter points amount">
+                        <label class="block mb-2">Season:</label>
+                        <input type="number" id="heroSkillsSeason" class="border p-2 rounded w-full" placeholder="Enter season">
                     </div>
-                    <button id="addDailyPoints" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Add Daily Points</button>
+                    <button id="getHeroSkills" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Hero Skills</button>
+                    <div id="heroSkillsInfo" class="mt-4 p-4 bg-gray-100 rounded"></div>
+                </div>
+            </div>
+
+            <!-- NFT Registration -->
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-3">NFT Registration</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2">NFT Contract:</label>
+                        <input type="text" id="nftContractAddress" class="border p-2 rounded w-full" placeholder="Enter NFT contract address">
+                    </div>
+                    <div class="flex space-x-4">
+                        <button id="checkNftRegistration" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Check Registration</button>
+                        <button id="getRegisteredNFTs" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get All Registered NFTs</button>
+                        <button id="getOfficialNFT" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Official NFT</button>
+                    </div>
+                    <div id="nftRegistrationInfo" class="mt-4 p-4 bg-gray-100 rounded"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NFT Contract Information -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-2xl font-semibold mb-4">NFT Contract Information</h2>
+            
+            <!-- Token Existence and Approvals -->
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-3">Token Existence and Approvals</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2">Token ID:</label>
+                        <input type="number" id="tokenExistsId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                    </div>
+                    <div>
+                        <label class="block mb-2">Operator Address:</label>
+                        <input type="text" id="operatorAddress" class="border p-2 rounded w-full" placeholder="Enter operator address">
+                    </div>
+                    <div class="flex space-x-4">
+                        <button id="checkTokenExists" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Check Token Exists</button>
+                        <button id="checkTokenApproval" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Check Token Approval</button>
+                        <button id="getAcceptedTokens" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Accepted Tokens</button>
+                    </div>
+                    <div id="tokenExistsInfo" class="mt-4 p-4 bg-gray-100 rounded"></div>
+                </div>
+            </div>
+
+            <!-- Default Payment Settings -->
+            <div>
+                <h3 class="text-xl font-semibold mb-3">Default Payment Settings</h3>
+                <div class="space-y-4">
+                    <div class="flex space-x-4">
+                        <button id="getDefaultPaymentToken" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Default Token</button>
+                        <button id="getDefaultNativePrice" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Native Price</button>
+                        <button id="getDefaultTokenPrice" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Token Price</button>
+                    </div>
+                    <div id="defaultPaymentInfo" class="mt-4 p-4 bg-gray-100 rounded"></div>
                 </div>
             </div>
         </div>

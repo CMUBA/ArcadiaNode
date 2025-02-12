@@ -2,81 +2,81 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
-import "../src/core/Hero.sol";
+import "../src/core/HeroV5.sol";
 import "../src/core/HeroNFT.sol";
 import "../src/core/HeroMetadata.sol";
-import "../src/proxy/HeroProxy.sol";
-import "../src/proxy/ProxyAdmin.sol";
 
 contract DeployAndInitScript is Script {
-    ProxyAdmin public proxyAdmin;
-    HeroNFT public heroNFTImpl;
-    Hero public heroImpl;
-    HeroMetadata public heroMetadataImpl;
-    HeroProxy public heroNFTProxy;
-    HeroProxy public heroProxy;
-    HeroProxy public heroMetadataProxy;
+    HeroNFT public heroNFT;
+    HeroV5 public hero;
+    HeroMetadata public heroMetadata;
+    address public deployer;
 
     function run() external {
         bytes32 privateKeyHash = vm.envBytes32("HERO_PRIVATE_KEY");
         uint256 deployerPrivateKey = uint256(privateKeyHash);
+        deployer = vm.addr(deployerPrivateKey);
+        
         vm.startBroadcast(deployerPrivateKey);
 
-        // 1. Deploy ProxyAdmin and Implementation contracts
-        proxyAdmin = new ProxyAdmin();
-        console.log("ProxyAdmin deployed to:", address(proxyAdmin));
-
-        // Deploy implementation contracts with required parameters
+        // Deploy contracts
         address defaultToken = address(0); // Use zero address as default token
         uint256 nativePrice = 0.01 ether;  // Set default native token price
         uint256 tokenPrice = 100 * 10**18; // Set default token price
         
-        heroNFTImpl = new HeroNFT(
+        // Deploy HeroNFT
+        heroNFT = new HeroNFT(
             defaultToken,
             nativePrice,
             tokenPrice
         );
-        heroImpl = new Hero();
-        heroMetadataImpl = new HeroMetadata();
+        console.log("HeroNFT deployed to:", address(heroNFT));
 
-        // Deploy proxies without initialization
-        heroNFTProxy = new HeroProxy(
-            address(heroNFTImpl),
-            ""  // Empty data since we don't need initialization
-        );
-        console.log("HeroNFT Proxy deployed to:", address(heroNFTProxy));
+        // Deploy HeroMetadata
+        heroMetadata = new HeroMetadata();
+        console.log("HeroMetadata deployed to:", address(heroMetadata));
 
-        heroProxy = new HeroProxy(
-            address(heroImpl),
-            ""  // Empty data since we don't need initialization
-        );
-        console.log("Hero Proxy deployed to:", address(heroProxy));
+        // Deploy Hero
+        hero = new HeroV5();
+        console.log("HeroV5 deployed to:", address(hero));
 
-        heroMetadataProxy = new HeroProxy(
-            address(heroMetadataImpl),
-            ""  // Empty data since we don't need initialization
-        );
-        console.log("HeroMetadata Proxy deployed to:", address(heroMetadataProxy));
-
-        // 3. Initialize Metadata
-        HeroMetadata metadata = HeroMetadata(address(heroMetadataProxy));
+        // Initialize Metadata
+        // Set initial skills for Spring season
+        heroMetadata.setSkill(0, 0, 1, "Eagle Eye", 2, true);
+        heroMetadata.setSkill(0, 1, 1, "Spider Sense", 1, true);
+        heroMetadata.setSkill(0, 2, 1, "Holy Counter", 1, true);
         
-        // Set initial skills (简化版本，实际应该从配置文件读取)
-        metadata.setSkill(0, 0, 1, "Eagle Eye", 2, true);
-        metadata.setSkill(0, 1, 1, "Spider Sense", 1, true);
-        metadata.setSkill(0, 2, 1, "Holy Counter", 1, true);
+        // Set initial race attributes
+        uint16[4] memory humanAttributes = [uint16(10), uint16(10), uint16(10), uint16(10)];
+        heroMetadata.setRace(0, humanAttributes, "Human race with balanced attributes", true);
 
-        // 4. Register NFT contract in Hero
-        Hero hero = Hero(address(heroProxy));
-        hero.registerNFT(address(heroNFTProxy), true);
-        console.log("Registered NFT contract in Hero");
+        // Set initial class attributes and growth rates
+        uint16[4] memory warriorAttributes = [uint16(12), uint16(15), uint16(20), uint16(18)];
+        uint16[4] memory warriorGrowth = [uint16(2), uint16(3), uint16(4), uint16(3)];
+        heroMetadata.setClass(0, warriorAttributes, warriorGrowth, "Warrior class focused on strength", true);
 
-        // 5. Mint first test NFT
+        // Register NFT contract in Hero system
+        hero.registerNFT(address(heroNFT), true);
+        console.log("Registered NFT contract in Hero system");
+
+        // Mint first test NFT to deployer
         uint256 mintPrice = 0.01 ether;
-        address defaultSender = vm.addr(1);
-        
-        try HeroNFT(address(heroNFTProxy)).mint{value: mintPrice}(defaultSender, 1) {
-            console.log("Successfully minted first NFT");
+        try heroNFT.mint{value: mintPrice}(deployer, 1) {
+            console.log("Successfully minted first NFT to deployer");
+            
+            // Create hero record for the minted NFT
+            try hero.createHero(
+                address(heroNFT),
+                1,
+                "Genesis Hero",
+                HeroV5.Race.Human,
+                HeroV5.Gender.Male
+            ) {
+                console.log("Successfully created first hero record");
+            } catch Error(string memory reason) {
+                console.log("Failed to create hero record");
+                console.log("Reason:", reason);
+            }
         } catch Error(string memory reason) {
             console.log("Failed to mint NFT");
             console.log("Reason:", reason);
@@ -84,22 +84,28 @@ contract DeployAndInitScript is Script {
 
         vm.stopBroadcast();
         
-        // Output addresses
-        outputAddresses();
+        // Output deployment information
+        outputDeploymentInfo();
     }
 
-    function outputAddresses() internal view {
-        console.log("\n# Hero Deployed Contract Addresses");
-        console.log("VITE_HERO_NFT_PROXY=%s", address(heroNFTProxy));
-        console.log("VITE_HERO_NFT_IMPLEMENTATION=%s", address(heroNFTImpl));
-        console.log("VITE_PROXY_ADMIN=%s\n", address(proxyAdmin));
-
-        console.log("VITE_HERO_METADATA_PROXY=%s", address(heroMetadataProxy));
-        console.log("VITE_HERO_METADATA_IMPLEMENTATION=%s", address(heroMetadataImpl));
-        console.log("VITE_HERO_METADATA_PROXY_ADMIN=%s\n", address(proxyAdmin));
-
-        console.log("VITE_HERO_PROXY=%s", address(heroProxy));
-        console.log("VITE_HERO_IMPLEMENTATION=%s", address(heroImpl));
-        console.log("VITE_HERO_PROXY_ADMIN=%s", address(proxyAdmin));
+    function outputDeploymentInfo() internal view {
+        console.log("\n=== Hero System Deployment Information ===");
+        console.log("Deployer Address: %s", deployer);
+        console.log("\nContract Addresses:");
+        console.log("HeroNFT: %s", address(heroNFT));
+        console.log("HeroMetadata: %s", address(heroMetadata));
+        console.log("HeroV5: %s", address(hero));
+        
+        console.log("\nInitial Setup:");
+        console.log("- Deployed core contracts");
+        console.log("- Initialized metadata (skills, race, class)");
+        console.log("- Registered NFT contract");
+        console.log("- Minted first NFT (ID: 1)");
+        console.log("- Created first hero record");
+        
+        console.log("\nFor environment file (.env):");
+        console.log("VITE_HERO_NFT_ADDRESS=%s", address(heroNFT));
+        console.log("VITE_HERO_METADATA_ADDRESS=%s", address(heroMetadata));
+        console.log("VITE_HERO_ADDRESS=%s", address(hero));
     }
 }

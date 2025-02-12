@@ -1,5 +1,6 @@
 import { heroAbi } from '../js/abi/hero.js';
 import { heroMetadataAbi } from '../js/abi/heroMetadata.js';
+import { heroNFTAbi } from '../js/abi/heroNFT.js';
 import baseConfig from './index.js';
 
 // Hero 相关配置
@@ -8,19 +9,20 @@ export const heroConfig = {
         nodeUrl: 'https://sepolia.optimism.io',
         chainId: 11155420, // Optimism Sepolia testnet
         contracts: {
-            hero: '0xb86236BA8D6CAb15cf7972871f246F7C8693338b',  // VITE_HERO_PROXY
-            heroMetadata: '0x7603DdBcC4c998C7aB8DE7F91768c0ACd9CE2377',  // VITE_HERO_METADATA_PROXY
-            heroNFT: '0xb4AE3C6B8531D97EA6146c2e7B811B8D82f9019c',  // VITE_HERO_NFT_PROXY
-            paymentToken: '0x0000000000000000000000000000000000000000',  // VITE_PAYMENT_TOKEN_ADDRESS
-            erc20Token: '0xBda48255DA1ed61a209641144Dd24696926aF3F0'    // VITE_ERC20_CONTRACT_ADDRESS
+            hero: '0x5B34103d15C848b9a58e311f1bC6D913395AcB1C',      // HeroV5
+            heroMetadata: '0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22', // HeroMetadata
+            heroNFT: '0x776f3f1137bc5f7363EE2c25116546661d2B8131',    // HeroNFT
+            paymentToken: '0x0000000000000000000000000000000000000000',  // ETH
+            erc20Token: '0xBda48255DA1ed61a209641144Dd24696926aF3F0'     // ERC20 Token for payments
         },
         prices: {
-            nativePrice: '100000000000000000',    // VITE_NATIVE_PRICE
-            tokenPrice: '100000000000000000000'   // VITE_ERC20_TOKEN_PRICE
+            nativePrice: '10000000000000000',    // 0.01 ETH
+            tokenPrice: '100000000000000000000'  // 100 tokens
         },
         abis: {
             hero: heroAbi,
-            heroMetadata: heroMetadataAbi
+            heroMetadata: heroMetadataAbi,
+            heroNFT: heroNFTAbi
         }
     },
     aptos: {
