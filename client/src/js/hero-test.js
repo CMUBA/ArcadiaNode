@@ -4,6 +4,11 @@ import { heroMetadataAbi } from './abi/heroMetadata.js';
 import { heroAbi } from './abi/hero.js';
 import { heroConfig } from '../config/hero.js';
 
+// Export functions for use in HTML
+window.connectWallet = connectWallet;
+window.createHero = createHero;
+window.loadNFTsFromContract = loadNFTsFromContract;
+
 let provider;
 let signer;
 let heroNFTContract;
@@ -154,36 +159,6 @@ async function getPriceConfig() {
 }
 
 // Hero Management Functions
-async function createHero() {
-    try {
-        const name = document.getElementById('heroName').value.trim();
-        const race = document.getElementById('heroRace').value;
-        const gender = document.getElementById('heroGender').value;
-        const contractAddress = document.getElementById('heroNFTContract').value;
-        const tokenId = document.getElementById('heroTokenId').value;
-
-        if (!name || !race || !contractAddress || !tokenId) {
-            throw new Error('Please fill in all required fields');
-        }
-
-        const tx = await heroContract.createHero(
-            contractAddress,
-            tokenId,
-            name,
-            race,
-            gender
-        );
-
-        showMessage('Creating hero...');
-        await tx.wait();
-        showMessage('Hero created successfully');
-        
-        // 刷新 NFT 列表
-        await loadNFTsFromContract(contractAddress);
-    } catch (error) {
-        showError('Failed to create hero:', error);
-    }
-}
 
 async function getHeroInfo() {
     const tokenId = document.getElementById('heroTokenId').value;
@@ -418,53 +393,34 @@ async function loadNFTsFromContract(contractAddress) {
 
         // 获取所有 NFT
         const nfts = [];
-        const maxTokensToCheck = 100; // 限制检查的最大 token 数量
-        const batchSize = 5;
+        const startTokenId = 0;
+        const endTokenId = 20; // 检查前20个token
 
-        for (let tokenId = 0; tokenId < maxTokensToCheck && nfts.length < balanceNumber; tokenId += batchSize) {
-            const batchPromises = [];
+        for (let tokenId = startTokenId; tokenId <= endTokenId && nfts.length < balanceNumber; tokenId++) {
+            try {
+                const owner = await nftContract.ownerOf(tokenId);
+                if (owner.toLowerCase() === connectedAddress.toLowerCase()) {
+                    let hasHero = false;
+                    let heroInfo = null;
 
-            for (let j = 0; j < batchSize && (tokenId + j) < maxTokensToCheck; j++) {
-                const currentTokenId = tokenId + j;
-                batchPromises.push(
-                    (async () => {
-                        try {
-                            const owner = await nftContract.ownerOf(currentTokenId);
-                            if (owner.toLowerCase() === connectedAddress.toLowerCase()) {
-                                let hasHero = false;
-                                let heroInfo = null;
+                    try {
+                        heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
+                        hasHero = true;
+                    } catch (e) {
+                        // NFT 未注册为英雄，这是正常情况
+                        console.log(`NFT ${tokenId} is not registered as hero yet`);
+                    }
 
-                                try {
-                                    heroInfo = await heroContract.getHeroInfo(contractAddress, currentTokenId);
-                                    hasHero = true;
-                                } catch (e) {
-                                    console.log(`NFT ${currentTokenId} is not registered as hero yet`);
-                                }
-
-                                return {
-                                    tokenId: currentTokenId,
-                                    contractAddress,
-                                    hasHero,
-                                    heroInfo
-                                };
-                            }
-                            return null;
-                        } catch (e) {
-                            // 如果 tokenId 不存在，会抛出异常，这是正常的
-                            return null;
-                        }
-                    })()
-                );
-            }
-
-            const batchResults = await Promise.all(batchPromises);
-            batchResults.forEach(result => {
-                if (result) nfts.push(result);
-            });
-
-            // 如果已找到足够的 NFT，就停止搜索
-            if (nfts.length >= balanceNumber) {
-                break;
+                    nfts.push({
+                        tokenId: Number(tokenId),
+                        contractAddress,
+                        hasHero,
+                        heroInfo
+                    });
+                }
+            } catch (e) {
+                // 如果 tokenId 不存在，跳过即可
+                continue;
             }
         }
         
@@ -480,6 +436,61 @@ async function loadNFTsFromContract(contractAddress) {
         } else {
             showError(`Failed to load NFTs from contract ${contractAddress}`, error);
         }
+    }
+}
+
+// 创建英雄
+async function createHero() {
+    try {
+        const contractAddress = document.getElementById('heroNFTContract').value;
+        const tokenId = Number(document.getElementById('heroTokenId').value);
+        const name = document.getElementById('heroName').value;
+        const race = Number(document.getElementById('heroRace').value);
+        const gender = Number(document.getElementById('heroGender').value);
+
+        // 基本验证
+        if (!contractAddress || !tokenId || !name || !race) {
+            showError('Please fill in all required hero details');
+            return;
+        }
+
+        // 验证数值
+        if (isNaN(tokenId) || isNaN(race) || isNaN(gender)) {
+            showError('Invalid number values provided');
+            return;
+        }
+
+        // 验证 NFT 所有权
+        const nftContract = new ethers.Contract(
+            contractAddress,
+            ['function ownerOf(uint256) view returns (address)'],
+            signer
+        );
+
+        const owner = await nftContract.ownerOf(tokenId);
+        if (owner.toLowerCase() !== connectedAddress.toLowerCase()) {
+            showError('You do not own this NFT');
+            return;
+        }
+
+        // 创建英雄
+        const tx = await heroContract.createHero(
+            contractAddress,
+            tokenId,
+            name,
+            race,
+            gender || '0' // 如果性别未指定，默认为 '0'
+        );
+
+        showMessage('Creating hero... Please wait for transaction confirmation');
+        await tx.wait();
+        showMessage('Hero created successfully!');
+
+        // 重新加载 NFT 列表
+        await loadNFTsFromContract(contractAddress);
+    } catch (error) {
+        console.error('Error creating hero:', error);
+        showError('Failed to create hero: ' + error.message);
     }
 }
 
