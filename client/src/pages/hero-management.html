@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero Management</title>
+    <script type="module" src="../js/hero-test.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow">
+            <div class="flex items-center space-x-6">
+                <h1 class="text-2xl font-bold text-gray-800">Hero Management</h1>
+                <nav class="flex space-x-6">
+                    <a href="hero-test.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT System</a>
+                    <a href="hero-metadata.html" class="text-blue-500 hover:text-blue-600 font-medium">Metadata Management</a>
+                    <a href="nft-contract.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT Contract Info</a>
+                </nav>
+            </div>
+            <!-- Wallet Connection -->
+            <div class="flex items-center space-x-4">
+                <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm font-medium">Connect Wallet</button>
+                <div id="connectedWallet" class="hidden">
+                    <p class="text-sm">Address: <span id="walletAddress" class="font-mono text-xs"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-2 gap-6">
+            <!-- Hero Skills -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Hero Skills</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">Token ID:</label>
+                        <input type="number" id="skillTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Season:</label>
+                        <input type="number" id="skillSeason" class="border p-2 rounded w-full" placeholder="Enter season">
+                    </div>
+                    <button onclick="getHeroSkills()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet w-full font-medium" disabled>Get Hero Skills</button>
+                    <div id="heroSkillsInfo" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+            </div>
+
+            <!-- Daily Points & Energy -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Daily Points & Energy</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">Token ID:</label>
+                        <input type="number" id="dailyTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Points:</label>
+                        <input type="number" id="dailyPoints" class="border p-2 rounded w-full" placeholder="Enter points">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Energy:</label>
+                        <input type="number" id="energy" class="border p-2 rounded w-full" placeholder="Enter energy">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="addDailyPoints()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium" disabled>Add Daily Points</button>
+                        <button onclick="consumeEnergy()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 requires-wallet font-medium" disabled>Consume Energy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

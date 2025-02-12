@@ -3,485 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hero System Test</title>
+    <title>Hero NFT System</title>
     <script type="module" src="../js/hero-test.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 p-4">
     <div class="max-w-7xl mx-auto">
-        <div class="flex justify-between items-center mb-4">
-            <h1 class="text-2xl font-bold">Hero System Test</h1>
+        <!-- Message Display -->
+        <div id="message" class="fixed top-4 right-4 z-50 hidden bg-blue-500 text-white px-6 py-3 rounded shadow-lg"></div>
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow">
+            <div class="flex items-center space-x-6">
+                <h1 class="text-2xl font-bold text-gray-800">Hero NFT System</h1>
+                <nav class="flex space-x-6">
+                    <a href="hero-metadata.html" class="text-blue-500 hover:text-blue-600 font-medium">Metadata Management</a>
+                    <a href="hero-management.html" class="text-blue-500 hover:text-blue-600 font-medium">Hero Management</a>
+                    <a href="nft-contract.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT Contract Info</a>
+                </nav>
+            </div>
             <!-- Wallet Connection -->
             <div class="flex items-center space-x-4">
-                <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm">Connect Wallet</button>
+                <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm font-medium">Connect Wallet</button>
                 <div id="connectedWallet" class="hidden">
                     <p class="text-sm">Address: <span id="walletAddress" class="font-mono text-xs"></span></p>
                 </div>
             </div>
         </div>
 
-        <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Left Column: NFT List and Hero Creation -->
-            <div class="space-y-8">
-                <!-- NFT List -->
-                <div class="bg-white rounded-lg shadow p-4">
-                    <h2 class="text-lg font-semibold mb-2">Your NFTs</h2>
-                    <div id="nftList" class="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
-                        <p class="text-gray-500 text-sm">Connect your wallet to view NFTs</p>
-                    </div>
-                </div>
-
-                <!-- Create Hero Section -->
-                <div id="createHeroSection" class="bg-white rounded-lg shadow p-4">
-                    <h2 class="text-lg font-semibold mb-2">Create Hero</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block mb-2">NFT Contract:</label>
-                            <input type="text" id="heroNFTContract" class="border p-2 rounded w-full" readonly>
-                        </div>
-                        <div>
-                            <label class="block mb-2">Token ID:</label>
-                            <input type="text" id="heroTokenId" class="border p-2 rounded w-full" readonly>
-                        </div>
-                        <div>
-                            <label class="block mb-2">Hero Name:</label>
-                            <input type="text" id="heroName" class="border p-2 rounded w-full" placeholder="Enter hero name">
-                        </div>
-                        <div>
-                            <label class="block mb-2">Race:</label>
-                            <select id="heroRace" class="border p-2 rounded w-full">
-                                <option value="">Select race</option>
-                                <option value="1">Human</option>
-                                <option value="2">Elf</option>
-                                <option value="3">Dwarf</option>
-                                <option value="4">Orc</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block mb-2">Gender:</label>
-                            <select id="heroGender" class="border p-2 rounded w-full">
-                                <option value="1">Male</option>
-                                <option value="2">Female</option>
-                            </select>
-                        </div>
-                        <button onclick="createHero()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet w-full" disabled>
-                            Create Hero
-                        </button>
-                    </div>
+        <!-- Main Content -->
+        <div class="grid grid-cols-2 gap-6">
+            <!-- NFT List -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Your NFTs</h2>
+                <div id="nftList" class="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
+                    <p class="text-gray-500 text-sm">Connect your wallet to view NFTs</p>
                 </div>
             </div>
 
-
-
-            <!-- Right Column: Management Functions -->
-            <div class="space-y-8">
-                <!-- NFT Management -->
-                <div class="bg-white rounded-lg shadow p-4">
-                    <h2 class="text-lg font-semibold mb-2">NFT Management</h2>
-                    
-                    <!-- Minting -->
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold mb-3">Mint NFT</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block mb-2">Token ID:</label>
-                                <input type="number" id="mintTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                            </div>
-                            <div class="flex space-x-4">
-                                <button id="mintWithEth" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Mint with ETH</button>
-                                <button id="mintWithToken" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 requires-wallet" disabled>Mint with Token</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Batch Minting -->
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold mb-3">Batch Mint NFTs</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block mb-2">Token IDs (comma-separated):</label>
-                                <input type="text" id="batchTokenIds" class="border p-2 rounded w-full" placeholder="1,2,3,4,5">
-                            </div>
-                            <div class="flex space-x-4">
-                                <button id="batchMintWithEth" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Batch Mint with ETH</button>
-                                <button id="batchMintWithToken" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 requires-wallet" disabled>Batch Mint with Token</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Price Configuration -->
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold mb-3">Price Configuration</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block mb-2">Token ID:</label>
-                                <input type="number" id="priceTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                            </div>
-                            <div>
-                                <label class="block mb-2">Native Price (ETH):</label>
-                                <input type="number" id="nativePrice" class="border p-2 rounded w-full" placeholder="Enter price in ETH">
-                            </div>
-                            <div>
-                                <label class="block mb-2">Token Price:</label>
-                                <input type="number" id="tokenPrice" class="border p-2 rounded w-full" placeholder="Enter token price">
-                            </div>
-                            <div>
-                                <label class="block mb-2">Payment Token:</label>
-                                <input type="text" id="paymentToken" class="border p-2 rounded w-full" placeholder="Enter payment token address">
-                            </div>
-                            <div class="flex space-x-4">
-                                <button id="setPriceConfig" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Set Price Config</button>
-                                <button id="getPriceConfig" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 requires-wallet" disabled>Get Price Config</button>
-                            </div>
-                            <div id="priceConfigInfo" class="mt-2 text-sm"></div>
-                        </div>
-                    </div>
-
-                    <!-- Burn NFT -->
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold mb-3">Burn NFT</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block mb-2">Token ID:</label>
-                                <input type="number" id="burnTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                            </div>
-                            <button id="burnNFT" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 requires-wallet" disabled>Burn NFT</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Hero Skills -->
-                <div class="bg-white rounded-lg shadow p-4">
-                    <h2 class="text-lg font-semibold mb-2">Hero Skills</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block mb-2">Token ID:</label>
-                            <input type="number" id="skillTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                        </div>
-                        <div>
-                            <label class="block mb-2">Season:</label>
-                            <input type="number" id="skillSeason" class="border p-2 rounded w-full" placeholder="Enter season">
-                        </div>
-                        <button id="getHeroSkills" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet w-full" disabled>Get Hero Skills</button>
-                        <div id="heroSkillsInfo" class="mt-2 text-sm"></div>
-                    </div>
-                </div>
-
-                <!-- Daily Points and Energy -->
-                <div class="bg-white rounded-lg shadow p-4">
-                    <h2 class="text-lg font-semibold mb-2">Daily Points & Energy</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block mb-2">Token ID:</label>
-                            <input type="number" id="dailyTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                        </div>
-                        <div>
-                            <label class="block mb-2">Points:</label>
-                            <input type="number" id="dailyPoints" class="border p-2 rounded w-full" placeholder="Enter points">
-                        </div>
-                        <div class="flex space-x-4">
-                            <button id="addDailyPoints" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet flex-1" disabled>Add Points</button>
-                            <button id="consumeEnergy" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 requires-wallet flex-1" disabled>Use Energy</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-
-
-
-
-
-                    </div>
-                </div>
-            </div>
-
-            <!-- Burn NFT -->
-            <div>
-                <h3 class="text-xl font-semibold mb-3">Burn NFT</h3>
+            <!-- Create Hero Section -->
+            <div id="createHeroSection" class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Create Hero</h2>
                 <div class="space-y-4">
                     <div>
-                        <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="burnTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID to burn">
-                    </div>
-                    <button id="burnNFT" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 requires-wallet" disabled>Burn NFT</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Metadata Management -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-2xl font-semibold mb-4">Metadata Management</h2>
-            
-            <!-- Skills -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Skills</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Season ID:</label>
-                        <input type="number" id="skillSeason" class="border p-2 rounded w-full" placeholder="Enter season ID">
+                        <label class="block mb-2 text-gray-700">NFT Contract:</label>
+                        <input type="text" id="heroNFTContract" class="border p-2 rounded w-full bg-gray-50" readonly>
                     </div>
                     <div>
-                        <label class="block mb-2">Skill ID:</label>
-                        <input type="number" id="skillId" class="border p-2 rounded w-full" placeholder="Enter skill ID">
+                        <label class="block mb-2 text-gray-700">Token ID:</label>
+                        <input type="text" id="heroTokenId" class="border p-2 rounded w-full bg-gray-50" readonly>
                     </div>
                     <div>
-                        <label class="block mb-2">Level:</label>
-                        <input type="number" id="skillLevel" class="border p-2 rounded w-full" placeholder="Enter skill level">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Name:</label>
-                        <input type="text" id="skillName" class="border p-2 rounded w-full" placeholder="Enter skill name">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Points:</label>
-                        <input type="number" id="skillPoints" class="border p-2 rounded w-full" placeholder="Enter skill points">
-                    </div>
-                    <div class="flex space-x-4">
-                        <button id="setSkill" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Set Skill</button>
-                        <button id="getSkill" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Skill</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Races -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Races</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Race ID:</label>
-                        <input type="number" id="raceId" class="border p-2 rounded w-full" placeholder="Enter race ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Base Attributes (comma-separated):</label>
-                        <input type="text" id="raceAttributes" class="border p-2 rounded w-full" placeholder="10,10,10,10,10,10">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Description:</label>
-                        <textarea id="raceDescription" class="border p-2 rounded w-full" rows="3" placeholder="Enter race description"></textarea>
-                    </div>
-                    <div class="flex space-x-4">
-                        <button id="setRace" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Set Race</button>
-                        <button id="getRace" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Race</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Classes -->
-            <div>
-                <h3 class="text-xl font-semibold mb-3">Classes</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Class ID:</label>
-                        <input type="number" id="classId" class="border p-2 rounded w-full" placeholder="Enter class ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Base Attributes (comma-separated):</label>
-                        <input type="text" id="classAttributes" class="border p-2 rounded w-full" placeholder="5,5,5,5,5,5">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Growth Rates (comma-separated):</label>
-                        <input type="text" id="classGrowthRates" class="border p-2 rounded w-full" placeholder="1,1,1,1,1,1">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Description:</label>
-                        <textarea id="classDescription" class="border p-2 rounded w-full" rows="3" placeholder="Enter class description"></textarea>
-                    </div>
-                    <div class="flex space-x-4">
-                        <button id="setClass" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Set Class</button>
-                        <button id="getClass" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Class</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Hero Management -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-2xl font-semibold mb-4">Hero Management</h2>
-            
-            <!-- Create Hero -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Create Hero</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Name:</label>
+                        <label class="block mb-2 text-gray-700">Hero Name:</label>
                         <input type="text" id="heroName" class="border p-2 rounded w-full" placeholder="Enter hero name">
                     </div>
                     <div>
-                        <label class="block mb-2">Race:</label>
-                        <input type="number" id="heroRace" class="border p-2 rounded w-full" placeholder="Enter race ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Gender:</label>
-                        <select id="heroGender" class="border p-2 rounded w-full">
-                            <option value="0">Male</option>
-                            <option value="1">Female</option>
+                        <label class="block mb-2 text-gray-700">Race:</label>
+                        <select id="heroRace" class="border p-2 rounded w-full">
+                            <option value="">Select race</option>
+                            <option value="1">Human</option>
+                            <option value="2">Elf</option>
+                            <option value="3">Dwarf</option>
+                            <option value="4">Orc</option>
                         </select>
                     </div>
-                    <button id="createHero" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Create Hero</button>
-                </div>
-            </div>
-
-            <!-- Hero Info -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Hero Information</h3>
-                <div class="space-y-4">
                     <div>
-                        <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="heroTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                        <label class="block mb-2 text-gray-700">Gender:</label>
+                        <select id="heroGender" class="border p-2 rounded w-full">
+                            <option value="1">Male</option>
+                            <option value="2">Female</option>
+                        </select>
                     </div>
-                    <button id="getHeroInfo" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Hero Info</button>
-                    <div id="heroInfo" class="mt-4 p-4 bg-gray-100 rounded"></div>
-                </div>
-            </div>
-
-            <!-- Update Hero Skill -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Update Hero Skill</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="updateSkillTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Season:</label>
-                        <input type="number" id="updateSkillSeason" class="border p-2 rounded w-full" placeholder="Enter season ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Skill Index:</label>
-                        <input type="number" id="updateSkillIndex" class="border p-2 rounded w-full" placeholder="Enter skill index">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Level:</label>
-                        <input type="number" id="updateSkillLevel" class="border p-2 rounded w-full" placeholder="Enter skill level">
-                    </div>
-                    <button id="updateHeroSkill" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Update Skill</button>
-                </div>
-            </div>
-
-            <!-- Update Hero Equipment -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Update Hero Equipment</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="updateEquipTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Slot:</label>
-                        <input type="number" id="updateEquipSlot" class="border p-2 rounded w-full" placeholder="Enter equipment slot">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Equipment Contract:</label>
-                        <input type="text" id="updateEquipContract" class="border p-2 rounded w-full" placeholder="Enter equipment contract address">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Equipment Token ID:</label>
-                        <input type="number" id="updateEquipTokenIdEquip" class="border p-2 rounded w-full" placeholder="Enter equipment token ID">
-                    </div>
-                    <button id="updateEquipment" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Update Equipment</button>
-                </div>
-            </div>
-
-            <!-- Daily Points and Energy -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Daily Points and Energy</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="pointsEnergyTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Amount:</label>
-                        <input type="number" id="pointsEnergyAmount" class="border p-2 rounded w-full" placeholder="Enter amount">
-                    </div>
-                    <div class="flex space-x-4">
-                        <button id="addDailyPoints" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Add Daily Points</button>
-                        <button id="consumeEnergy" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 requires-wallet" disabled>Consume Energy</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Hero Skills -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Hero Skills</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="heroSkillsTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Season:</label>
-                        <input type="number" id="heroSkillsSeason" class="border p-2 rounded w-full" placeholder="Enter season">
-                    </div>
-                    <button id="getHeroSkills" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Hero Skills</button>
-                    <div id="heroSkillsInfo" class="mt-4 p-4 bg-gray-100 rounded"></div>
-                </div>
-            </div>
-
-            <!-- NFT Registration -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">NFT Registration</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">NFT Contract:</label>
-                        <input type="text" id="nftContractAddress" class="border p-2 rounded w-full" placeholder="Enter NFT contract address">
-                    </div>
-                    <div class="flex space-x-4">
-                        <button id="checkNftRegistration" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Check Registration</button>
-                        <button id="getRegisteredNFTs" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get All Registered NFTs</button>
-                        <button id="getOfficialNFT" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Official NFT</button>
-                    </div>
-                    <div id="nftRegistrationInfo" class="mt-4 p-4 bg-gray-100 rounded"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- NFT Contract Information -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-2xl font-semibold mb-4">NFT Contract Information</h2>
-            
-            <!-- Token Existence and Approvals -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Token Existence and Approvals</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="tokenExistsId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Operator Address:</label>
-                        <input type="text" id="operatorAddress" class="border p-2 rounded w-full" placeholder="Enter operator address">
-                    </div>
-                    <div class="flex space-x-4">
-                        <button id="checkTokenExists" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Check Token Exists</button>
-                        <button id="checkTokenApproval" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Check Token Approval</button>
-                        <button id="getAcceptedTokens" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Accepted Tokens</button>
-                    </div>
-                    <div id="tokenExistsInfo" class="mt-4 p-4 bg-gray-100 rounded"></div>
-                </div>
-            </div>
-
-            <!-- Default Payment Settings -->
-            <div>
-                <h3 class="text-xl font-semibold mb-3">Default Payment Settings</h3>
-                <div class="space-y-4">
-                    <div class="flex space-x-4">
-                        <button id="getDefaultPaymentToken" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Default Token</button>
-                        <button id="getDefaultNativePrice" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Native Price</button>
-                        <button id="getDefaultTokenPrice" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Token Price</button>
-                    </div>
-                    <div id="defaultPaymentInfo" class="mt-4 p-4 bg-gray-100 rounded"></div>
+                    <button onclick="createHero()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet w-full font-medium" disabled>
+                        Create Hero
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Event Log -->
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white rounded-lg shadow p-6 mt-6">
             <h2 class="text-2xl font-semibold mb-4">Event Log</h2>
             <pre id="eventLog" class="bg-gray-100 p-4 rounded h-48 overflow-y-auto font-mono text-sm"></pre>
         </div>

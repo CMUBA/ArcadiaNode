@@ -575,12 +575,30 @@ hero-test完整流程如下：
 显示英雄信息
 提供查看详情的按钮
 
-我回滚了hero-test.html页面和hero-test.js
-1. 请确认是紧凑的两列模式，重点功能在上面hero功能测试上
-2. 我们确认下页面初始化后的逻辑，点击链接钱包，获得地址；然后自动Loading registered NFT contracts，从hero合约查询获得一个已注册的nft合约列表；基于这个列表，每个合约都有一个loadnft，查询当前登录地址是否拥有这个nft；如果拥有，则查询是否注册了hero，注册了hero则显示hero信息，没有则提示可以注册hero，传递此参数给create hero。
-3. 然后下面是hero create的测试区域，然后再是其他区域
+
+页面加载流程：
+连接钱包后，首先调用 hero.getRegisteredNFTs() 获取所有已注册的 NFT 合约列表
+显示每个注册的 NFT 合约地址，并为每个合约添加 "Load NFTs" 按钮
+用户可以点击按钮查看具体合约下拥有的 NFT
+NFT 加载流程：
+使用 balanceOf 检查用户在该合约下的 NFT 数量
+遍历可能的 token ID（设置了合理的上限），使用 ownerOf 检查所有权
+对于用户拥有的每个 NFT，调用 hero.getHeroInfo 检查是否已创建英雄
+根据是否已创建英雄显示不同的界面：
+已创建：显示英雄信息（名称、等级等）
+未创建：显示 "Create Hero" 按钮
+
+这样的实现避免了使用 tokenOfOwnerByIndex，而是采用了更通用的方式来查找用户拥有的 NFT。虽然这种方式在 token ID 范围很大时可能不够高效，但对于测试环境来说是可以接受的。
+hero-test页面的逻辑：
+点击连接钱包，获得登录钱包地址，然后先通过ABI查询hero合约已经注册了的NFT合约列表，逐个显示。
+在每个NFT合约行结尾，显示loadNFT button，点击后通过登录钱包地址、NFT合约地址来查询是否在Hero合约注册或记录。
+基于这个列表，每个合约都有一个loadnft，查询当前登录地址是否拥有这个nft；如果拥有，则查询是否注册了hero，注册了hero则显示hero信息，没有则提示可以注册hero，传递此参数给create hero。
+3. 然后下面是hero create的测试区域
 4. 我们确认hero create测试逻辑已经实现，可以正常创建英雄（参考DeployAndInit.s.sol脚本）
 5. 历史经验：使用 getRegisteredNFTs 合约接口获取注册的 NFT 合约列表
 使用 ERC721 标准接口 balanceOf 和 tokenOfOwnerByIndex 获取用户拥有的 NFT
 使用 getHeroInfo 接口检查 NFT 是否已注册英雄
 这样的实现更加直接和高效，不需要查询区块历史。
+
+loadnft button目标是查询当前登录地址是否拥有这个合约nft，你用byindex查询对么？eip721支持指定地址查询是否拥有nft吧
+loadnft button报错
