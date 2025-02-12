@@ -575,4 +575,12 @@ hero-test完整流程如下：
 显示英雄信息
 提供查看详情的按钮
 
-我们确认下页面初始化后的逻辑，点击链接钱包，获得地址；然后自动Loading registered NFT contracts，从hero合约查询获得一个已注册的nft合约列表；基于这个列表，每个合约都有一个loadnft，查询当前登录地址是否拥有这个nft；如果拥有，则查询是否注册了hero，注册了hero则显示hero信息，没有则提示可以注册hero，传递此参数给create hero
+我回滚了hero-test.html页面和hero-test.js
+1. 请确认是紧凑的两列模式，重点功能在上面hero功能测试上
+2. 我们确认下页面初始化后的逻辑，点击链接钱包，获得地址；然后自动Loading registered NFT contracts，从hero合约查询获得一个已注册的nft合约列表；基于这个列表，每个合约都有一个loadnft，查询当前登录地址是否拥有这个nft；如果拥有，则查询是否注册了hero，注册了hero则显示hero信息，没有则提示可以注册hero，传递此参数给create hero。
+3. 然后下面是hero create的测试区域，然后再是其他区域
+4. 我们确认hero create测试逻辑已经实现，可以正常创建英雄（参考DeployAndInit.s.sol脚本）
+5. 历史经验：使用 getRegisteredNFTs 合约接口获取注册的 NFT 合约列表
+使用 ERC721 标准接口 balanceOf 和 tokenOfOwnerByIndex 获取用户拥有的 NFT
+使用 getHeroInfo 接口检查 NFT 是否已注册英雄
+这样的实现更加直接和高效，不需要查询区块历史。

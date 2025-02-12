@@ -43,6 +43,12 @@ async function connectWallet() {
             throw new Error('MetaMask is not installed');
         }
 
+        // 请求连接到 Optimism Sepolia
+        await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0xaa37dc' }],
+        });
+
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
         connectedAddress = await signer.getAddress();
@@ -61,6 +67,9 @@ async function connectWallet() {
         });
 
         showMessage('Wallet connected successfully');
+
+        // 自动加载注册的 NFT 合约列表
+        await loadRegisteredNFTs();
     } catch (error) {
         showError('Failed to connect wallet:', error);
     }
@@ -146,15 +155,31 @@ async function getPriceConfig() {
 
 // Hero Management Functions
 async function createHero() {
-    const name = document.getElementById('heroName').value;
-    const race = document.getElementById('heroRace').value;
-    const gender = document.getElementById('heroGender').value;
-    const tokenId = document.getElementById('heroTokenId').value;
-    
     try {
-        const tx = await heroContract.createHero(nftContractAddress, tokenId, name, race, gender);
+        const name = document.getElementById('heroName').value.trim();
+        const race = document.getElementById('heroRace').value;
+        const gender = document.getElementById('heroGender').value;
+        const contractAddress = document.getElementById('heroNFTContract').value;
+        const tokenId = document.getElementById('heroTokenId').value;
+
+        if (!name || !race || !contractAddress || !tokenId) {
+            throw new Error('Please fill in all required fields');
+        }
+
+        const tx = await heroContract.createHero(
+            contractAddress,
+            tokenId,
+            name,
+            race,
+            gender
+        );
+
+        showMessage('Creating hero...');
         await tx.wait();
         showMessage('Hero created successfully');
+        
+        // 刷新 NFT 列表
+        await loadNFTsFromContract(contractAddress);
     } catch (error) {
         showError('Failed to create hero:', error);
     }
@@ -334,61 +359,149 @@ async function getDefaultTokenPrice() {
     }
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', async () => {
-    // Disable all buttons except connect wallet
-    const buttons = document.querySelectorAll('.requires-wallet');
-    for (const button of buttons) {
-        button.disabled = true;
-    }
-
-    // Add event listeners
-    const addListener = (id, handler) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('click', handler);
+// 加载注册的 NFT 合约列表
+async function loadRegisteredNFTs() {
+    try {
+        const nftList = document.getElementById('nftList');
+        nftList.innerHTML = '<p>Loading registered NFT contracts...</p>';
+        
+        // 从合约获取注册的 NFT 合约列表
+        const registeredNFTs = await heroContract.getRegisteredNFTs();
+        
+        if (!registeredNFTs || registeredNFTs.length === 0) {
+            nftList.innerHTML = '<p>No registered NFT contracts found</p>';
+            return;
         }
-    };
+        
+        // 显示合约列表
+        nftList.innerHTML = `
+            <div class="space-y-4">
+                <h3 class="font-semibold">Registered NFT Contracts:</h3>
+                ${registeredNFTs.map(nftAddress => `
+                    <div class="flex items-center justify-between border-b py-2">
+                        <span class="font-mono text-sm">${nftAddress}</span>
+                        <button onclick="loadNFTsFromContract('${nftAddress}')"
+                                class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                            Load NFTs
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (error) {
+        showError('Failed to load NFT contracts:', error);
+        nftList.innerHTML = '<p class="text-red-500">Error loading NFT contracts</p>';
+    }
+}
 
-    // Wallet Connection
-    addListener('connectWallet', connectWallet);
+// 从指定合约加载 NFT
+async function loadNFTsFromContract(contractAddress) {
+    try {
+        const nftContract = new ethers.Contract(
+            contractAddress,
+            ['function balanceOf(address) view returns (uint256)', 'function tokenOfOwnerByIndex(address,uint256) view returns (uint256)'],
+            signer
+        );
+        
+        // 获取用户拥有的 NFT 数量
+        const balance = await nftContract.balanceOf(connectedAddress);
+        const balanceNumber = Number(balance);
+        
+        if (balanceNumber === 0) {
+            showMessage(`No NFTs found in contract ${contractAddress}`);
+            return;
+        }
+        
+        // 获取所有 NFT 并检查是否注册了英雄
+        const nfts = [];
+        for (let i = 0; i < balanceNumber; i++) {
+            const tokenId = await nftContract.tokenOfOwnerByIndex(connectedAddress, i);
+            let hasHero = false;
+            let heroInfo = null;
+            
+            try {
+                heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
+                hasHero = true;
+            } catch (e) {
+                console.log(`No hero registered for token ${tokenId}`);
+            }
+            
+            nfts.push({
+                tokenId,
+                contractAddress,
+                hasHero,
+                heroInfo
+            });
+        }
+        
+        displayNFTs(nfts);
+    } catch (error) {
+        showError(`Failed to load NFTs from contract ${contractAddress}:`, error);
+    }
+}
+
+// 显示 NFT 列表
+function displayNFTs(nfts) {
+    const nftList = document.getElementById('nftList');
+    const currentContent = nftList.innerHTML;
     
-    // NFT Management
-    addListener('mintWithEth', () => mintNFT(false));
-    addListener('mintWithToken', () => mintNFT(true));
-    addListener('batchMintWithEth', () => batchMintNFT(false));
-    addListener('batchMintWithToken', () => batchMintNFT(true));
-    addListener('burnNFT', burnNFT);
+    const newContent = `
+        <div class="mt-4">
+            <h3 class="font-semibold mb-2">Found NFTs:</h3>
+            ${nfts.map(nft => `
+                <div class="flex items-center justify-between border-b py-2">
+                    <div>
+                        <span class="font-semibold">Token ID: ${nft.tokenId.toString()}</span>
+                        ${nft.hasHero ? `
+                            <div class="text-sm text-gray-600">
+                                <div>Name: ${nft.heroInfo.name}</div>
+                                <div>Race: ${nft.heroInfo.race}</div>
+                                <div>Level: ${nft.heroInfo.level}</div>
+                            </div>
+                        ` : `
+                            <div class="text-sm text-yellow-600">
+                                <button onclick="prepareCreateHero('${nft.contractAddress}', ${nft.tokenId})" 
+                                        class="text-blue-500 hover:text-blue-700">
+                                    Create Hero for this NFT
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
     
-    // Price Configuration
-    addListener('setPriceConfig', setPriceConfig);
-    addListener('getPriceConfig', getPriceConfig);
+    // 保留合约列表，添加 NFT 列表
+    const contractListEnd = currentContent.indexOf('<div class="mt-4">');
+    const baseContent = contractListEnd !== -1 ? currentContent.substring(0, contractListEnd) : currentContent;
+    nftList.innerHTML = baseContent + newContent;
+}
+
+// 准备创建英雄
+function prepareCreateHero(contractAddress, tokenId) {
+    document.getElementById('heroNFTContract').value = contractAddress;
+    document.getElementById('heroTokenId').value = tokenId;
     
-    // Hero Management
-    addListener('createHero', createHero);
-    addListener('getHeroInfo', getHeroInfo);
-    addListener('updateHeroSkill', updateHeroSkill);
-    addListener('updateEquipment', updateEquipment);
+    const createHeroSection = document.getElementById('createHeroSection');
+    if (createHeroSection) {
+        createHeroSection.scrollIntoView({ behavior: 'smooth' });
+    }
     
-    // Daily Points and Energy
-    addListener('addDailyPoints', addDailyPoints);
-    addListener('consumeEnergy', consumeEnergy);
+    showMessage('Please fill in hero details and click Create Hero');
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    // 禁用需要钱包的按钮
+    document.querySelectorAll('.requires-wallet').forEach(button => {
+        button.disabled = true;
+    });
     
-    // Hero Skills
-    addListener('getHeroSkills', getHeroSkills);
-    
-    // NFT Registration
-    addListener('checkNftRegistration', checkNftRegistration);
-    addListener('getRegisteredNFTs', getRegisteredNFTs);
-    addListener('getOfficialNFT', getOfficialNFT);
-    
-    // Token Existence and Approvals
-    addListener('checkTokenExists', checkTokenExists);
-    addListener('checkTokenApproval', checkTokenApproval);
-    addListener('getAcceptedTokens', getAcceptedTokens);
-    
-    // Default Payment Settings
-    addListener('getDefaultPaymentToken', getDefaultPaymentToken);
-    addListener('getDefaultNativePrice', getDefaultNativePrice);
-    addListener('getDefaultTokenPrice', getDefaultTokenPrice);
-}); 
+    // 添加事件监听器
+    document.getElementById('connectWallet').addEventListener('click', connectWallet);
+});
+
+// 将函数添加到全局作用域
+window.loadNFTsFromContract = loadNFTsFromContract;
+window.prepareCreateHero = prepareCreateHero; 

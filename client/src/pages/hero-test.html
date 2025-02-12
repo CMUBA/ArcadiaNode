@@ -15,65 +15,187 @@
         <div class="bg-white rounded-lg shadow p-6 mb-8">
             <h2 class="text-2xl font-semibold mb-4">Wallet Connection</h2>
             <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Connect Wallet</button>
-            <div id="connectedWallet" class="hidden">
+            <div id="connectedWallet" class="hidden mt-4">
                 <p>Connected Address: <span id="walletAddress" class="font-mono"></span></p>
-                <p id="nftStatus"></p>
             </div>
         </div>
 
-        <!-- NFT Management -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-2xl font-semibold mb-4">NFT Management</h2>
-            
-            <!-- Minting -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Mint NFT</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="mintTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Left Column: NFT List and Hero Creation -->
+            <div class="space-y-8">
+                <!-- NFT List -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-2xl font-semibold mb-4">Your NFTs</h2>
+                    <div id="nftList" class="space-y-4">
+                        <p class="text-gray-500">Connect your wallet to view NFTs</p>
                     </div>
-                    <div class="flex space-x-4">
-                        <button id="mintWithEth" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Mint with ETH</button>
-                        <button id="mintWithToken" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 requires-wallet" disabled>Mint with Token</button>
+                </div>
+
+                <!-- Create Hero Section -->
+                <div id="createHeroSection" class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-2xl font-semibold mb-4">Create Hero</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block mb-2">NFT Contract:</label>
+                            <input type="text" id="heroNFTContract" class="border p-2 rounded w-full" readonly>
+                        </div>
+                        <div>
+                            <label class="block mb-2">Token ID:</label>
+                            <input type="text" id="heroTokenId" class="border p-2 rounded w-full" readonly>
+                        </div>
+                        <div>
+                            <label class="block mb-2">Hero Name:</label>
+                            <input type="text" id="heroName" class="border p-2 rounded w-full" placeholder="Enter hero name">
+                        </div>
+                        <div>
+                            <label class="block mb-2">Race:</label>
+                            <select id="heroRace" class="border p-2 rounded w-full">
+                                <option value="">Select race</option>
+                                <option value="Human">Human</option>
+                                <option value="Elf">Elf</option>
+                                <option value="Dwarf">Dwarf</option>
+                                <option value="Orc">Orc</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block mb-2">Gender:</label>
+                            <select id="heroGender" class="border p-2 rounded w-full">
+                                <option value="1">Male</option>
+                                <option value="2">Female</option>
+                            </select>
+                        </div>
+                        <button onclick="createHero()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet w-full" disabled>
+                            Create Hero
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Batch Minting -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Batch Mint NFTs</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Token IDs (comma-separated):</label>
-                        <input type="text" id="batchTokenIds" class="border p-2 rounded w-full" placeholder="1,2,3,4,5">
+
+
+            <!-- Right Column: Management Functions -->
+            <div class="space-y-8">
+                <!-- NFT Management -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-2xl font-semibold mb-4">NFT Management</h2>
+                    
+                    <!-- Minting -->
+                    <div class="mb-6">
+                        <h3 class="text-xl font-semibold mb-3">Mint NFT</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block mb-2">Token ID:</label>
+                                <input type="number" id="mintTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                            </div>
+                            <div class="flex space-x-4">
+                                <button id="mintWithEth" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Mint with ETH</button>
+                                <button id="mintWithToken" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 requires-wallet" disabled>Mint with Token</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex space-x-4">
-                        <button id="batchMintWithEth" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Batch Mint with ETH</button>
-                        <button id="batchMintWithToken" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 requires-wallet" disabled>Batch Mint with Token</button>
+
+                    <!-- Batch Minting -->
+                    <div class="mb-6">
+                        <h3 class="text-xl font-semibold mb-3">Batch Mint NFTs</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block mb-2">Token IDs (comma-separated):</label>
+                                <input type="text" id="batchTokenIds" class="border p-2 rounded w-full" placeholder="1,2,3,4,5">
+                            </div>
+                            <div class="flex space-x-4">
+                                <button id="batchMintWithEth" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Batch Mint with ETH</button>
+                                <button id="batchMintWithToken" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 requires-wallet" disabled>Batch Mint with Token</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Configuration -->
+                    <div class="mb-6">
+                        <h3 class="text-xl font-semibold mb-3">Price Configuration</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block mb-2">Token ID:</label>
+                                <input type="number" id="priceTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                            </div>
+                            <div>
+                                <label class="block mb-2">Native Price (ETH):</label>
+                                <input type="number" id="nativePrice" class="border p-2 rounded w-full" placeholder="Enter price in ETH">
+                            </div>
+                            <div>
+                                <label class="block mb-2">Token Price:</label>
+                                <input type="number" id="tokenPrice" class="border p-2 rounded w-full" placeholder="Enter token price">
+                            </div>
+                            <div>
+                                <label class="block mb-2">Payment Token:</label>
+                                <input type="text" id="paymentToken" class="border p-2 rounded w-full" placeholder="Enter payment token address">
+                            </div>
+                            <div class="flex space-x-4">
+                                <button id="setPriceConfig" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Set Price Config</button>
+                                <button id="getPriceConfig" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 requires-wallet" disabled>Get Price Config</button>
+                            </div>
+                            <div id="priceConfigInfo" class="mt-2 text-sm"></div>
+                        </div>
+                    </div>
+
+                    <!-- Burn NFT -->
+                    <div class="mb-6">
+                        <h3 class="text-xl font-semibold mb-3">Burn NFT</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block mb-2">Token ID:</label>
+                                <input type="number" id="burnTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                            </div>
+                            <button id="burnNFT" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 requires-wallet" disabled>Burn NFT</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hero Skills -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-2xl font-semibold mb-4">Hero Skills</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block mb-2">Token ID:</label>
+                            <input type="number" id="skillTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                        </div>
+                        <div>
+                            <label class="block mb-2">Season:</label>
+                            <input type="number" id="skillSeason" class="border p-2 rounded w-full" placeholder="Enter season">
+                        </div>
+                        <button id="getHeroSkills" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet w-full" disabled>Get Hero Skills</button>
+                        <div id="heroSkillsInfo" class="mt-2 text-sm"></div>
+                    </div>
+                </div>
+
+                <!-- Daily Points and Energy -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-2xl font-semibold mb-4">Daily Points & Energy</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block mb-2">Token ID:</label>
+                            <input type="number" id="dailyTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                        </div>
+                        <div>
+                            <label class="block mb-2">Points:</label>
+                            <input type="number" id="dailyPoints" class="border p-2 rounded w-full" placeholder="Enter points">
+                        </div>
+                        <div class="flex space-x-4">
+                            <button id="addDailyPoints" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet flex-1" disabled>Add Points</button>
+                            <button id="consumeEnergy" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 requires-wallet flex-1" disabled>Use Energy</button>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</body>
+</html>
 
-            <!-- Price Configuration -->
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3">Price Configuration</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2">Token ID:</label>
-                        <input type="number" id="priceConfigTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Token Address:</label>
-                        <input type="text" id="priceConfigTokenAddress" class="border p-2 rounded w-full" placeholder="0x...">
-                    </div>
-                    <div>
-                        <label class="block mb-2">Price Amount:</label>
-                        <input type="number" id="priceConfigAmount" class="border p-2 rounded w-full" placeholder="Enter price amount">
-                    </div>
-                    <div class="flex space-x-4">
-                        <button id="setPriceConfig" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Set Price Config</button>
-                        <button id="getPriceConfig" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Get Price Config</button>
+
+
+
+
                     </div>
                 </div>
             </div>
