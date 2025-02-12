@@ -557,3 +557,22 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
 Transactions saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/broadcast/UpdateNFTPayment.s.sol/11155420/run-latest.json
 
 Sensitive values saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/cache/UpdateNFTPayment.s.sol/11155420/run-latest.json
+
+
+
+hero-test完整流程如下：
+
+用户点击连接钱包
+连接成功后自动加载注册的 NFT 合约列表
+用户可以点击每个合约的 "Load NFTs" 按钮
+加载 NFT 时会检查：
+用户是否拥有该合约的 NFT
+每个 NFT 是否已注册英雄
+对于未注册英雄的 NFT：
+显示 "Create Hero" 按钮
+点击后自动填充创建英雄表单
+对于已注册英雄的 NFT：
+显示英雄信息
+提供查看详情的按钮
+
+我们确认下页面初始化后的逻辑，点击链接钱包，获得地址；然后自动Loading registered NFT contracts，从hero合约查询获得一个已注册的nft合约列表；基于这个列表，每个合约都有一个loadnft，查询当前登录地址是否拥有这个nft；如果拥有，则查询是否注册了hero，注册了hero则显示hero信息，没有则提示可以注册hero，传递此参数给create hero
