@@ -399,7 +399,7 @@ async function loadNFTsFromContract(contractAddress) {
     try {
         const nftContract = new ethers.Contract(
             contractAddress,
-            ['function balanceOf(address) view returns (uint256)', 'function tokenOfOwnerByIndex(address,uint256) view returns (uint256)'],
+            heroNFTAbi, // 使用完整的 ABI
             signer
         );
         
@@ -415,28 +415,45 @@ async function loadNFTsFromContract(contractAddress) {
         // 获取所有 NFT 并检查是否注册了英雄
         const nfts = [];
         for (let i = 0; i < balanceNumber; i++) {
-            const tokenId = await nftContract.tokenOfOwnerByIndex(connectedAddress, i);
-            let hasHero = false;
-            let heroInfo = null;
-            
             try {
-                heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
-                hasHero = true;
+                const tokenId = await nftContract.tokenOfOwnerByIndex(connectedAddress, i);
+                let hasHero = false;
+                let heroInfo = null;
+                
+                try {
+                    // 使用 try-catch 检查 NFT 是否已注册为英雄
+                    heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
+                    hasHero = true;
+                } catch (e) {
+                    // NFT 未注册为英雄，这是正常情况
+                    console.log(`NFT ${tokenId} is not registered as hero yet`);
+                }
+                
+                nfts.push({
+                    tokenId: Number(tokenId), // 确保 tokenId 是数字
+                    contractAddress,
+                    hasHero,
+                    heroInfo
+                });
             } catch (e) {
-                console.log(`No hero registered for token ${tokenId}`);
+                console.error(`Error loading NFT at index ${i}:`, e);
+                // 继续处理下一个 NFT
+                continue;
             }
-            
-            nfts.push({
-                tokenId,
-                contractAddress,
-                hasHero,
-                heroInfo
-            });
         }
         
-        displayNFTs(nfts);
+        if (nfts.length > 0) {
+            displayNFTs(nfts);
+        } else {
+            showMessage(`No NFTs found in contract ${contractAddress}`);
+        }
     } catch (error) {
-        showError(`Failed to load NFTs from contract ${contractAddress}:`, error);
+        console.error('Error details:', error);
+        if (error.code === 'CALL_EXCEPTION') {
+            showError(`Contract ${contractAddress} does not support required NFT functions`, error);
+        } else {
+            showError(`Failed to load NFTs from contract ${contractAddress}`, error);
+        }
     }
 }
 

@@ -7,34 +7,34 @@
     <script type="module" src="../js/hero-test.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100 p-8">
+<body class="bg-gray-100 p-4">
     <div class="max-w-7xl mx-auto">
-        <h1 class="text-4xl font-bold mb-8">Hero System Test</h1>
-
-        <!-- Wallet Connection -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-2xl font-semibold mb-4">Wallet Connection</h2>
-            <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Connect Wallet</button>
-            <div id="connectedWallet" class="hidden mt-4">
-                <p>Connected Address: <span id="walletAddress" class="font-mono"></span></p>
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold">Hero System Test</h1>
+            <!-- Wallet Connection -->
+            <div class="flex items-center space-x-4">
+                <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm">Connect Wallet</button>
+                <div id="connectedWallet" class="hidden">
+                    <p class="text-sm">Address: <span id="walletAddress" class="font-mono text-xs"></span></p>
+                </div>
             </div>
         </div>
 
         <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Left Column: NFT List and Hero Creation -->
             <div class="space-y-8">
                 <!-- NFT List -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-2xl font-semibold mb-4">Your NFTs</h2>
-                    <div id="nftList" class="space-y-4">
-                        <p class="text-gray-500">Connect your wallet to view NFTs</p>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-lg font-semibold mb-2">Your NFTs</h2>
+                    <div id="nftList" class="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
+                        <p class="text-gray-500 text-sm">Connect your wallet to view NFTs</p>
                     </div>
                 </div>
 
                 <!-- Create Hero Section -->
-                <div id="createHeroSection" class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-2xl font-semibold mb-4">Create Hero</h2>
+                <div id="createHeroSection" class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-lg font-semibold mb-2">Create Hero</h2>
                     <div class="space-y-4">
                         <div>
                             <label class="block mb-2">NFT Contract:</label>
@@ -77,8 +77,8 @@
             <!-- Right Column: Management Functions -->
             <div class="space-y-8">
                 <!-- NFT Management -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-2xl font-semibold mb-4">NFT Management</h2>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-lg font-semibold mb-2">NFT Management</h2>
                     
                     <!-- Minting -->
                     <div class="mb-6">
@@ -152,8 +152,8 @@
                 </div>
 
                 <!-- Hero Skills -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-2xl font-semibold mb-4">Hero Skills</h2>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-lg font-semibold mb-2">Hero Skills</h2>
                     <div class="space-y-4">
                         <div>
                             <label class="block mb-2">Token ID:</label>
@@ -169,8 +169,8 @@
                 </div>
 
                 <!-- Daily Points and Energy -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-2xl font-semibold mb-4">Daily Points & Energy</h2>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-lg font-semibold mb-2">Daily Points & Energy</h2>
                     <div class="space-y-4">
                         <div>
                             <label class="block mb-2">Token ID:</label>
