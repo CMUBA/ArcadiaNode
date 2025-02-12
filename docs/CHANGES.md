@@ -491,3 +491,69 @@ HeroV5: 0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
 - Registered NFT contract in Hero system
 - Minted first NFT (ID: 1) to deployer
 - Created first hero record
+
+
+#### NFT add erc20 contract
+ source .env&&forge script script/UpdateNFTPayment.s.sol:UpdateNFTPaymentScript --rpc-url https://opt-sepolia.g.alchemy.com/v2/IIY_LZOlEuy66agzhxpYexmEaHuMskl- --broadcast
+[⠢] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+
+=== Network Information ===
+  Chain ID: 11155420
+
+=== Pre-update Checks ===
+  Deployer address: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+  NFT contract address: 0x776f3f1137bc5f7363EE2c25116546661d2B8131
+  Current block: 23764914
+  Current timestamp: 1739332368
+  Contract code size: 8178
+  Using RPC URL: https://opt-sepolia.g.alchemy.com/v2/IIY_LZOlEuy66agzhxpYexmEaHuMskl-
+  Contract owner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+  Deployer address: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+  Successfully set default payment token
+  Successfully set default prices
+
+=== NFT Payment Update Information ===
+  HeroNFT Address: 0x776f3f1137bc5f7363EE2c25116546661d2B8131
+  New Payment Token: 0xBda48255DA1ed61a209641144Dd24696926aF3F0
+  Native Price: 0 ETH
+  Token Price: 100 Tokens
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 11155420
+
+Estimated gas price: 0.001005503 gwei
+
+Estimated total gas used for script: 109796
+
+Estimated amount required: 0.000000110400207388 ETH
+
+==========================
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x9341581258c0c961f64b222ff2689e999c1c1ccab9cbb2696cf25493ee69e7b7
+Block: 23764923
+Paid: 0.000000046967383944 ETH (46722 gas * 0.001005252 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x65dc51584a61a864a81fe68298e403ee1f9e4067de27bfededda2706ee576c4b
+Block: 23764924
+Paid: 0.000000028501909956 ETH (28353 gas * 0.001005252 gwei)
+
+✅ Sequence #1 on optimism-sepolia | Total Paid: 0.0000000754692939 ETH (75075 gas * avg 0.001005252 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/broadcast/UpdateNFTPayment.s.sol/11155420/run-latest.json
+
+Sensitive values saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/cache/UpdateNFTPayment.s.sol/11155420/run-latest.json
