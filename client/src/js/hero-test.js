@@ -397,12 +397,16 @@ async function loadRegisteredNFTs() {
 // 从指定合约加载 NFT
 async function loadNFTsFromContract(contractAddress) {
     try {
+        // 创建合约实例，只使用基本的 ERC721 方法
         const nftContract = new ethers.Contract(
             contractAddress,
-            heroNFTAbi, // 使用完整的 ABI
+            [
+                'function balanceOf(address) view returns (uint256)',
+                'function ownerOf(uint256) view returns (address)'
+            ],
             signer
         );
-        
+
         // 获取用户拥有的 NFT 数量
         const balance = await nftContract.balanceOf(connectedAddress);
         const balanceNumber = Number(balance);
@@ -411,34 +415,56 @@ async function loadNFTsFromContract(contractAddress) {
             showMessage(`No NFTs found in contract ${contractAddress}`);
             return;
         }
-        
-        // 获取所有 NFT 并检查是否注册了英雄
+
+        // 获取所有 NFT
         const nfts = [];
-        for (let i = 0; i < balanceNumber; i++) {
-            try {
-                const tokenId = await nftContract.tokenOfOwnerByIndex(connectedAddress, i);
-                let hasHero = false;
-                let heroInfo = null;
-                
-                try {
-                    // 使用 try-catch 检查 NFT 是否已注册为英雄
-                    heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
-                    hasHero = true;
-                } catch (e) {
-                    // NFT 未注册为英雄，这是正常情况
-                    console.log(`NFT ${tokenId} is not registered as hero yet`);
-                }
-                
-                nfts.push({
-                    tokenId: Number(tokenId), // 确保 tokenId 是数字
-                    contractAddress,
-                    hasHero,
-                    heroInfo
-                });
-            } catch (e) {
-                console.error(`Error loading NFT at index ${i}:`, e);
-                // 继续处理下一个 NFT
-                continue;
+        const maxTokensToCheck = 100; // 限制检查的最大 token 数量
+        const batchSize = 5;
+
+        for (let tokenId = 0; tokenId < maxTokensToCheck && nfts.length < balanceNumber; tokenId += batchSize) {
+            const batchPromises = [];
+
+            for (let j = 0; j < batchSize && (tokenId + j) < maxTokensToCheck; j++) {
+                const currentTokenId = tokenId + j;
+                batchPromises.push(
+                    (async () => {
+                        try {
+                            const owner = await nftContract.ownerOf(currentTokenId);
+                            if (owner.toLowerCase() === connectedAddress.toLowerCase()) {
+                                let hasHero = false;
+                                let heroInfo = null;
+
+                                try {
+                                    heroInfo = await heroContract.getHeroInfo(contractAddress, currentTokenId);
+                                    hasHero = true;
+                                } catch (e) {
+                                    console.log(`NFT ${currentTokenId} is not registered as hero yet`);
+                                }
+
+                                return {
+                                    tokenId: currentTokenId,
+                                    contractAddress,
+                                    hasHero,
+                                    heroInfo
+                                };
+                            }
+                            return null;
+                        } catch (e) {
+                            // 如果 tokenId 不存在，会抛出异常，这是正常的
+                            return null;
+                        }
+                    })()
+                );
+            }
+
+            const batchResults = await Promise.all(batchPromises);
+            batchResults.forEach(result => {
+                if (result) nfts.push(result);
+            });
+
+            // 如果已找到足够的 NFT，就停止搜索
+            if (nfts.length >= balanceNumber) {
+                break;
             }
         }
         
