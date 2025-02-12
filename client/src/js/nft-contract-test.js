@@ -16,6 +16,11 @@ window.getDefaultNativePrice = getDefaultNativePrice;
 window.getDefaultTokenPrice = getDefaultTokenPrice;
 window.setPriceConfig = setPriceConfig;
 window.getPriceConfig = getPriceConfig;
+window.setDefaultNativePrice = setDefaultNativePrice;
+window.setDefaultTokenPrice = setDefaultTokenPrice;
+window.burnNFT = burnNFT;
+window.loadNFTList = loadNFTList;
+window.checkNFTPrice = checkNFTPrice;
 
 // Contract initialization
 let provider;
@@ -47,8 +52,19 @@ async function updateContractInfo() {
 // Mint NFT function
 async function mintNFT(useToken = false) {
     try {
+        if (!window.ethereum) {
+            showError('MetaMask is not installed');
+            return;
+        }
+
+        // 重新初始化合约连接
+        const connected = await connectWallet();
+        if (!connected || !heroNFTContract || !provider || !signer) {
+            showError('Contract not initialized. Please connect wallet first.');
+            return;
+        }
+
         const tokenId = Number(getElement('mintTokenId').value);
-        
         if (!validateNumber(tokenId)) {
             showError('Please enter a valid token ID');
             return;
@@ -56,33 +72,119 @@ async function mintNFT(useToken = false) {
 
         let tx;
         if (useToken) {
+            // 使用代币铸造
             const defaultToken = await heroNFTContract.getDefaultPaymentToken();
-            const price = await heroNFTContract.getDefaultTokenPrice();
+            
+            // 获取特定 tokenId 的价格配置
+            const priceConfig = await heroNFTContract.getPriceConfig(tokenId);
+            const price = priceConfig.isActive ? priceConfig.price : await heroNFTContract.getDefaultTokenPrice();
+            
+            // 显示所需支付金额
+            const formattedPrice = ethers.formatUnits(price, 18);
+            showMessage(`Required payment: ${formattedPrice} tokens`);
+            
+            // 检查代币合约
+            if (defaultToken !== ethers.ZeroAddress) {
+                const tokenContract = new ethers.Contract(
+                    defaultToken,
+                    ['function approve(address spender, uint256 amount) public returns (bool)'],
+                    signer  // 使用 signer 而不是 provider
+                );
+                
+                showMessage('Approving token transfer...');
+                const approveTx = await tokenContract.approve(nftContractAddress, price);
+                await approveTx.wait();
+                showMessage('Token transfer approved');
+            }
+            
             tx = await heroNFTContract.mintWithToken(
-                await signer.getAddress(),
+                connectedAddress,
                 tokenId,
                 defaultToken
             );
         } else {
+            // 使用 ETH 铸造
             const price = await heroNFTContract.getDefaultNativePrice();
+            const formattedPrice = ethers.formatEther(price);
+            showMessage(`Required payment: ${formattedPrice} ETH`);
+            
+            // 检查用户余额
+            const balance = await provider.getBalance(connectedAddress);
+            if (balance < price) {
+                showError(`Insufficient ETH balance. You need ${formattedPrice} ETH`);
+                return;
+            }
+
+            // 使用合约的 mint 函数
             tx = await heroNFTContract.mint(
-                await signer.getAddress(),
-                tokenId,
-                { value: price }
+                connectedAddress,  // to address
+                tokenId,          // tokenId
+                {
+                    value: price,
+                    gasLimit: 300000
+                }
             );
         }
 
         showMessage('Minting NFT... Please wait for transaction confirmation');
-        await tx.wait();
-        showMessage('NFT minted successfully!');
+        const receipt = await tx.wait();
+        
+        // 检查交易是否成功
+        if (receipt.status === 0) {
+            throw new Error('Transaction failed');
+        }
+        
+        showMessage(`NFT minted successfully! Transaction hash: ${receipt.hash}`);
+        
+        // 铸造后更新余额和NFT列表
+        await Promise.all([
+            updateBalances(),
+            loadNFTList()
+        ]);
     } catch (error) {
         console.error('Error minting NFT:', error);
-        showError(`Failed to mint NFT: ${error.message}`);
+        
+        // 详细的错误信息处理
+        let errorMessage = 'Failed to mint NFT: ';
+        if (error.reason) {
+            errorMessage += error.reason;
+        } else if (error.data?.message) {  // 使用可选链操作符
+            errorMessage += error.data.message;
+        } else {
+            errorMessage += error.message;
+        }
+        
+        showError(errorMessage);
+        
+        // 显示当前价格配置
+        try {
+            const nativePrice = await heroNFTContract.getDefaultNativePrice();
+            const tokenPrice = await heroNFTContract.getDefaultTokenPrice();
+            console.log('Current price configuration:');
+            console.log('Native price:', ethers.formatEther(nativePrice), 'ETH');
+            console.log('Token price:', ethers.formatUnits(tokenPrice, 18), 'tokens');
+        } catch (e) {
+            console.error('Error getting price configuration:', e);
+        }
     }
 }
 
 async function batchMintNFT(useToken = false) {
     try {
+        if (!window.ethereum) {
+            showError('MetaMask is not installed');
+            return;
+        }
+
+        if (!heroNFTContract) {
+            // Try to reconnect wallet
+            await connectWallet();
+            if (!heroNFTContract) {
+                showError('Contract not initialized. Please connect wallet first.');
+                return;
+            }
+        }
+
         const tokenIds = getElement('batchTokenIds').value
             .split(',')
             .map(id => Number(id.trim()));
@@ -97,8 +199,20 @@ async function batchMintNFT(useToken = false) {
             const defaultToken = await heroNFTContract.getDefaultPaymentToken();
             const price = await heroNFTContract.getDefaultTokenPrice();
             const totalPrice = price * BigInt(tokenIds.length);
+            
+            // Check if token contract needs approval
+            if (defaultToken !== ethers.ZeroAddress) {
+                const tokenContract = new ethers.Contract(
+                    defaultToken,
+                    ['function approve(address spender, uint256 amount) public returns (bool)'],
+                    signer
+                );
+                const approveTx = await tokenContract.approve(nftContractAddress, totalPrice);
+                await approveTx.wait();
+            }
+            
             tx = await heroNFTContract.mintBatchWithToken(
-                await signer.getAddress(),
+                connectedAddress,
                 tokenIds,
                 defaultToken
             );
@@ -106,7 +220,7 @@ async function batchMintNFT(useToken = false) {
             const price = await heroNFTContract.getDefaultNativePrice();
             const totalPrice = price * BigInt(tokenIds.length);
             tx = await heroNFTContract.mintBatch(
-                await signer.getAddress(),
+                connectedAddress,
                 tokenIds,
                 { value: totalPrice }
             );
@@ -115,6 +229,7 @@ async function batchMintNFT(useToken = false) {
         showMessage('Minting NFTs... Please wait for transaction confirmation');
         await tx.wait();
         showMessage('Batch NFT minting successful');
+        await loadNFTList();
     } catch (error) {
         console.error('Error minting batch NFTs:', error);
         showError(`Failed to mint batch NFTs: ${error.message}`);
@@ -179,9 +294,23 @@ async function getAcceptedTokens() {
 
 async function setPriceConfig() {
     try {
-        const tokenId = Number(getElement('priceConfigTokenId').value);
-        const tokenAddress = getElement('priceConfigTokenAddress').value;
-        const price = getElement('priceConfigAmount').value;
+        if (!window.ethereum) {
+            showError('MetaMask is not installed');
+            return;
+        }
+
+        if (!heroNFTContract) {
+            // Try to reconnect wallet
+            await connectWallet();
+            if (!heroNFTContract) {
+                showError('Contract not initialized. Please connect wallet first.');
+                return;
+            }
+        }
+
+        const tokenId = Number(document.getElementById('priceConfigTokenId').value);
+        const tokenAddress = document.getElementById('priceConfigTokenAddress').value;
+        const price = document.getElementById('priceConfigAmount').value;
 
         if (!validateNumber(tokenId)) {
             showError('Please enter a valid token ID');
@@ -201,9 +330,21 @@ async function setPriceConfig() {
             tokenAddress,
             ethers.parseUnits(price, 18)
         );
+        
+        showMessage('Setting price configuration... Please wait for confirmation');
         await tx.wait();
-        showMessage('Price configuration updated successfully');
+        
+        // 验证价格是否正确设置
+        const newConfig = await heroNFTContract.getPriceConfig(tokenId);
+        const newPrice = ethers.formatUnits(newConfig.price, 18);
+        if (newPrice !== price) {
+            showError(`Price not set correctly. Expected: ${price}, Got: ${newPrice}`);
+            return;
+        }
+        
+        showMessage('Price configuration set successfully');
     } catch (error) {
+        console.error('Error setting price config:', error);
         showError(`Failed to set price config: ${error.message}`);
     }
 }
@@ -267,12 +408,269 @@ async function validateTokenIds(tokenIds) {
     return true;
 }
 
+// Default Price Settings
+async function setDefaultNativePrice() {
+    try {
+        const price = document.getElementById('defaultNativePrice').value;
+        if (!price || Number.isNaN(Number(price))) {
+            showError('Please enter a valid price amount');
+            return;
+        }
+
+        const tx = await heroNFTContract.setDefaultNativePrice(
+            ethers.parseEther(price)
+        );
+        showMessage('Setting default native price... Please wait for confirmation');
+        await tx.wait();
+        showMessage('Default native price set successfully');
+    } catch (error) {
+        showError(`Failed to set default native price: ${error.message}`);
+    }
+}
+
+async function setDefaultTokenPrice() {
+    try {
+        const price = document.getElementById('defaultTokenPrice').value;
+        if (!price || Number.isNaN(Number(price))) {
+            showError('Please enter a valid price amount');
+            return;
+        }
+
+        const tx = await heroNFTContract.setDefaultTokenPrice(
+            ethers.parseUnits(price, 18)
+        );
+        showMessage('Setting default token price... Please wait for confirmation');
+        await tx.wait();
+        showMessage('Default token price set successfully');
+    } catch (error) {
+        showError(`Failed to set default token price: ${error.message}`);
+    }
+}
+
+// Burn NFT
+async function burnNFT(tokenId) {
+    try {
+        if (!tokenId || Number.isNaN(tokenId)) {
+            showError('Please enter a valid token ID');
+            return;
+        }
+
+        // Check if the user owns the token
+        const owner = await heroNFTContract.ownerOf(tokenId);
+        if (owner.toLowerCase() !== connectedAddress.toLowerCase()) {
+            showError('You do not own this token');
+            return;
+        }
+
+        const tx = await heroNFTContract.burn(tokenId);
+        showMessage('Burning NFT... Please wait for confirmation');
+        await tx.wait();
+        showMessage('NFT burned successfully');
+
+        // Refresh NFT list
+        await loadNFTList();
+    } catch (error) {
+        showError(`Failed to burn NFT: ${error.message}`);
+    }
+}
+
 // Initialize NFT contract
 export async function initNFTContract(provider, signer, address) {
-    heroNFTContract = new ethers.Contract(nftContractAddress, heroNFTAbi, signer);
-    connectedAddress = address;
-    await updateContractInfo();
-    await getDefaultPaymentToken();
-    await getDefaultNativePrice();
-    await getDefaultTokenPrice();
+    try {
+        if (!signer) {
+            showError('Signer not available. Please connect wallet first.');
+            return;
+        }
+
+        heroNFTContract = new ethers.Contract(nftContractAddress, heroNFTAbi, signer);
+        connectedAddress = address;
+
+        // Initialize contract info and settings
+        await Promise.all([
+            updateContractInfo(),
+            getDefaultPaymentToken(),
+            getDefaultNativePrice(),
+            getDefaultTokenPrice(),
+            loadNFTList()
+        ]);
+
+        showMessage('NFT contract initialized successfully');
+    } catch (error) {
+        console.error('Error initializing NFT contract:', error);
+        showError(`Failed to initialize NFT contract: ${error.message}`);
+    }
+}
+
+// Add NFT list loading function
+async function loadNFTList() {
+    try {
+        const nftList = getElement('nftList');
+        if (!nftList) return;
+
+        if (!heroNFTContract) {
+            showError('Contract not initialized. Please connect wallet first.');
+            return;
+        }
+
+        // Get total supply and check each token
+        const maxTokenId = 20; // Limit token ID range to 20 for testing
+        const nftsContainer = document.createElement('div');
+        nftsContainer.className = 'space-y-4';
+        let foundNFTs = false;
+
+        for (let tokenId = 1; tokenId <= maxTokenId; tokenId++) {
+            try {
+                const exists = await heroNFTContract.exists(tokenId);
+                if (!exists) continue;
+
+                const owner = await heroNFTContract.ownerOf(tokenId);
+                if (owner.toLowerCase() === connectedAddress.toLowerCase()) {
+                    foundNFTs = true;
+                    const nftItem = document.createElement('div');
+                    nftItem.className = 'bg-white p-4 rounded-lg shadow flex justify-between items-center';
+                    nftItem.innerHTML = `
+                        <div>
+                            <span class="font-semibold">Token ID: ${tokenId.toString()}</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="burnNFT(${tokenId})" 
+                                    class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
+                                Burn
+                            </button>
+                        </div>
+                    `;
+                    nftsContainer.appendChild(nftItem);
+                }
+            } catch (error) {
+                console.error(`Error checking token ${tokenId}:`, error);
+            }
+        }
+
+        nftList.innerHTML = '';
+        if (!foundNFTs) {
+            nftList.innerHTML = '<p class="text-gray-500">You don\'t own any NFTs from this contract</p>';
+        } else {
+            nftList.appendChild(nftsContainer);
+        }
+    } catch (error) {
+        console.error('Error loading NFT list:', error);
+        showError(`Failed to load NFT list: ${error.message}`);
+    }
+}
+
+// Add connectWallet function to this file
+async function connectWallet() {
+    try {
+        if (!window.ethereum) {
+            throw new Error('MetaMask is not installed');
+        }
+
+        // Request connection to Optimism Sepolia
+        await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0xaa37dc' }],
+        });
+
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        connectedAddress = await signer.getAddress();
+
+        // Initialize contract with signer
+        heroNFTContract = new ethers.Contract(nftContractAddress, heroNFTAbi, signer);
+
+        // Update balances
+        await updateBalances();
+
+        // Enable buttons after successful connection
+        document.querySelectorAll('.requires-wallet').forEach(button => {
+            button.disabled = false;
+        });
+
+        return true;
+    } catch (error) {
+        console.error('Error connecting wallet:', error);
+        showError(`Failed to connect wallet: ${error.message}`);
+        return false;
+    }
+}
+
+// 添加新的函数来检查 NFT 价格
+async function checkNFTPrice() {
+    try {
+        if (!window.ethereum) {
+            showError('MetaMask is not installed');
+            return;
+        }
+
+        // 确保合约已初始化
+        if (!heroNFTContract) {
+            // 尝试重新连接钱包
+            const connected = await connectWallet();
+            if (!connected || !heroNFTContract) {
+                showError('Contract not initialized. Please connect wallet first.');
+                return;
+            }
+        }
+
+        const tokenId = Number(getElement('mintTokenId').value);
+        if (!validateNumber(tokenId)) {
+            showError('Please enter a valid token ID');
+            return;
+        }
+
+        // 获取价格配置
+        const config = await heroNFTContract.getPriceConfig(tokenId);
+        const defaultNativePrice = await heroNFTContract.getDefaultNativePrice();
+        const defaultTokenPrice = await heroNFTContract.getDefaultTokenPrice();
+
+        // 显示价格
+        const ethPriceElement = getElement('ethPrice');
+        const tokenPriceElement = getElement('tokenPrice');
+
+        if (config.isActive) {
+            ethPriceElement.textContent = `${ethers.formatEther(config.price)} ETH (Custom)`;
+            tokenPriceElement.textContent = `${ethers.formatUnits(config.price, 18)} Tokens (Custom)`;
+        } else {
+            ethPriceElement.textContent = `${ethers.formatEther(defaultNativePrice)} ETH (Default)`;
+            tokenPriceElement.textContent = `${ethers.formatUnits(defaultTokenPrice, 18)} Tokens (Default)`;
+        }
+
+        // 获取并显示余额
+        await updateBalances();
+
+        showMessage('Price information updated successfully');
+    } catch (error) {
+        console.error('Error checking NFT price:', error);
+        showError(`Failed to check NFT price: ${error.message}`);
+    }
+}
+
+// 添加更新余额的函数
+async function updateBalances() {
+    try {
+        if (!provider || !signer || !connectedAddress) {
+            return;
+        }
+
+        // 获取 ETH 余额
+        const ethBalance = await provider.getBalance(connectedAddress);
+        getElement('ethBalance').textContent = `${ethers.formatEther(ethBalance)} ETH`;
+
+        // 获取代币余额
+        const defaultToken = await heroNFTContract.getDefaultPaymentToken();
+        if (defaultToken !== ethers.ZeroAddress) {
+            const tokenContract = new ethers.Contract(
+                defaultToken,
+                ['function balanceOf(address account) view returns (uint256)'],
+                provider
+            );
+            const tokenBalance = await tokenContract.balanceOf(connectedAddress);
+            getElement('tokenBalance').textContent = `${ethers.formatUnits(tokenBalance, 18)} Tokens`;
+        } else {
+            getElement('tokenBalance').textContent = 'N/A (Using ETH)';
+        }
+    } catch (error) {
+        console.error('Error updating balances:', error);
+        showError(`Failed to update balances: ${error.message}`);
+    }
 } 

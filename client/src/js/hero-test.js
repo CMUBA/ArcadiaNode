@@ -105,9 +105,11 @@ async function loadRegisteredNFTs() {
             return;
         }
 
-        // Get list of registered NFT contracts
+        // Get list of registered NFT contracts and remove duplicates
         const registeredNFTs = await heroContract.getRegisteredNFTs();
-        if (registeredNFTs.length === 0) {
+        const uniqueNFTs = [...new Set(registeredNFTs.map(addr => addr.toLowerCase()))];
+        
+        if (uniqueNFTs.length === 0) {
             nftList.innerHTML = '<p class="text-gray-500">No registered NFT contracts found</p>';
             return;
         }
@@ -116,8 +118,8 @@ async function loadRegisteredNFTs() {
         const contractsContainer = document.createElement('div');
         contractsContainer.className = 'space-y-4';
 
-        // Process each registered NFT contract
-        for (const contractAddress of registeredNFTs) {
+        // Process each unique registered NFT contract
+        for (const contractAddress of uniqueNFTs) {
             try {
                 const nftContract = new ethers.Contract(
                     contractAddress,
@@ -127,31 +129,36 @@ async function loadRegisteredNFTs() {
 
                 // Create contract section
                 const contractSection = document.createElement('div');
-                contractSection.className = 'bg-white p-4 rounded-lg shadow';
+                contractSection.className = 'p-4 border rounded-lg';
                 
-                // Add contract header
-                contractSection.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="font-semibold">Contract: ${contractAddress}</h3>
-                        <button onclick="loadNFTsFromContract('${contractAddress}')" 
-                                class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
-                            Load NFTs
-                        </button>
-                    </div>
-                    <div id="nfts-${contractAddress}" class="space-y-2"></div>
-                `;
+                // Add contract address
+                const addressDiv = document.createElement('div');
+                addressDiv.className = 'mb-2';
+                addressDiv.textContent = `Contract: ${contractAddress}`;
+                contractSection.appendChild(addressDiv);
 
+                // Add buttons container
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.className = 'flex space-x-2';
+
+                // Add Load NFTs button
+                const loadButton = document.createElement('button');
+                loadButton.className = 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600';
+                loadButton.textContent = 'Load NFTs';
+                loadButton.onclick = () => loadNFTsFromContract(contractAddress);
+                buttonsDiv.appendChild(loadButton);
+
+                contractSection.appendChild(buttonsDiv);
                 contractsContainer.appendChild(contractSection);
             } catch (error) {
-                console.warn(`Error processing contract ${contractAddress}:`, error);
+                console.error(`Error processing contract ${contractAddress}:`, error);
             }
         }
 
         nftList.appendChild(contractsContainer);
-        showMessage('NFT contracts loaded successfully');
     } catch (error) {
-        console.error('Error in loadRegisteredNFTs:', error);
-        showError(`Failed to load NFT contracts: ${error.message}`);
+        console.error('Error loading registered NFTs:', error);
+        showError(`Failed to load registered NFTs: ${error.message}`);
     }
 }
 
@@ -177,14 +184,21 @@ async function connectWallet() {
         heroMetadataContract = new ethers.Contract(metadataContractAddress, heroMetadataAbi, signer);
         heroContract = new ethers.Contract(heroContractAddress, heroAbi, signer);
 
+        // Update UI elements
         const walletAddressEl = getElement('walletAddress');
         const connectedWalletEl = getElement('connectedWallet');
+        const connectWalletBtn = getElement('connectWallet');
         
         if (walletAddressEl) {
             walletAddressEl.textContent = connectedAddress;
         }
         if (connectedWalletEl) {
             connectedWalletEl.classList.remove('hidden');
+        }
+        if (connectWalletBtn) {
+            connectWalletBtn.textContent = 'Connected';
+            connectWalletBtn.classList.add('bg-green-500');
+            connectWalletBtn.classList.remove('bg-blue-500');
         }
         
         // Enable wallet-required buttons
@@ -561,77 +575,63 @@ async function getDefaultTokenPrice() {
 // 从指定合约加载 NFT
 async function loadNFTsFromContract(contractAddress) {
     try {
-        const nftContainer = getElement(`nfts-${contractAddress}`);
-        if (!nftContainer) return;
-
-        nftContainer.innerHTML = '<p class="text-gray-500">Loading NFTs...</p>';
-
-        const nftContract = new ethers.Contract(
-            contractAddress,
-            heroNFTAbi,
-            signer
-        );
-
-        // Get user's balance for this NFT contract
+        const nftContract = new ethers.Contract(contractAddress, heroNFTAbi, signer);
         const balance = await nftContract.balanceOf(connectedAddress);
-        if (balance === 0n) {
-            nftContainer.innerHTML = '<p class="text-gray-500">No NFTs found for this contract</p>';
-            return;
-        }
+        const nftList = document.createElement('div');
+        nftList.className = 'mt-4 space-y-2';
 
-        // Clear loading message
-        nftContainer.innerHTML = '';
-
-        // Iterate through token IDs to find owned ones
-        const maxTokenId = 100; // Reasonable limit for testing
-        for (let tokenId = 1; tokenId <= maxTokenId; tokenId++) {
+        for (let i = 0; i < balance; i++) {
             try {
+                const tokenId = await nftContract.tokenOfOwnerByIndex(connectedAddress, i);
                 const owner = await nftContract.ownerOf(tokenId);
+                
                 if (owner.toLowerCase() === connectedAddress.toLowerCase()) {
                     // Check if hero exists for this NFT
-                    let heroInfo = null;
+                    let heroExists = false;
                     try {
-                        heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
+                        await heroContract.getHeroInfo(contractAddress, tokenId);
+                        heroExists = true;
                     } catch (error) {
                         // Hero doesn't exist for this NFT
+                        heroExists = false;
                     }
 
-                    const nftElement = document.createElement('div');
-                    nftElement.className = 'border p-3 rounded';
-                    
-                    if (heroInfo && heroInfo.name) {
-                        nftElement.innerHTML = `
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <p class="font-medium">Token ID: ${tokenId}</p>
-                                    <p class="text-sm text-gray-600">Hero Name: ${heroInfo.name}</p>
-                                    <p class="text-sm text-gray-600">Level: ${heroInfo.level}</p>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        nftElement.innerHTML = `
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <p class="font-medium">Token ID: ${tokenId}</p>
-                                    <p class="text-sm text-yellow-600">No hero created yet</p>
-                                </div>
-                                <button onclick="prepareCreateHero('${contractAddress}', ${tokenId})" 
-                                        class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">
-                                    Create Hero
-                                </button>
-                            </div>
-                        `;
-                    }
-                    nftContainer.appendChild(nftElement);
+                    const nftItem = document.createElement('div');
+                    nftItem.className = 'p-3 border rounded flex justify-between items-center';
+                    nftItem.innerHTML = `
+                        <span>Token ID: ${tokenId.toString()}</span>
+                        ${!heroExists ? `
+                            <button 
+                                onclick="prepareCreateHero('${contractAddress}', ${tokenId})"
+                                class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                            >
+                                Create Hero for this NFT
+                            </button>
+                        ` : `
+                            <span class="text-green-500">Hero Created</span>
+                        `}
+                    `;
+                    nftList.appendChild(nftItem);
                 }
             } catch (error) {
-                // Skip non-existent tokens
-                continue;
+                console.error(`Error processing token ${i}:`, error);
             }
         }
 
-        showMessage(`NFTs loaded successfully from contract ${contractAddress}`);
+        // Find the contract section and append the NFT list
+        const contractSection = Array.from(document.querySelectorAll('.p-4.border.rounded-lg')).find(
+            section => section.textContent.includes(contractAddress)
+        );
+        
+        if (contractSection) {
+            // Remove any existing NFT list
+            const existingList = contractSection.querySelector('.mt-4.space-y-2');
+            if (existingList) {
+                existingList.remove();
+            }
+            contractSection.appendChild(nftList);
+        }
+
     } catch (error) {
         console.error('Error loading NFTs:', error);
         showError(`Failed to load NFTs: ${error.message}`);
@@ -733,15 +733,15 @@ function displayNFTs(nfts) {
 
 // 准备创建英雄
 function prepareCreateHero(contractAddress, tokenId) {
-    document.getElementById('heroNFTContract').value = contractAddress;
-    document.getElementById('heroTokenId').value = tokenId;
+    // Set values in the create hero form
+    setInputValue('heroNFTContract', contractAddress);
+    setInputValue('heroTokenId', tokenId);
     
-    const createHeroSection = document.getElementById('createHeroSection');
+    // Show the create hero section
+    const createHeroSection = getElement('createHeroSection');
     if (createHeroSection) {
         createHeroSection.scrollIntoView({ behavior: 'smooth' });
     }
-    
-    showMessage('Please fill in hero details and click Create Hero');
 }
 
 async function validateTokenIds(tokenIds) {

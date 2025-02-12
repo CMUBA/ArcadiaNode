@@ -67,17 +67,39 @@
                     <div>
                         <label class="block mb-2 text-gray-700">Native Price (ETH):</label>
                         <div class="flex space-x-2">
-                            <input type="text" id="defaultNativePrice" class="border p-2 rounded flex-grow bg-gray-50" readonly>
+                            <input type="text" id="defaultNativePrice" class="border p-2 rounded flex-grow">
                             <button onclick="getDefaultNativePrice()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Get</button>
+                            <button onclick="setDefaultNativePrice()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Set</button>
                         </div>
                     </div>
                     <div>
                         <label class="block mb-2 text-gray-700">Token Price:</label>
                         <div class="flex space-x-2">
-                            <input type="text" id="defaultTokenPrice" class="border p-2 rounded flex-grow bg-gray-50" readonly>
+                            <input type="text" id="defaultTokenPrice" class="border p-2 rounded flex-grow">
                             <button onclick="getDefaultTokenPrice()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Get</button>
+                            <button onclick="setDefaultTokenPrice()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Set</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- NFT List -->
+            <div class="bg-white rounded-lg shadow p-6 col-span-2">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Your NFTs</h2>
+                <div id="nftList" class="space-y-4">
+                    <p class="text-gray-500">Connect wallet to view your NFTs</p>
+                </div>
+            </div>
+
+            <!-- Burn NFT -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Burn NFT</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">Token ID:</label>
+                        <input type="number" id="burnTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID to burn">
+                    </div>
+                    <button onclick="burnNFT()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 requires-wallet font-medium w-full" disabled>Burn NFT</button>
                 </div>
             </div>
 
@@ -87,7 +109,18 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block mb-2 text-gray-700">Token ID:</label>
-                        <input type="number" id="mintTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                        <div class="flex space-x-2">
+                            <input type="number" id="mintTokenId" class="border p-2 rounded flex-grow" placeholder="Enter token ID">
+                            <button onclick="window.checkNFTPrice()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet font-medium" disabled>Check Price</button>
+                        </div>
+                    </div>
+                    <div id="priceInfo" class="text-sm text-gray-600 space-y-1">
+                        <p>ETH Price: <span id="ethPrice">-</span></p>
+                        <p>Token Price: <span id="tokenPrice">-</span></p>
+                    </div>
+                    <div id="balanceInfo" class="text-sm text-gray-600 space-y-1">
+                        <p>Your ETH Balance: <span id="ethBalance">-</span></p>
+                        <p>Your Token Balance: <span id="tokenBalance">-</span></p>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <button onclick="window.mintWithEth()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium" disabled>Mint with ETH</button>
@@ -165,3 +198,4 @@
     </div>
 </body>
 </html>
+
