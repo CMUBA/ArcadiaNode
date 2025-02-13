@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hero Management</title>
-    <script type="module" src="../js/hero-test.js"></script>
+    <script type="module" src="../js/hero-management.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 p-4">
     <div class="max-w-7xl mx-auto">
+        <!-- Message Display -->
+        <div id="message" class="fixed top-4 right-4 z-50 hidden bg-blue-500 text-white px-6 py-3 rounded shadow-lg"></div>
+        
         <!-- Header -->
         <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow">
             <div class="flex items-center space-x-6">
                 <h1 class="text-2xl font-bold text-gray-800">Hero Management</h1>
                 <nav class="flex space-x-6">
-                    <a href="hero-test.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT System</a>
+                    <a href="../index.html" class="text-blue-500 hover:text-blue-600 font-medium">Home</a>
+                    <a href="hero-test.html" class="text-blue-500 hover:text-blue-600 font-medium">Hero System</a>
                     <a href="hero-metadata.html" class="text-blue-500 hover:text-blue-600 font-medium">Metadata Management</a>
-                    <a href="nft-contract.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT Contract Info</a>
+                    <a href="nft-contract.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT Contract</a>
                 </nav>
             </div>
             <!-- Wallet Connection -->
@@ -30,45 +34,153 @@
 
         <!-- Main Content -->
         <div class="grid grid-cols-2 gap-6">
-            <!-- Hero Skills -->
+            <!-- Contract Information -->
             <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-semibold mb-4 text-gray-800">Hero Skills</h2>
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Contract Information</h2>
                 <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">Contract Address:</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" id="contractAddress" class="border p-2 rounded flex-grow bg-gray-50" readonly>
+                            <a id="contractLink" href="#" target="_blank" class="text-blue-500 hover:text-blue-600">View on Explorer</a>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Owner Address:</label>
+                        <input type="text" id="ownerAddress" class="border p-2 rounded w-full bg-gray-50" readonly>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Registered NFT Contracts:</label>
+                        <div id="registeredNFTs" class="text-sm text-gray-600"></div>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Total Heroes:</label>
+                        <div id="totalHeroes" class="text-sm text-gray-600"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Information -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Hero Information</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">NFT Contract:</label>
+                        <input type="text" id="heroNFTContract" class="border p-2 rounded w-full" placeholder="Enter NFT contract address">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Token ID:</label>
+                        <input type="number" id="heroTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                    </div>
+                    <button onclick="getHeroInfo()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet font-medium w-full" disabled>Get Hero Info</button>
+                    <div id="heroInfo" class="mt-2 text-sm text-gray-600 whitespace-pre-wrap"></div>
+                </div>
+            </div>
+
+            <!-- Skill Management -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Skill Management</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">NFT Contract:</label>
+                        <input type="text" id="skillNFTContract" class="border p-2 rounded w-full" placeholder="Enter NFT contract address">
+                    </div>
                     <div>
                         <label class="block mb-2 text-gray-700">Token ID:</label>
                         <input type="number" id="skillTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
                     </div>
                     <div>
                         <label class="block mb-2 text-gray-700">Season:</label>
-                        <input type="number" id="skillSeason" class="border p-2 rounded w-full" placeholder="Enter season">
+                        <input type="number" id="skillSeason" class="border p-2 rounded w-full" placeholder="Enter season number">
                     </div>
-                    <button onclick="getHeroSkills()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet w-full font-medium" disabled>Get Hero Skills</button>
-                    <div id="heroSkillsInfo" class="mt-2 text-sm text-gray-600"></div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Skill Index:</label>
+                        <input type="number" id="skillIndex" class="border p-2 rounded w-full" placeholder="Enter skill index">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Level:</label>
+                        <input type="number" id="skillLevel" class="border p-2 rounded w-full" placeholder="Enter skill level">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="updateSkill()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium" disabled>Update Skill</button>
+                        <button onclick="getHeroSkills()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet font-medium" disabled>Get Skills</button>
+                    </div>
+                    <div id="skillInfo" class="mt-2 text-sm text-gray-600 whitespace-pre-wrap"></div>
                 </div>
             </div>
 
-            <!-- Daily Points & Energy -->
+            <!-- Equipment Management -->
             <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-semibold mb-4 text-gray-800">Daily Points & Energy</h2>
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Equipment Management</h2>
                 <div class="space-y-4">
                     <div>
+                        <label class="block mb-2 text-gray-700">NFT Contract:</label>
+                        <input type="text" id="equipNFTContract" class="border p-2 rounded w-full" placeholder="Enter NFT contract address">
+                    </div>
+                    <div>
                         <label class="block mb-2 text-gray-700">Token ID:</label>
-                        <input type="number" id="dailyTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                        <input type="number" id="equipTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
                     </div>
                     <div>
-                        <label class="block mb-2 text-gray-700">Points:</label>
-                        <input type="number" id="dailyPoints" class="border p-2 rounded w-full" placeholder="Enter points">
+                        <label class="block mb-2 text-gray-700">Slot:</label>
+                        <input type="number" id="equipSlot" class="border p-2 rounded w-full" placeholder="Enter equipment slot">
                     </div>
                     <div>
-                        <label class="block mb-2 text-gray-700">Energy:</label>
-                        <input type="number" id="energy" class="border p-2 rounded w-full" placeholder="Enter energy">
+                        <label class="block mb-2 text-gray-700">Equipment Contract:</label>
+                        <input type="text" id="equipContract" class="border p-2 rounded w-full" placeholder="Enter equipment contract address">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Equipment Token ID:</label>
+                        <input type="number" id="equipTokenIdEquip" class="border p-2 rounded w-full" placeholder="Enter equipment token ID">
+                    </div>
+                    <button onclick="updateEquipment()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium w-full" disabled>Update Equipment</button>
+                </div>
+            </div>
+
+            <!-- Points and Energy Management -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Points & Energy Management</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">NFT Contract:</label>
+                        <input type="text" id="pointsEnergyNFTContract" class="border p-2 rounded w-full" placeholder="Enter NFT contract address">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Token ID:</label>
+                        <input type="number" id="pointsEnergyTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Amount:</label>
+                        <input type="number" id="pointsEnergyAmount" class="border p-2 rounded w-full" placeholder="Enter amount">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <button onclick="addDailyPoints()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium" disabled>Add Daily Points</button>
-                        <button onclick="consumeEnergy()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 requires-wallet font-medium" disabled>Consume Energy</button>
+                        <button onclick="addDailyPoints()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium" disabled>Add Points</button>
+                        <button onclick="consumeEnergy()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 requires-wallet font-medium" disabled>Consume Energy</button>
                     </div>
                 </div>
             </div>
+
+            <!-- NFT Registration -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">NFT Registration</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">NFT Contract Address:</label>
+                        <input type="text" id="nftContractAddress" class="border p-2 rounded w-full" placeholder="Enter NFT contract address">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="checkNftRegistration()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet font-medium" disabled>Check Registration</button>
+                        <button onclick="getOfficialNFT()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 requires-wallet font-medium" disabled>Get Official NFT</button>
+                    </div>
+                    <div id="nftRegistrationInfo" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 class="text-2xl font-semibold mb-4">Event Log</h2>
+            <pre id="eventLog" class="bg-gray-100 p-4 rounded h-48 overflow-y-auto font-mono text-sm"></pre>
         </div>
     </div>
 </body>

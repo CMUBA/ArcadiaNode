@@ -294,23 +294,9 @@ async function getAcceptedTokens() {
 
 async function setPriceConfig() {
     try {
-        if (!window.ethereum) {
-            showError('MetaMask is not installed');
-            return;
-        }
-
-        if (!heroNFTContract) {
-            // Try to reconnect wallet
-            await connectWallet();
-            if (!heroNFTContract) {
-                showError('Contract not initialized. Please connect wallet first.');
-                return;
-            }
-        }
-
-        const tokenId = Number(document.getElementById('priceConfigTokenId').value);
-        const tokenAddress = document.getElementById('priceConfigTokenAddress').value;
-        const price = document.getElementById('priceConfigAmount').value;
+        const tokenId = Number(getElement('priceConfigTokenId').value);
+        const tokenAddress = getElement('priceConfigTokenAddress').value;
+        const amount = getElement('priceConfigAmount').value;
 
         if (!validateNumber(tokenId)) {
             showError('Please enter a valid token ID');
@@ -320,32 +306,29 @@ async function setPriceConfig() {
             showError('Please enter a valid token address');
             return;
         }
-        if (!price || Number.isNaN(Number(price))) {
+        if (!amount || Number.isNaN(Number(amount))) {
             showError('Please enter a valid price amount');
             return;
         }
 
-        const tx = await heroNFTContract.setPriceConfig(
-            tokenId,
-            tokenAddress,
-            ethers.parseUnits(price, 18)
-        );
-        
-        showMessage('Setting price configuration... Please wait for confirmation');
+        // Convert price to BigInt
+        const priceBigInt = ethers.parseUnits(amount.toString(), 18);
+
+        const tx = await heroNFTContract.setPriceConfig(tokenId, tokenAddress, priceBigInt);
+        showMessage('Setting price config... Please wait for confirmation');
         await tx.wait();
-        
-        // 验证价格是否正确设置
-        const newConfig = await heroNFTContract.getPriceConfig(tokenId);
-        const newPrice = ethers.formatUnits(newConfig.price, 18);
-        if (newPrice !== price) {
-            showError(`Price not set correctly. Expected: ${price}, Got: ${newPrice}`);
-            return;
+
+        // Verify the price was set correctly
+        const priceConfig = await heroNFTContract.getPriceConfig(tokenId);
+        const setPriceFormatted = ethers.formatUnits(priceConfig.price, 18);
+
+        if (setPriceFormatted !== amount) {
+            throw new Error(`Price not set correctly. Expected: ${amount}, Got: ${setPriceFormatted}`);
         }
-        
-        showMessage('Price configuration set successfully');
+
+        showMessage('Price config set successfully');
     } catch (error) {
-        console.error('Error setting price config:', error);
-        showError(`Failed to set price config: ${error.message}`);
+        showError('Failed to set price config:', error);
     }
 }
 
@@ -582,9 +565,10 @@ async function connectWallet() {
         await updateBalances();
 
         // Enable buttons after successful connection
-        document.querySelectorAll('.requires-wallet').forEach(button => {
+        const buttons = document.querySelectorAll('.requires-wallet');
+        for (const button of buttons) {
             button.disabled = false;
-        });
+        }
 
         return true;
     } catch (error) {

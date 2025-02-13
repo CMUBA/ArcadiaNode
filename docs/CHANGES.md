@@ -588,17 +588,16 @@ NFT 加载流程：
 已创建：显示英雄信息（名称、等级等）
 未创建：显示 "Create Hero" 按钮
 
-这样的实现避免了使用 tokenOfOwnerByIndex，而是采用了更通用的方式来查找用户拥有的 NFT。虽然这种方式在 token ID 范围很大时可能不够高效，但对于测试环境来说是可以接受的。
+
 hero-test页面的逻辑：
-点击连接钱包，获得登录钱包地址，然后先通过ABI查询hero合约已经注册了的NFT合约列表，逐个显示。
-在每个NFT合约行结尾，显示loadNFT button，点击后通过登录钱包地址、NFT合约地址来查询是否在Hero合约注册或记录。
-基于这个列表，每个合约都有一个loadnft，查询当前登录地址是否拥有这个nft；如果拥有，则查询是否注册了hero，注册了hero则显示hero信息，没有则提示可以注册hero，传递此参数给create hero。
-3. 然后下面是hero create的测试区域
+1. 点击连接钱包，获得登录钱包地址，然后先通过ABI查询hero合约已经注册了的NFT合约列表，逐个显示。
+2. 在每个NFT合约行结尾，通过登录钱包地址、NFT合约地址来查询是否在Hero合约注册或记录。
+3. 如果拥有hero记录，则显示hero信息，没有则提示可以显示注册hero，点击传递此参数给create hero。
 4. 我们确认hero create测试逻辑已经实现，可以正常创建英雄（参考DeployAndInit.s.sol脚本）
 5. 历史经验：使用 getRegisteredNFTs 合约接口获取注册的 NFT 合约列表
-使用 ERC721 标准接口 balanceOf 和 tokenOfOwnerByIndex 获取用户拥有的 NFT
+使用 ERC721 标准接口 balanceOf 和 ownerOf通过便利前20 nft id 获取用户拥有的 NFT（未来用户登录会携带合约和id）
 使用 getHeroInfo 接口检查 NFT 是否已注册英雄
 这样的实现更加直接和高效，不需要查询区块历史。
-
-loadnft button目标是查询当前登录地址是否拥有这个合约nft，你用byindex查询对么？eip721支持指定地址查询是否拥有nft吧
-loadnft button报错
+这样的实现避免了使用 tokenOfOwnerByIndex，而是采用了更通用的方式来查找用户拥有的 NFT。虽然这种方式在 token ID 范围很大时可能不够高效，但对于测试环境来说是可以接受的。
+6. 1. 改造所有链接钱包button：除了获取登陆地址等原来功能外，增加查询hero合约，获得此钱包注册过的nft合约和id，返回供后面业务使用
+2. http://localhost:3008/pages/hero-test.html，点击连接钱包，先获得了在hero合约注册过的nft合约和id，和查询登陆账户拥有的nft列表做对比，已经注册了hero的nft，不可以显示create hero button，而是显示hero记录信息；没有注册的才显示cteate hero

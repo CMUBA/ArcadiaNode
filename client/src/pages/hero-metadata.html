@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hero Metadata Management</title>
-    <script type="module" src="../js/hero-test.js"></script>
+    <script type="module" src="../js/hero-metadata.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 p-4">
     <div class="max-w-7xl mx-auto">
+        <!-- Message Display -->
+        <div id="message" class="fixed top-4 right-4 z-50 hidden bg-blue-500 text-white px-6 py-3 rounded shadow-lg"></div>
+        
         <!-- Header -->
         <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow">
             <div class="flex items-center space-x-6">
-                <h1 class="text-2xl font-bold text-gray-800">Metadata Management</h1>
+                <h1 class="text-2xl font-bold text-gray-800">Hero Metadata Management</h1>
                 <nav class="flex space-x-6">
-                    <a href="hero-test.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT System</a>
+                    <a href="../index.html" class="text-blue-500 hover:text-blue-600 font-medium">Home</a>
+                    <a href="hero-test.html" class="text-blue-500 hover:text-blue-600 font-medium">Hero System</a>
                     <a href="hero-management.html" class="text-blue-500 hover:text-blue-600 font-medium">Hero Management</a>
-                    <a href="nft-contract.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT Contract Info</a>
+                    <a href="nft-contract.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT Contract</a>
                 </nav>
             </div>
             <!-- Wallet Connection -->
@@ -30,38 +34,133 @@
 
         <!-- Main Content -->
         <div class="grid grid-cols-2 gap-6">
-            <!-- Price Settings -->
+            <!-- Contract Information -->
             <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Price Settings</h3>
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Contract Information</h2>
                 <div class="space-y-4">
                     <div>
-                        <label class="block mb-2 text-gray-700">Token ID:</label>
-                        <input type="number" id="priceTokenId" class="border p-2 rounded w-full" placeholder="Enter token ID">
+                        <label class="block mb-2 text-gray-700">Contract Address:</label>
+                        <input type="text" id="contractAddress" class="border p-2 rounded w-full bg-gray-50" readonly>
                     </div>
                     <div>
-                        <label class="block mb-2 text-gray-700">Native Price (ETH):</label>
-                        <input type="number" id="nativePrice" class="border p-2 rounded w-full" placeholder="Enter price in ETH">
+                        <label class="block mb-2 text-gray-700">Owner Address:</label>
+                        <input type="text" id="ownerAddress" class="border p-2 rounded w-full bg-gray-50" readonly>
                     </div>
-                    <button onclick="setPriceConfig()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet w-full font-medium" disabled>Set Price Config</button>
                 </div>
             </div>
 
-            <!-- Token Settings -->
+            <!-- Skill Management -->
             <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Token Settings</h3>
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Skill Management</h2>
                 <div class="space-y-4">
                     <div>
-                        <label class="block mb-2 text-gray-700">Token Price:</label>
-                        <input type="number" id="tokenPrice" class="border p-2 rounded w-full" placeholder="Enter token price">
+                        <label class="block mb-2 text-gray-700">Season ID:</label>
+                        <input type="number" id="seasonId" class="border p-2 rounded w-full" placeholder="Enter season ID (0-3)">
                     </div>
                     <div>
-                        <label class="block mb-2 text-gray-700">Payment Token:</label>
-                        <input type="text" id="paymentToken" class="border p-2 rounded w-full" placeholder="Enter payment token address">
+                        <label class="block mb-2 text-gray-700">Skill ID:</label>
+                        <input type="number" id="skillId" class="border p-2 rounded w-full" placeholder="Enter skill ID (0-4)">
                     </div>
-                    <button onclick="getPriceConfig()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 requires-wallet w-full font-medium" disabled>Get Price Config</button>
-                    <div id="priceConfigInfo" class="mt-2 text-sm"></div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Level:</label>
+                        <input type="number" id="skillLevel" class="border p-2 rounded w-full" placeholder="Enter level (1-10)">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Skill Name:</label>
+                        <input type="text" id="skillName" class="border p-2 rounded w-full" placeholder="Enter skill name">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Points:</label>
+                        <input type="number" id="skillPoints" class="border p-2 rounded w-full" placeholder="Enter skill points">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="setSkill()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium" disabled>Set Skill</button>
+                        <button onclick="getSkill()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet font-medium" disabled>Get Skill</button>
+                    </div>
+                    <div id="skillInfo" class="mt-2 text-sm text-gray-600"></div>
                 </div>
             </div>
+
+            <!-- Race Management -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Race Management</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">Race ID:</label>
+                        <input type="number" id="raceId" class="border p-2 rounded w-full" placeholder="Enter race ID">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Race Name:</label>
+                        <input type="text" id="raceName" class="border p-2 rounded w-full" placeholder="Enter race name">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Base Attributes [STR, DEX, INT, VIT]:</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <input type="number" id="raceStr" class="border p-2 rounded w-full" placeholder="STR">
+                            <input type="number" id="raceDex" class="border p-2 rounded w-full" placeholder="DEX">
+                            <input type="number" id="raceInt" class="border p-2 rounded w-full" placeholder="INT">
+                            <input type="number" id="raceVit" class="border p-2 rounded w-full" placeholder="VIT">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Race Description:</label>
+                        <textarea id="raceDescription" class="border p-2 rounded w-full h-24" placeholder="Enter race description"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="setRace()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium" disabled>Set Race</button>
+                        <button onclick="getRace()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet font-medium" disabled>Get Race</button>
+                    </div>
+                    <div id="raceInfo" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+            </div>
+
+            <!-- Class Management -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Class Management</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">Class ID:</label>
+                        <input type="number" id="classId" class="border p-2 rounded w-full" placeholder="Enter class ID">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Class Name:</label>
+                        <input type="text" id="className" class="border p-2 rounded w-full" placeholder="Enter class name">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Base Attributes [STR, DEX, INT, VIT]:</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <input type="number" id="classStr" class="border p-2 rounded w-full" placeholder="STR">
+                            <input type="number" id="classDex" class="border p-2 rounded w-full" placeholder="DEX">
+                            <input type="number" id="classInt" class="border p-2 rounded w-full" placeholder="INT">
+                            <input type="number" id="classVit" class="border p-2 rounded w-full" placeholder="VIT">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Growth Rates [STR, DEX, INT, VIT]:</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <input type="number" id="classStrGrowth" class="border p-2 rounded w-full" placeholder="STR">
+                            <input type="number" id="classDexGrowth" class="border p-2 rounded w-full" placeholder="DEX">
+                            <input type="number" id="classIntGrowth" class="border p-2 rounded w-full" placeholder="INT">
+                            <input type="number" id="classVitGrowth" class="border p-2 rounded w-full" placeholder="VIT">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-700">Class Description:</label>
+                        <textarea id="classDescription" class="border p-2 rounded w-full h-24" placeholder="Enter class description"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="setClass()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium" disabled>Set Class</button>
+                        <button onclick="getClass()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet font-medium" disabled>Get Class</button>
+                    </div>
+                    <div id="classInfo" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 class="text-2xl font-semibold mb-4">Event Log</h2>
+            <pre id="eventLog" class="bg-gray-100 p-4 rounded h-48 overflow-y-auto font-mono text-sm"></pre>
         </div>
     </div>
 </body>
