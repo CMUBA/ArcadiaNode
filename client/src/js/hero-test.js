@@ -3,7 +3,6 @@ import { heroNFTAbi } from './abi/heroNFT.js';
 import { heroMetadataAbi } from './abi/heroMetadata.js';
 import { heroAbi } from './abi/hero.js';
 import { heroConfig } from '../config/hero.js';
-import { initNFTContract } from './nft-contract-test.js';
 
 // Export functions for use in HTML
 window.connectWallet = connectWallet;
@@ -22,6 +21,11 @@ window.getDefaultPaymentToken = getDefaultPaymentToken;
 window.getDefaultNativePrice = getDefaultNativePrice;
 window.getDefaultTokenPrice = getDefaultTokenPrice;
 window.prepareCreateHero = prepareCreateHero;
+
+// Export API test functions
+window.testCreateHeroAPI = testCreateHeroAPI;
+window.testLoadHeroAPI = testLoadHeroAPI;
+window.testSaveHeroAPI = testSaveHeroAPI;
 
 // Contract initialization
 let provider;
@@ -219,60 +223,51 @@ async function connectWallet() {
 
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
-        connectedAddress = await signer.getAddress();
-
-        // Initialize contracts
+        
+        // 初始化所有合约
         heroContract = new ethers.Contract(heroContractAddress, heroAbi, signer);
         heroNFTContract = new ethers.Contract(nftContractAddress, heroNFTAbi, signer);
+        heroMetadataContract = new ethers.Contract(metadataContractAddress, heroMetadataAbi, signer);
 
-        // Update UI elements
-        const walletAddressEl = getElement('walletAddress');
-        const connectedWalletEl = getElement('connectedWallet');
+        connectedAddress = await signer.getAddress();
+
+        // Update UI
         const connectWalletBtn = getElement('connectWallet');
+        const connectedWalletDiv = getElement('connectedWallet');
+        const walletAddressSpan = getElement('walletAddress');
         
-        if (walletAddressEl) {
-            walletAddressEl.textContent = connectedAddress;
-        }
-        if (connectedWalletEl) {
-            connectedWalletEl.classList.remove('hidden');
-        }
-        if (connectWalletBtn) {
+        if (connectWalletBtn && connectedWalletDiv && walletAddressSpan) {
             connectWalletBtn.textContent = 'Connected';
-            connectWalletBtn.classList.add('bg-green-500');
-            connectWalletBtn.classList.remove('bg-blue-500');
+            connectWalletBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            connectWalletBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            connectedWalletDiv.classList.remove('hidden');
+            walletAddressSpan.textContent = connectedAddress;
         }
 
-        // Get registered NFTs from hero contract
-        const registeredNFTs = await heroContract.getRegisteredNFTs();
-        window.registeredNFTs = registeredNFTs; // Store for later use
-
-        // Enable wallet-required buttons
+        // Enable buttons that require wallet connection
         for (const button of document.querySelectorAll('.requires-wallet')) {
             button.disabled = false;
         }
 
-        // Load NFTs
-        await loadRegisteredNFTs();
-        showMessage('Wallet connected successfully');
+        // 确保合约已初始化后再加载 NFTs
+        if (heroContract && heroNFTContract) {
+            await loadRegisteredNFTs();
+        } else {
+            throw new Error('Contracts not initialized properly');
+        }
         
-        return true;
+        showMessage('Wallet connected successfully');
     } catch (error) {
         showError('Failed to connect wallet:', error);
         return false;
     }
 }
 
-// Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Disable wallet-required buttons
-    for (const button of document.querySelectorAll('.requires-wallet')) {
-        button.disabled = true;
-    }
-    
-    // Add event listeners
-    const connectWalletBtn = getElement('connectWallet');
-    if (connectWalletBtn) {
-        connectWalletBtn.addEventListener('click', connectWallet);
+// Add event listener for page load
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check if wallet is already connected
+    if (window.ethereum?.selectedAddress) {
+        await connectWallet();
     }
 });
 
@@ -724,7 +719,17 @@ async function createHero() {
         );
 
         showMessage('Creating hero... Please wait for transaction confirmation');
-        await tx.wait();
+        const receipt = await tx.wait();
+        
+        // Display transaction hash with Etherscan link
+        const txHashInfo = getElement('txHashInfo');
+        const txHashLink = getElement('txHashLink');
+        if (txHashInfo && txHashLink) {
+            txHashLink.href = `https://sepolia-optimism.etherscan.io/tx/${receipt.hash}`;
+            txHashLink.textContent = receipt.hash;
+            txHashInfo.classList.remove('hidden');
+        }
+        
         showMessage('Hero created successfully!');
 
         // 重新加载 NFT 列表
@@ -801,4 +806,161 @@ async function validateTokenIds(tokenIds) {
         if (!numId || Number.isNaN(numId)) return false;
     }
     return true;
+}
+
+// API test functions
+async function testCreateHeroAPI() {
+    try {
+        if (!window.ethereum?.selectedAddress) {
+            showError('Please connect your wallet first');
+            return;
+        }
+
+        // Get current values from form
+        const nftContract = getElement('heroNFTContract').value;
+        const tokenId = getElement('heroTokenId').value;
+        const name = getElement('heroName').value;
+        const race = getElement('heroRace').value;
+        const gender = getElement('heroGender').value;
+
+        // Create message to sign
+        const message = `Create Hero: ${nftContract}-${tokenId}`;
+        const signature = await signer.signMessage(message);
+
+        // Make API call
+        const response = await fetch('/api/hero/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'signature': signature,
+                'message': message,
+                'address': await signer.getAddress()
+            },
+            body: JSON.stringify({
+                nftContract,
+                tokenId,
+                name,
+                race,
+                gender
+            })
+        });
+
+        const result = await response.json();
+        getElement('apiResponse').textContent = JSON.stringify(result, null, 2);
+        
+        if (result.error) {
+            showError(result.error);
+        } else {
+            showMessage('Hero created successfully via API');
+        }
+    } catch (error) {
+        showError('API test failed:', error);
+    }
+}
+
+async function testLoadHeroAPI() {
+    try {
+        if (!window.ethereum?.selectedAddress) {
+            showError('Please connect your wallet first');
+            return;
+        }
+
+        // Get current values from form
+        const nftContract = getElement('heroNFTContract').value;
+        const tokenId = getElement('heroTokenId').value;
+
+        // Create message to sign
+        const message = `Load Hero: ${nftContract}-${tokenId}`;
+        const signature = await signer.signMessage(message);
+
+        // Make API call
+        const response = await fetch(`/api/hero/${nftContract}/${tokenId}`, {
+            method: 'GET',
+            headers: {
+                'signature': signature,
+                'message': message,
+                'address': await signer.getAddress()
+            }
+        });
+
+        const result = await response.json();
+        getElement('apiResponse').textContent = JSON.stringify(result, null, 2);
+        
+        if (result.error) {
+            showError(result.error);
+        } else {
+            showMessage('Hero loaded successfully via API');
+        }
+    } catch (error) {
+        showError('API test failed:', error);
+    }
+}
+
+async function testSaveHeroAPI() {
+    try {
+        if (!window.ethereum?.selectedAddress) {
+            showError('Please connect your wallet first');
+            return;
+        }
+
+        // Get current values from form
+        const nftContract = getElement('heroNFTContract').value;
+        const tokenId = getElement('heroTokenId').value;
+        const name = getElement('heroName').value;
+        const race = getElement('heroRace').value;
+        const gender = getElement('heroGender').value;
+
+        // Create message to sign
+        const message = `Save Hero: ${nftContract}-${tokenId}`;
+        const signature = await signer.signMessage(message);
+
+        // Make API call
+        const response = await fetch('/api/hero/save', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'signature': signature,
+                'message': message,
+                'address': await signer.getAddress()
+            },
+            body: JSON.stringify({
+                nftContract,
+                tokenId,
+                heroData: {
+                    name,
+                    race,
+                    gender,
+                    level: '1'
+                }
+            })
+        });
+
+        const result = await response.json();
+        getElement('apiResponse').textContent = JSON.stringify(result, null, 2);
+        
+        if (result.error) {
+            showError(result.error);
+        } else {
+            showMessage('Hero saved successfully via API');
+        }
+    } catch (error) {
+        showError('API test failed:', error);
+    }
+}
+
+async function initHeroContract() {
+    try {
+        if (!window.ethereum) {
+            throw new Error('MetaMask is not installed');
+        }
+
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        heroContract = new ethers.Contract(heroContractAddress, heroAbi, signer);
+        
+        return true;
+    } catch (error) {
+        console.error('Error initializing hero contract:', error);
+        return false;
+    }
 } 

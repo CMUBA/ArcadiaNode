@@ -3,6 +3,7 @@ const cors = require('cors');
 const nodeRouter = require('./node/index.js');
 const path = require('node:path');
 const fs = require('node:fs/promises');
+const heroApi = require('./chain/hero-api.js');
 require('dotenv').config();
 
 // 插件管理器
@@ -89,7 +90,8 @@ function checkServices() {
         { method: 'GET', path: '/api/v1/plugins', desc: 'List all plugins' },
         { method: 'POST', path: '/api/v1/plugins/:name/start', desc: 'Start a plugin' },
         { method: 'POST', path: '/api/v1/plugins/:name/stop', desc: 'Stop a plugin' },
-        { method: 'GET', path: '/api/v1/plugins/:name/health', desc: 'Check plugin health' }
+        { method: 'GET', path: '/api/v1/plugins/:name/health', desc: 'Check plugin health' },
+        { method: 'GET', path: '/api/hero', desc: 'Hero API' }
     ];
     
     for (const ep of endpoints) {
@@ -175,6 +177,9 @@ app.use('/api/v1/discuss', (req, res, next) => {
     discussPlugin.router(req, res, next);
 });
 
+// Hero API
+app.use('/api/hero', heroApi);
+
 // 错误处理中间件
 app.use((err, req, res, next) => {
     console.error('Error:', err);
@@ -210,6 +215,7 @@ async function startServer() {
             console.log('- GET  /api/v1/plugins');
             console.log('- GET  /api/v1/discuss/posts');
             console.log('- POST /api/v1/discuss/posts');
+            console.log('- GET  /api/hero');
         });
     } catch (error) {
         console.error('Error starting server:', error);

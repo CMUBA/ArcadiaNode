@@ -69,62 +69,79 @@ function validateAddress(address) {
 // Contract functions
 async function updateContractInfo() {
     try {
+        if (!heroContract) {
+            showError('Hero contract not initialized');
+            return;
+        }
+
+        // 设置合约地址
         setInputValue('contractAddress', heroContractAddress);
-        
-        // Set contract link
-        const contractLink = getElement('contractLink');
-        if (contractLink) {
-            contractLink.href = `https://sepolia-optimism.etherscan.io/address/${heroContractAddress}`;
+
+        // 获取合约所有者
+        const owner = await heroContract.owner();
+        setInputValue('ownerAddress', owner);
+
+        // 获取已注册的 NFT 列表
+        const registeredNFTs = await heroContract.getRegisteredNFTs();
+        const totalHeroes = document.getElementById('totalHeroes');
+        if (totalHeroes) {
+            // 使用自动生成的 getter 函数
+            const count = await heroContract.totalHeroCount();
+            totalHeroes.textContent = `Total Heroes: ${count.toString()}`;
         }
 
-        if (heroContract) {
-            // Get owner
-            const owner = await heroContract.owner();
-            setInputValue('ownerAddress', owner);
-
-            // Get registered NFTs
-            const registeredNFTs = await heroContract.getRegisteredNFTs();
-            const uniqueNFTs = [...new Set(registeredNFTs.map(addr => addr.toLowerCase()))];
-            getElement('registeredNFTs').textContent = 
-                `Total: ${uniqueNFTs.length}\n${uniqueNFTs.join('\n')}`;
-
-            // Get total heroes (this is an example, adjust based on your contract)
-            let totalHeroes = 0;
-            for (const nftContract of uniqueNFTs) {
-                try {
-                    // You might need to implement a way to count heroes per contract
-                    const heroCount = await heroContract.getHeroCount(nftContract);
-                    totalHeroes += Number(heroCount);
-                } catch (error) {
-                    console.error(`Error getting hero count for ${nftContract}:`, error);
-                }
-            }
-            getElement('totalHeroes').textContent = `Total: ${totalHeroes}`;
+        // 显示已注册的 NFT 列表
+        const registeredNFTsElement = document.getElementById('registeredNFTs');
+        if (registeredNFTsElement) {
+            registeredNFTsElement.innerHTML = registeredNFTs.map(addr => 
+                `<div class="mb-1">${addr}</div>`
+            ).join('');
         }
+
     } catch (error) {
-        console.error('Error updating contract info:', error);
-        showError(`Failed to update contract info: ${error.message}`);
+        showError('Error updating contract info', error);
     }
 }
 
 // Hero Information
 async function getHeroInfo() {
     try {
-        const nftContract = getElement('heroNFTContract').value;
-        const tokenId = Number(getElement('heroTokenId').value);
+        // 修改这里，使用正确的元素 ID
+        const nftContractInput = document.getElementById('heroNFTContract');
+        const tokenIdInput = document.getElementById('heroTokenId');
 
-        if (!validateAddress(nftContract)) {
-            showError('Please enter a valid NFT contract address');
-            return;
-        }
-        if (!validateNumber(tokenId)) {
-            showError('Please enter a valid token ID');
+        if (!nftContractInput || !tokenIdInput) {
+            showError('Required input elements not found');
             return;
         }
 
-        const heroInfo = await heroContract.getHeroInfo(nftContract, tokenId);
-        getElement('heroInfo').textContent = JSON.stringify(heroInfo, null, 2);
-        showMessage('Hero information retrieved successfully');
+        const nftContract = nftContractInput.value;
+        const tokenId = tokenIdInput.value;
+
+        if (!validateAddress(nftContract) || !validateNumber(tokenId)) {
+            showError('Please enter valid contract address and token ID');
+            return;
+        }
+
+        const info = await heroContract.getHeroInfo(nftContract, tokenId);
+        
+        // Convert BigInt values to strings before displaying
+        const displayInfo = {
+            name: info.name,
+            race: info.race.toString(),
+            gender: info.gender.toString(),
+            level: info.level.toString(),
+            energy: info.energy.toString(),
+            dailyPoints: info.dailyPoints.toString()
+        };
+
+        const heroInfoElement = document.getElementById('heroInfo');
+        if (heroInfoElement) {
+            heroInfoElement.textContent = JSON.stringify(displayInfo, null, 2);
+            showMessage('Hero info retrieved successfully');
+        } else {
+            showError('Hero info display element not found');
+        }
     } catch (error) {
         showError('Failed to get hero info:', error);
     }
@@ -319,19 +336,22 @@ async function connectWallet() {
         }
         if (connectWalletBtn) {
             connectWalletBtn.textContent = 'Connected';
-            connectWalletBtn.classList.add('bg-green-500');
-            connectWalletBtn.classList.remove('bg-blue-500');
+            connectWalletBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            connectWalletBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
         }
 
         // Enable wallet-required buttons
-        for (const button of document.querySelectorAll('.requires-wallet')) {
+        const walletButtons = document.querySelectorAll('.requires-wallet');
+        for (const button of walletButtons) {
             button.disabled = false;
         }
 
         await updateContractInfo();
         showMessage('Wallet connected successfully');
+        return true;
     } catch (error) {
         showError('Failed to connect wallet:', error);
+        return false;
     }
 }
 

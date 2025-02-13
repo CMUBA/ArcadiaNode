@@ -28,9 +28,9 @@
                 <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm font-medium">Connect Wallet</button>
                 <div id="connectedWallet" class="hidden">
                     <p class="text-sm">Address: <span id="walletAddress" class="font-mono text-xs"></span></p>
-                </div>
-            </div>
-        </div>
+                    </div>
+                    </div>
+                    </div>
 
         <!-- Main Content -->
         <div class="grid grid-cols-2 gap-6">
@@ -39,8 +39,8 @@
                 <h2 class="text-xl font-semibold mb-4 text-gray-800">Your NFTs</h2>
                 <div id="nftList" class="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
                     <p class="text-gray-500 text-sm">Connect your wallet to view NFTs</p>
-                </div>
-            </div>
+                    </div>
+                        </div>
 
             <!-- Create Hero Section -->
             <div id="createHeroSection" class="bg-white rounded-lg shadow p-6">
@@ -50,7 +50,7 @@
                         <label class="block mb-2 text-gray-700">NFT Contract:</label>
                         <input type="text" id="heroNFTContract" class="border p-2 rounded w-full bg-gray-50" readonly>
                     </div>
-                    <div>
+                                <div>
                         <label class="block mb-2 text-gray-700">Token ID:</label>
                         <input type="text" id="heroTokenId" class="border p-2 rounded w-full bg-gray-50" readonly>
                     </div>
@@ -66,8 +66,8 @@
                             <option value="2">Elf</option>
                             <option value="3">Dwarf</option>
                             <option value="4">Orc</option>
-                        </select>
-                    </div>
+                </select>
+            </div>
                     <div>
                         <label class="block mb-2 text-gray-700">Gender:</label>
                         <select id="heroGender" class="border p-2 rounded w-full">
@@ -78,6 +78,9 @@
                     <button onclick="createHero()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet w-full font-medium" disabled>
                         Create Hero
                     </button>
+                    <div id="txHashInfo" class="mt-2 text-sm text-gray-600 hidden">
+                        Transaction Hash: <a id="txHashLink" href="#" target="_blank" class="text-blue-500 hover:text-blue-600 break-all"></a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -86,6 +89,131 @@
         <div class="bg-white rounded-lg shadow p-6 mt-6">
             <h2 class="text-2xl font-semibold mb-4">Event Log</h2>
             <pre id="eventLog" class="bg-gray-100 p-4 rounded h-48 overflow-y-auto font-mono text-sm"></pre>
+        </div>
+
+        <!-- Basic API Testing -->
+        <div class="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 class="text-xl font-semibold mb-4">Basic API Testing</h2>
+            <div class="space-y-4">
+                <!-- Create Hero API -->
+                        <div>
+                    <h3 class="font-semibold mb-2">Create Hero API</h3>
+                    <div class="bg-gray-100 p-4 rounded">
+                        <p class="text-sm text-gray-600 mb-2">POST /api/hero/create</p>
+                        <pre class="text-sm mb-2">Request Body:
+{
+    "nftContract": "0x...",
+    "tokenId": "1",
+    "name": "Hero Name",
+    "race": "1",
+    "gender": "1"
+}</pre>
+                        <button onclick="testCreateHeroAPI()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet" disabled>Test Create Hero API</button>
+                    </div>
+                </div>
+
+                <!-- Load Hero API -->
+                        <div>
+                    <h3 class="font-semibold mb-2">Load Hero API</h3>
+                    <div class="bg-gray-100 p-4 rounded">
+                        <p class="text-sm text-gray-600 mb-2">GET /api/hero/{nftContract}/{tokenId}</p>
+                        <button onclick="testLoadHeroAPI()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet" disabled>Test Load Hero API</button>
+                    </div>
+                </div>
+
+                <!-- Save Hero API -->
+                            <div>
+                    <h3 class="font-semibold mb-2">Save Hero API</h3>
+                    <div class="bg-gray-100 p-4 rounded">
+                        <p class="text-sm text-gray-600 mb-2">PUT /api/hero/save</p>
+                        <pre class="text-sm mb-2">Request Body:
+{
+    "nftContract": "0x...",
+    "tokenId": "1",
+    "heroData": {
+        "name": "Updated Hero Name",
+        "race": "1",
+        "gender": "1",
+        "level": "1"
+    }
+}</pre>
+                        <button onclick="testSaveHeroAPI()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 requires-wallet" disabled>Test Save Hero API</button>
+                    </div>
+                </div>
+
+                <!-- API Response -->
+                <div>
+                    <h3 class="font-semibold mb-2">API Response</h3>
+                    <pre id="apiResponse" class="bg-gray-100 p-4 rounded h-32 overflow-y-auto font-mono text-sm">Response will appear here...</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Static Hero Data Information -->
+        <div class="container mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold mb-8">Hero Data Structure</h1>
+
+            <!-- Static Hero Data Information -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Static Hero Data Structure</h2>
+                <p class="text-gray-600 mb-4">Dependent on-chain data table contract: <span class="font-mono">****</span></p>
+                
+            <div class="space-y-4">
+                    <div>
+                        <h3 class="font-semibold">1. Talent Skills Table</h3>
+                        <p class="text-gray-600">Default includes four talents {Spring, Summer, Autumn, Winter}, each with five skills and their data characteristics.</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold">2. Race Table</h3>
+                        <p class="text-gray-600">Default includes five races {Human, Elf, Dwarf, Orc, Undead}.</p>
+                </div>
+
+                        <div>
+                        <h3 class="font-semibold">3. Class Table</h3>
+                        <p class="text-gray-600">Default includes five classes {Warrior, Mage, Archer, Rogue, Priest}.</p>
+                        </div>
+                    
+                        <div>
+                        <h3 class="font-semibold">4. Attributes Table</h3>
+                        <p class="text-gray-600">Default includes four attributes {Agility, Attack, Health, Defense}.</p>
+                        </div>
+                    
+                        <div>
+                        <h3 class="font-semibold">5. Equipment Table</h3>
+                        <p class="text-gray-600">Default includes three equipment types {Weapon, Armor, Accessory}, can correspond to different contract addresses.</p>
+    </div>
+
+                    <div>
+                        <h3 class="font-semibold">6. Item Table</h3>
+                        <p class="text-gray-600">Default includes one item type {Item}, can correspond to different contract addresses.</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold">7. Daily Energy and Points Limit</h3>
+                        <p class="text-gray-600">Default daily energy is 100, points earning limit is 1000. Entering a dungeon consumes varying amounts of energy.</p>
+                    </div>
+
+                    <div class="mt-6">
+                        <h3 class="font-semibold">Example JSON Structure:</h3>
+                        <pre class="bg-gray-100 p-4 rounded-lg mt-2 overflow-x-auto">
+{
+    "name": "Hero Name",
+    "race": "Human",      // default is Human
+    "gender": "Male",     // default is Male
+    "level": 1,          // default is 1
+    "energy": 100,       // default is 100, consumed when entering dungeons (30-100)
+    "skills": {
+        "Spring": [1,0,0,0,0],
+        "Summer": [0,1,0,0,0],
+        "Autumn": [0,0,1,0,0],
+        "Winter": [0,0,0,1,0]
+    },
+    "equipment": ["Weapon 1", "Armor 1", "Accessory 1"]  // default is []
+}</pre>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </body>
