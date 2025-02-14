@@ -1,66 +1,20 @@
-const express = require('express');
-const cors = require('cors');
-const nodeRouter = require('./node/index.js');
-const path = require('node:path');
-const fs = require('node:fs/promises');
-const heroApi = require('./chain/hero-api.js');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import heroApi from './chain/hero-api.js';
+import path from 'node:path';
+import fs from 'node:fs/promises';
 
-// 插件管理器
-class PluginManager {
-    constructor() {
-        this.plugins = new Map();
-        this.pluginsConfig = null;
-    }
-
-    async loadPluginsConfig() {
-        try {
-            const configPath = path.join(__dirname, 'plugins', 'plugin.json');
-            const configData = await fs.readFile(configPath, 'utf8');
-            this.pluginsConfig = JSON.parse(configData);
-        } catch (error) {
-            console.error('Error loading plugins config:', error);
-            this.pluginsConfig = { plugins: [] };
+// Server configuration
+const config = {
+    port: process.env.SERVER_PORT || 3017,
+    ethereum: {
+        contracts: {
+            hero: process.env.HERO_CONTRACT_ADDRESS,
+            heroNFT: process.env.HERO_NFT_CONTRACT_ADDRESS,
+            heroMetadata: process.env.HERO_METADATA_CONTRACT_ADDRESS
         }
     }
-
-    async initializePlugins() {
-        if (!this.pluginsConfig) {
-            await this.loadPluginsConfig();
-        }
-
-        for (const pluginConfig of this.pluginsConfig.plugins) {
-            if (pluginConfig.enabled) {
-                try {
-                    const pluginPath = path.join(__dirname, 'plugins', pluginConfig.path);
-                    const plugin = require(pluginPath);
-                    const instance = plugin.createPlugin(pluginConfig.config);
-                    await instance.start();
-                    this.plugins.set(pluginConfig.name, instance);
-                    console.log(`Plugin ${pluginConfig.name} initialized successfully`);
-                } catch (error) {
-                    console.error(`Error initializing plugin ${pluginConfig.name}:`, error);
-                }
-            }
-        }
-    }
-
-    getPlugin(name) {
-        return this.plugins.get(name);
-    }
-
-    async getAllPlugins() {
-        const result = [];
-        for (const [name, plugin] of this.plugins) {
-            const health = await plugin.healthCheck();
-            result.push({ name, health });
-        }
-        return result;
-    }
-}
-
-// 创建插件管理器实例
-const pluginManager = new PluginManager();
+};
 
 // 执行自检
 function checkServices() {
@@ -72,9 +26,10 @@ function checkServices() {
     const envVars = {
         'SERVER_PORT': process.env.SERVER_PORT || '3017 (default)',
         'CLIENT_PORT': process.env.CLIENT_PORT || '3008 (default)',
-        'NODE_REGISTRY_ADDRESS': process.env.NODE_REGISTRY_ADDRESS || 'Not set',
-        'OPTIMISM_TESTNET_RPC_URL': process.env.OPTIMISM_TESTNET_RPC_URL ? 'Set' : 'Not set',
-        'NODE_PRIVATE_KEY': process.env.NODE_PRIVATE_KEY ? 'Set' : 'Not set'
+        'ETHEREUM_RPC_URL': process.env.ETHEREUM_RPC_URL ? 'Set' : 'Not set',
+        'HERO_CONTRACT_ADDRESS': process.env.HERO_CONTRACT_ADDRESS ? 'Set' : 'Not set',
+        'HERO_NFT_CONTRACT_ADDRESS': process.env.HERO_NFT_CONTRACT_ADDRESS ? 'Set' : 'Not set',
+        'HERO_METADATA_CONTRACT_ADDRESS': process.env.HERO_METADATA_CONTRACT_ADDRESS ? 'Set' : 'Not set'
     };
     
     for (const [key, value] of Object.entries(envVars)) {
@@ -84,13 +39,7 @@ function checkServices() {
     // 检查API端点
     console.log('\n📌 Available API Endpoints:');
     const endpoints = [
-        { method: 'GET', path: '/', desc: 'Service health check' },
-        { method: 'GET', path: '/api/v1/node/get-challenge', desc: 'Get challenge for node registration' },
-        { method: 'POST', path: '/api/v1/node/register', desc: 'Register new node' },
-        { method: 'GET', path: '/api/v1/plugins', desc: 'List all plugins' },
-        { method: 'POST', path: '/api/v1/plugins/:name/start', desc: 'Start a plugin' },
-        { method: 'POST', path: '/api/v1/plugins/:name/stop', desc: 'Stop a plugin' },
-        { method: 'GET', path: '/api/v1/plugins/:name/health', desc: 'Check plugin health' },
+        { method: 'GET', path: '/api/health', desc: 'Service health check' },
         { method: 'GET', path: '/api/hero', desc: 'Hero API' }
     ];
     
@@ -119,62 +68,14 @@ function checkServices() {
 checkServices();
 
 const app = express();
-const PORT = process.env.SERVER_PORT || 3017;
-const CLIENT_PORT = process.env.CLIENT_PORT || 3008;
 
-// 中间件
-app.use(cors({
-    origin: [
-        `http://localhost:${CLIENT_PORT}`,
-        `http://localhost:${PORT}`
-    ],
-    credentials: true
-}));
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// 基础路由
-app.get('/', async (req, res) => {
-    try {
-        const plugins = await pluginManager.getAllPlugins();
-        const serverInfo = {
-            name: 'Arcadia Node Server',
-            version: '1.0.0',
-            uptime: process.uptime(),
-            plugins: plugins.map(plugin => ({
-                name: plugin.name,
-                status: plugin.health.status,
-                details: plugin.health
-            }))
-        };
-        res.json(serverInfo);
-    } catch (error) {
-        res.status(500).json({
-            error: 'Failed to get server info',
-            details: error.message
-        });
-    }
-});
-
-// API 路由
-app.use('/api/v1/node', nodeRouter);
-
-// 插件路由
-app.get('/api/v1/plugins', async (req, res, next) => {
-    try {
-        const plugins = await pluginManager.getAllPlugins();
-        res.json(plugins);
-    } catch (error) {
-        next(error);
-    }
-});
-
-// 插件特定路由
-app.use('/api/v1/discuss', (req, res, next) => {
-    const discussPlugin = pluginManager.getPlugin('discuss');
-    if (!discussPlugin) {
-        return res.status(404).json({ error: 'Discuss plugin not found' });
-    }
-    discussPlugin.router(req, res, next);
+// Basic route for testing
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Hero API
@@ -199,29 +100,9 @@ app.use((req, res) => {
     });
 });
 
-// 启动服务器
-async function startServer() {
-    try {
-        // 初始化插件
-        await pluginManager.initializePlugins();
-        
-        // 启动服务器
-        app.listen(PORT, () => {
-            console.log('\n🚀 Server is now running and ready for requests!');
-            console.log('Available routes:');
-            console.log('- GET  /');
-            console.log('- GET  /api/v1/node/get-challenge');
-            console.log('- POST /api/v1/node/register');
-            console.log('- GET  /api/v1/plugins');
-            console.log('- GET  /api/v1/discuss/posts');
-            console.log('- POST /api/v1/discuss/posts');
-            console.log('- GET  /api/hero');
-        });
-    } catch (error) {
-        console.error('Error starting server:', error);
-        process.exit(1);
-    }
-}
-
-// 启动服务器
-startServer(); 
+// Start server
+app.listen(config.port, () => {
+    console.log(`Server running on port ${config.port}`);
+    console.log('Environment:', process.env.NODE_ENV || 'development');
+    console.log('Contract addresses:', config.ethereum.contracts);
+}); 
