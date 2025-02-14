@@ -4,28 +4,32 @@ import { heroMetadataAbi } from './abi/heroMetadata.js';
 import { heroAbi } from './abi/hero.js';
 import { heroConfig } from '../config/hero.js';
 
+// Validation helper functions
+function validateAddress(address) {
+    try {
+        return ethers.isAddress(address);
+    } catch (error) {
+        return false;
+    }
+}
+
+function validateNumber(num) {
+    return !isNaN(num) && Number.isInteger(Number(num)) && Number(num) > 0;
+}
+
+function setInputValue(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.value = value;
+    }
+}
+
 // Export functions for use in HTML
 window.connectWallet = connectWallet;
 window.createHero = createHero;
 window.loadNFTsFromContract = loadNFTsFromContract;
 window.mintNFT = mintNFT;
-window.mintWithToken = () => mintNFT(true);
-window.mintWithEth = () => mintNFT(false);
-window.batchMintWithToken = () => batchMintNFT(true);
-window.batchMintWithEth = () => batchMintNFT(false);
-window.checkNftRegistration = checkNftRegistration;
-window.checkTokenExists = checkTokenExists;
-window.checkTokenApproval = checkTokenApproval;
-window.getAcceptedTokens = getAcceptedTokens;
-window.getDefaultPaymentToken = getDefaultPaymentToken;
-window.getDefaultNativePrice = getDefaultNativePrice;
-window.getDefaultTokenPrice = getDefaultTokenPrice;
 window.prepareCreateHero = prepareCreateHero;
-
-// Export API test functions
-window.testCreateHeroAPI = testCreateHeroAPI;
-window.testLoadHeroAPI = testLoadHeroAPI;
-window.testSaveHeroAPI = testSaveHeroAPI;
 
 // Contract initialization
 let provider;
@@ -44,7 +48,8 @@ const {
 
 // Export utility functions
 export function logEvent(message) {
-    const eventLog = getElement('eventLog');
+    console.log(`[Event] ${message}`); // Add console logging
+    const eventLog = document.getElementById('eventLog');
     if (eventLog) {
         const logEntry = document.createElement('div');
         logEntry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
@@ -53,9 +58,9 @@ export function logEvent(message) {
     }
 }
 
-export async function showMessage(message, duration = 3000) {
-    console.log(message);
-    const messageElement = getElement('message');
+export function showMessage(message, duration = 3000) {
+    console.log(`[Message] ${message}`); // Add console logging
+    const messageElement = document.getElementById('message');
     if (messageElement) {
         messageElement.textContent = message;
         messageElement.classList.remove('hidden');
@@ -68,64 +73,47 @@ export async function showMessage(message, duration = 3000) {
 
 export function showError(message, error = null) {
     const errorMessage = error ? `${message}: ${error.message}` : message;
-    console.error(errorMessage);
+    console.error(`[Error] ${errorMessage}`); // Add console logging
     showMessage(`Error: ${errorMessage}`, 5000);
     logEvent(`Error: ${errorMessage}`);
-}
-
-export function getElement(id) {
-    const element = document.getElementById(id);
-    if (!element) {
-        console.warn(`Element with id '${id}' not found`);
-    }
-    return element;
-}
-
-export function setInputValue(id, value) {
-    const element = getElement(id);
-    if (element && element instanceof HTMLInputElement) {
-        element.value = value;
-    }
-}
-
-export function validateNumber(value) {
-    const num = Number(value);
-    return !Number.isNaN(num) && num > 0;
-}
-
-export function validateAddress(address) {
-    return address && ethers.isAddress(address);
 }
 
 // Modified loadRegisteredNFTs function
 async function loadRegisteredNFTs() {
     try {
-        const nftList = getElement('nftList');
-        if (!nftList) return;
+        const nftList = document.getElementById('nftList');
+        if (!nftList) {
+            throw new Error('NFT list element not found');
+        }
 
-        nftList.innerHTML = '';
+        nftList.innerHTML = '<p class="text-gray-500">Loading NFTs...</p>';
+        logEvent('Starting to load registered NFTs');
         
         if (!heroContract || !heroNFTContract) {
-            showError('Contracts not initialized');
-            return;
+            throw new Error('Contracts not initialized');
         }
 
         // Get list of registered NFT contracts and remove duplicates
+        logEvent('Fetching registered NFT contracts...');
         const registeredNFTs = await heroContract.getRegisteredNFTs();
         const uniqueNFTs = [...new Set(registeredNFTs.map(addr => addr.toLowerCase()))];
+        logEvent(`Found ${uniqueNFTs.length} unique registered NFT contracts`);
         
         if (uniqueNFTs.length === 0) {
             nftList.innerHTML = '<p class="text-gray-500">No registered NFT contracts found</p>';
+            logEvent('No registered NFT contracts found');
             return;
         }
 
         // Create container for registered NFTs
         const contractsContainer = document.createElement('div');
         contractsContainer.className = 'space-y-4';
+        let totalNFTsFound = 0;
 
         // Process each unique registered NFT contract
         for (const contractAddress of uniqueNFTs) {
             try {
+                logEvent(`Processing NFT contract: ${contractAddress}`);
                 const nftContract = new ethers.Contract(
                     contractAddress,
                     heroNFTAbi,
@@ -141,13 +129,16 @@ async function loadRegisteredNFTs() {
 
                         const owner = await nftContract.ownerOf(tokenId);
                         if (owner.toLowerCase() === connectedAddress.toLowerCase()) {
+                            logEvent(`Found NFT owned by user - Contract: ${contractAddress}, TokenId: ${tokenId}`);
+                            totalNFTsFound++;
+
                             // Check if hero exists for this NFT
                             let heroInfo = null;
                             try {
                                 heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
+                                logEvent(`Found hero for NFT - Contract: ${contractAddress}, TokenId: ${tokenId}`);
                             } catch (error) {
-                                // Hero doesn't exist for this NFT
-                                console.log(`No hero found for NFT ${tokenId} at ${contractAddress}`);
+                                logEvent(`No hero found for NFT - Contract: ${contractAddress}, TokenId: ${tokenId}`);
                             }
 
                             const nftItem = document.createElement('div');
@@ -163,10 +154,10 @@ async function loadRegisteredNFTs() {
                                         </div>
                                     </div>
                                     <div class="text-sm text-gray-600">
-                                        <p>Hero Name: ${heroInfo.name}</p>
-                                        <p>Race: ${heroInfo.race}</p>
-                                        <p>Level: ${heroInfo.level}</p>
-                                        <p>Experience: ${heroInfo.experience}</p>
+                                        <p>Hero Name: ${heroInfo.name || 'Unnamed'}</p>
+                                        <p>Race: ${heroInfo.race || 'Unknown'}</p>
+                                        <p>Level: ${heroInfo.level || '0'}</p>
+                                        <p>Experience: ${heroInfo.experience || '0'}</p>
                                     </div>
                                 `;
                             } else {
@@ -188,53 +179,135 @@ async function loadRegisteredNFTs() {
                         }
                     } catch (error) {
                         console.error(`Error checking token ${tokenId}:`, error);
+                        logEvent(`Error checking token ${tokenId}: ${error.message}`);
                     }
                 }
             } catch (error) {
                 console.error(`Error processing contract ${contractAddress}:`, error);
+                logEvent(`Error processing contract ${contractAddress}: ${error.message}`);
             }
         }
 
         nftList.innerHTML = '';
         if (contractsContainer.children.length === 0) {
             nftList.innerHTML = '<p class="text-gray-500">No NFTs found for connected address</p>';
+            logEvent('No NFTs found for connected address');
         } else {
             nftList.appendChild(contractsContainer);
+            logEvent(`Successfully loaded ${totalNFTsFound} NFTs for connected address`);
         }
 
     } catch (error) {
         console.error('Error loading registered NFTs:', error);
-        showError(`Failed to load registered NFTs: ${error.message}`);
+        showError('Failed to load registered NFTs', error);
+        logEvent(`Failed to load registered NFTs: ${error.message}`);
+    }
+}
+
+// Add MetaMask detection
+function checkMetaMask() {
+    if (typeof window.ethereum === 'undefined') {
+        showError('MetaMask is not installed. Please install MetaMask to use this application.');
+        return false;
+    }
+    return true;
+}
+
+// Add network check
+async function checkNetwork() {
+    try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        if (chainId !== '0xaa37dc') { // Optimism Sepolia
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0xaa37dc' }],
+            });
+        }
+        return true;
+    } catch (error) {
+        if (error.code === 4902) {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: '0xaa37dc',
+                        chainName: 'Optimism Sepolia',
+                        nativeCurrency: {
+                            name: 'ETH',
+                            symbol: 'ETH',
+                            decimals: 18
+                        },
+                        rpcUrls: ['https://sepolia.optimism.io'],
+                        blockExplorerUrls: ['https://sepolia-optimism.etherscan.io']
+                    }]
+                });
+                return true;
+            } catch (addError) {
+                showError('Failed to add Optimism Sepolia network', addError);
+                return false;
+            }
+        }
+        showError('Failed to switch network', error);
+        return false;
     }
 }
 
 // Modified connectWallet function
 async function connectWallet() {
     try {
-        if (!window.ethereum) {
-            throw new Error('MetaMask is not installed');
+        console.log('Attempting to connect wallet...');
+        logEvent('Attempting to connect wallet...');
+
+        if (!checkMetaMask()) {
+            return;
         }
 
-        // Request connection to Optimism Sepolia
-        await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xaa37dc' }],
-        });
+        // Check if MetaMask is locked
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        console.log('Current accounts:', accounts);
+        
+        if (!accounts || accounts.length === 0) {
+            logEvent('MetaMask is locked - requesting account access...');
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            logEvent('Account access granted');
+        }
+
+        // Check and switch network if needed
+        if (!await checkNetwork()) {
+            return;
+        }
 
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
+        console.log('Got signer:', await signer.getAddress());
+        logEvent('Got signer from provider');
+
+        // Initialize contracts
+        console.log('Initializing contracts...');
+        logEvent('Initializing contracts...');
         
-        // 初始化所有合约
-        heroContract = new ethers.Contract(heroContractAddress, heroAbi, signer);
-        heroNFTContract = new ethers.Contract(nftContractAddress, heroNFTAbi, signer);
-        heroMetadataContract = new ethers.Contract(metadataContractAddress, heroMetadataAbi, signer);
+        try {
+            heroContract = new ethers.Contract(heroContractAddress, heroAbi, signer);
+            console.log('Hero contract initialized:', await heroContract.getAddress());
+            
+            heroNFTContract = new ethers.Contract(nftContractAddress, heroNFTAbi, signer);
+            console.log('HeroNFT contract initialized:', await heroNFTContract.getAddress());
+            
+            heroMetadataContract = new ethers.Contract(metadataContractAddress, heroMetadataAbi, signer);
+            console.log('HeroMetadata contract initialized:', await heroMetadataContract.getAddress());
+        } catch (error) {
+            console.error('Contract initialization error:', error);
+            throw error;
+        }
 
         connectedAddress = await signer.getAddress();
+        console.log('Connected wallet address:', connectedAddress);
+        logEvent(`Connected wallet address: ${connectedAddress}`);
 
         // Update UI
-        const connectWalletBtn = getElement('connectWallet');
-        const connectedWalletDiv = getElement('connectedWallet');
-        const walletAddressSpan = getElement('walletAddress');
+        const connectWalletBtn = document.getElementById('connectWallet');
+        const connectedWalletDiv = document.getElementById('connectedWallet');
+        const walletAddressSpan = document.getElementById('walletAddress');
         
         if (connectWalletBtn && connectedWalletDiv && walletAddressSpan) {
             connectWalletBtn.textContent = 'Connected';
@@ -249,27 +322,190 @@ async function connectWallet() {
             button.disabled = false;
         }
 
-        // 确保合约已初始化后再加载 NFTs
-        if (heroContract && heroNFTContract) {
-            await loadRegisteredNFTs();
-        } else {
-            throw new Error('Contracts not initialized properly');
-        }
-        
+        // Add MetaMask event listeners
+        window.ethereum.on('accountsChanged', handleAccountsChanged);
+        window.ethereum.on('chainChanged', handleChainChanged);
+
         showMessage('Wallet connected successfully');
+
+        // Load NFTs after successful connection
+        logEvent('Loading registered NFTs...');
+        await loadRegisteredNFTs();
+        
     } catch (error) {
-        showError('Failed to connect wallet:', error);
-        return false;
+        console.error('Wallet connection error:', error);
+        showError('Failed to connect wallet', error);
+        
+        // Reset UI state on error
+        const connectWalletBtn = document.getElementById('connectWallet');
+        if (connectWalletBtn) {
+            connectWalletBtn.textContent = 'Connect Wallet';
+            connectWalletBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+            connectWalletBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+        }
+        for (const button of document.querySelectorAll('.requires-wallet')) {
+            button.disabled = true;
+        }
     }
 }
 
-// Add event listener for page load
-document.addEventListener('DOMContentLoaded', async () => {
-    // Check if wallet is already connected
-    if (window.ethereum?.selectedAddress) {
-        await connectWallet();
+// Handle account changes
+function handleAccountsChanged(accounts) {
+    if (accounts.length === 0) {
+        showMessage('Please connect to MetaMask.');
+        // Reset UI
+        const connectWalletBtn = document.getElementById('connectWallet');
+        if (connectWalletBtn) {
+            connectWalletBtn.textContent = 'Connect Wallet';
+            connectWalletBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+            connectWalletBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+        }
+        for (const button of document.querySelectorAll('.requires-wallet')) {
+            button.disabled = true;
+        }
+    } else if (accounts[0] !== connectedAddress) {
+        connectedAddress = accounts[0];
+        showMessage(`Account changed to: ${accounts[0]}`);
+        document.getElementById('walletAddress').textContent = accounts[0];
+    }
+}
+
+// Handle chain changes
+function handleChainChanged() {
+    window.location.reload();
+}
+
+// Add DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Page loaded - initializing event listeners...'); // Add console logging
+    logEvent('Page loaded - wallet connection ready');
+    
+    // Add click event listener to connect wallet button
+    const connectWalletBtn = document.getElementById('connectWallet');
+    if (connectWalletBtn) {
+        connectWalletBtn.addEventListener('click', connectWallet);
+        console.log('Added click listener to connect wallet button');
     }
 });
+
+// Prepare create hero
+async function prepareCreateHero(contractAddress, tokenId) {
+    try {
+        logEvent(`Preparing to create hero for NFT - Contract: ${contractAddress}, TokenId: ${tokenId}`);
+
+        if (!validateAddress(contractAddress)) {
+            throw new Error('Invalid contract address');
+        }
+
+        if (!validateNumber(tokenId)) {
+            throw new Error('Invalid token ID');
+        }
+
+        // Verify NFT ownership
+        logEvent('Verifying NFT ownership...');
+        const nftContract = new ethers.Contract(contractAddress, heroNFTAbi, signer);
+        const owner = await nftContract.ownerOf(tokenId);
+        
+        if (owner.toLowerCase() !== connectedAddress.toLowerCase()) {
+            throw new Error('You do not own this NFT');
+        }
+        logEvent('NFT ownership verified');
+
+        // Check if hero already exists
+        logEvent('Checking if hero already exists...');
+        try {
+            const heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
+            if (heroInfo) {
+                throw new Error('Hero already exists for this NFT');
+            }
+        } catch (error) {
+            // Expected error if hero doesn't exist
+            logEvent('No existing hero found, proceeding with creation');
+        }
+
+        // Set form values
+        setInputValue('heroNFTContract', contractAddress);
+        setInputValue('heroTokenId', tokenId);
+        logEvent('Form values set for hero creation');
+
+        // Scroll to create hero section
+        const createHeroSection = document.getElementById('createHeroSection');
+        if (createHeroSection) {
+            createHeroSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        showMessage('Ready to create hero');
+    } catch (error) {
+        console.error('Error preparing hero creation:', error);
+        showError('Failed to prepare hero creation', error);
+        logEvent(`Failed to prepare hero creation: ${error.message}`);
+    }
+}
+
+// Create hero
+async function createHero() {
+    try {
+        const contractAddress = document.getElementById('heroNFTContract').value;
+        const tokenId = Number(document.getElementById('heroTokenId').value);
+        const name = document.getElementById('heroName').value;
+        const race = Number(document.getElementById('heroRace').value);
+        const gender = Number(document.getElementById('heroGender').value);
+
+        // Basic validation
+        if (!contractAddress || !tokenId || !name || !race) {
+            showError('Please fill in all required hero details');
+            return;
+        }
+
+        // Validate numbers
+        if (!validateNumber(tokenId) || !validateNumber(race) || !validateNumber(gender)) {
+            showError('Invalid number values provided');
+            return;
+        }
+
+        // Verify NFT ownership
+        const nftContract = new ethers.Contract(
+            contractAddress,
+            ['function ownerOf(uint256) view returns (address)'],
+            signer
+        );
+
+        const owner = await nftContract.ownerOf(tokenId);
+        if (owner.toLowerCase() !== connectedAddress.toLowerCase()) {
+            showError('You do not own this NFT');
+            return;
+        }
+
+        // Create hero
+        const tx = await heroContract.createHero(
+            contractAddress,
+            tokenId,
+            name,
+            race,
+            gender || 0 // Default to 0 if gender not specified
+        );
+
+        showMessage('Creating hero... Please wait for transaction confirmation');
+        const receipt = await tx.wait();
+        
+        // Display transaction hash with Etherscan link
+        const txHashInfo = document.getElementById('txHashInfo');
+        const txHashLink = document.getElementById('txHashLink');
+        if (txHashInfo && txHashLink) {
+            txHashLink.href = `https://sepolia-optimism.etherscan.io/tx/${receipt.hash}`;
+            txHashLink.textContent = receipt.hash;
+            txHashInfo.classList.remove('hidden');
+        }
+        
+        showMessage('Hero created successfully!');
+
+        // Refresh NFT list
+        await loadRegisteredNFTs();
+    } catch (error) {
+        console.error('Error creating hero:', error);
+        showError(`Failed to create hero: ${error.message}`);
+    }
+}
 
 // Mint NFT function
 async function mintNFT(useToken = false) {
@@ -675,129 +911,6 @@ async function loadNFTsFromContract(contractAddress) {
     }
 }
 
-// 创建英雄
-async function createHero() {
-    try {
-        const contractAddress = getElement('heroNFTContract').value;
-        const tokenId = Number(getElement('heroTokenId').value);
-        const name = getElement('heroName').value;
-        const race = Number(getElement('heroRace').value);
-        const gender = Number(getElement('heroGender').value);
-
-        // 基本验证
-        if (!contractAddress || !tokenId || !name || !race) {
-            showError('Please fill in all required hero details');
-            return;
-        }
-
-        // 验证数值
-        if (!validateNumber(tokenId) || !validateNumber(race) || !validateNumber(gender)) {
-            showError('Invalid number values provided');
-            return;
-        }
-
-        // 验证 NFT 所有权
-        const nftContract = new ethers.Contract(
-            contractAddress,
-            ['function ownerOf(uint256) view returns (address)'],
-            signer
-        );
-
-        const owner = await nftContract.ownerOf(tokenId);
-        if (owner.toLowerCase() !== connectedAddress.toLowerCase()) {
-            showError('You do not own this NFT');
-            return;
-        }
-
-        // 创建英雄
-        const tx = await heroContract.createHero(
-            contractAddress,
-            tokenId,
-            name,
-            race,
-            gender || 0 // 如果性别未指定，默认为 0
-        );
-
-        showMessage('Creating hero... Please wait for transaction confirmation');
-        const receipt = await tx.wait();
-        
-        // Display transaction hash with Etherscan link
-        const txHashInfo = getElement('txHashInfo');
-        const txHashLink = getElement('txHashLink');
-        if (txHashInfo && txHashLink) {
-            txHashLink.href = `https://sepolia-optimism.etherscan.io/tx/${receipt.hash}`;
-            txHashLink.textContent = receipt.hash;
-            txHashInfo.classList.remove('hidden');
-        }
-        
-        showMessage('Hero created successfully!');
-
-        // 重新加载 NFT 列表
-        await loadNFTsFromContract(contractAddress);
-    } catch (error) {
-        console.error('Error creating hero:', error);
-        showError(`Failed to create hero: ${error.message}`);
-    }
-}
-
-// 显示 NFT 列表
-function displayNFTs(nfts) {
-    const nftList = document.getElementById('nftList');
-    const currentContent = nftList.innerHTML;
-    
-    const newContent = `
-        <div class="mt-4">
-            <h3 class="font-semibold mb-2">Found NFTs:</h3>
-            ${nfts.map(nft => `
-                <div class="flex items-center justify-between border-b py-2">
-                    <div>
-                        <span class="font-semibold">Token ID: ${nft.tokenId.toString()}</span>
-                        ${nft.hasHero ? `
-                            <div class="text-sm text-gray-600">
-                                <div>Name: ${nft.heroInfo.name}</div>
-                                <div>Race: ${nft.heroInfo.race}</div>
-                                <div>Level: ${nft.heroInfo.level}</div>
-                            </div>
-                        ` : `
-                            <div class="text-sm text-yellow-600">
-                                <button onclick="prepareCreateHero('${nft.contractAddress}', ${nft.tokenId})" 
-                                        class="text-blue-500 hover:text-blue-700">
-                                    Create Hero for this NFT
-                                </button>
-                            </div>
-                        `}
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    `;
-    
-    // 保留合约列表，添加 NFT 列表
-    const contractListEnd = currentContent.indexOf('<div class="mt-4">');
-    const baseContent = contractListEnd !== -1 ? currentContent.substring(0, contractListEnd) : currentContent;
-    nftList.innerHTML = baseContent + newContent;
-}
-
-// 准备创建英雄
-async function prepareCreateHero(contractAddress, tokenId) {
-    try {
-        // Set the values in the create hero form
-        setInputValue('heroNFTContract', contractAddress);
-        setInputValue('heroTokenId', tokenId);
-        
-        // Scroll to the create hero section
-        const createHeroSection = getElement('createHeroSection');
-        if (createHeroSection) {
-            createHeroSection.scrollIntoView({ behavior: 'smooth' });
-            showMessage('Ready to create hero. Please fill in the remaining details.');
-        } else {
-            showError('Create hero section not found');
-        }
-    } catch (error) {
-        showError('Failed to prepare hero creation:', error);
-    }
-}
-
 async function validateTokenIds(tokenIds) {
     if (!Array.isArray(tokenIds)) return false;
     
@@ -817,11 +930,11 @@ async function testCreateHeroAPI() {
         }
 
         // Get current values from form
-        const nftContract = getElement('heroNFTContract').value;
-        const tokenId = getElement('heroTokenId').value;
-        const name = getElement('heroName').value;
-        const race = getElement('heroRace').value;
-        const gender = getElement('heroGender').value;
+        const nftContract = document.getElementById('heroNFTContract').value;
+        const tokenId = document.getElementById('heroTokenId').value;
+        const name = document.getElementById('heroName').value;
+        const race = document.getElementById('heroRace').value;
+        const gender = document.getElementById('heroGender').value;
 
         // Create message to sign
         const message = `Create Hero: ${nftContract}-${tokenId}`;
@@ -846,7 +959,7 @@ async function testCreateHeroAPI() {
         });
 
         const result = await response.json();
-        getElement('apiResponse').textContent = JSON.stringify(result, null, 2);
+        document.getElementById('apiResponse').textContent = JSON.stringify(result, null, 2);
         
         if (result.error) {
             showError(result.error);
@@ -866,8 +979,8 @@ async function testLoadHeroAPI() {
         }
 
         // Get current values from form
-        const nftContract = getElement('heroNFTContract').value;
-        const tokenId = getElement('heroTokenId').value;
+        const nftContract = document.getElementById('heroNFTContract').value;
+        const tokenId = document.getElementById('heroTokenId').value;
 
         // Create message to sign
         const message = `Load Hero: ${nftContract}-${tokenId}`;
@@ -884,7 +997,7 @@ async function testLoadHeroAPI() {
         });
 
         const result = await response.json();
-        getElement('apiResponse').textContent = JSON.stringify(result, null, 2);
+        document.getElementById('apiResponse').textContent = JSON.stringify(result, null, 2);
         
         if (result.error) {
             showError(result.error);
@@ -904,11 +1017,11 @@ async function testSaveHeroAPI() {
         }
 
         // Get current values from form
-        const nftContract = getElement('heroNFTContract').value;
-        const tokenId = getElement('heroTokenId').value;
-        const name = getElement('heroName').value;
-        const race = getElement('heroRace').value;
-        const gender = getElement('heroGender').value;
+        const nftContract = document.getElementById('heroNFTContract').value;
+        const tokenId = document.getElementById('heroTokenId').value;
+        const name = document.getElementById('heroName').value;
+        const race = document.getElementById('heroRace').value;
+        const gender = document.getElementById('heroGender').value;
 
         // Create message to sign
         const message = `Save Hero: ${nftContract}-${tokenId}`;
@@ -936,7 +1049,7 @@ async function testSaveHeroAPI() {
         });
 
         const result = await response.json();
-        getElement('apiResponse').textContent = JSON.stringify(result, null, 2);
+        document.getElementById('apiResponse').textContent = JSON.stringify(result, null, 2);
         
         if (result.error) {
             showError(result.error);

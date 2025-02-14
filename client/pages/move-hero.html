@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Move Hero Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-8">
+    <!-- Navigation -->
+    <nav class="flex space-x-6 mb-8">
+        <a href="../index.html" class="text-blue-500 hover:text-blue-600 font-medium">Home</a>
+        <a href="move-hero.html" class="text-blue-500 hover:text-blue-600 font-medium">Move Hero</a>
+        <a href="move-metadata.html" class="text-blue-500 hover:text-blue-600 font-medium">Move Metadata</a>
+        <a href="move-nft.html" class="text-blue-500 hover:text-blue-600 font-medium">Move NFT</a>
+    </nav>
+
+    <!-- Wallet Connection -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold mb-4">Wallet Connection</h2>
+        <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Connect Wallet</button>
+        <p id="walletAddress" class="mt-2 text-gray-600"></p>
+    </div>
+
+    <!-- Hero Creation -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold mb-4">Create Hero</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Hero Name</label>
+                <input type="text" id="heroName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Race</label>
+                <select id="heroRace" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="0">Human</option>
+                    <option value="1">Elf</option>
+                    <option value="2">Dwarf</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Class</label>
+                <select id="heroClass" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="0">Warrior</option>
+                    <option value="1">Mage</option>
+                    <option value="2">Rogue</option>
+                </select>
+            </div>
+            <button id="createHero" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Create Hero</button>
+        </div>
+    </div>
+
+    <!-- Hero Management -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold mb-4">Hero Management</h2>
+        
+        <!-- Skills -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-2">Skills</h3>
+            <select id="skillSelect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm mb-2">
+                <option value="0">Slash</option>
+                <option value="1">Fireball</option>
+                <option value="2">Stealth</option>
+            </select>
+            <button id="addSkill" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add Skill</button>
+        </div>
+
+        <!-- Equipment -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-2">Equipment</h3>
+            <input type="text" id="equipmentName" placeholder="Equipment Name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm mb-2">
+            <button id="addEquipment" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add Equipment</button>
+        </div>
+
+        <!-- Energy Management -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-2">Energy Management</h3>
+            <input type="number" id="energyAmount" placeholder="Energy Amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm mb-2">
+            <button id="consumeEnergy" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Consume Energy</button>
+        </div>
+
+        <!-- Daily Points -->
+        <div>
+            <h3 class="text-lg font-semibold mb-2">Daily Points</h3>
+            <input type="number" id="pointsAmount" placeholder="Points Amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm mb-2">
+            <button id="addPoints" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Add Points</button>
+        </div>
+    </div>
+
+    <!-- Hero Information -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold mb-4">Hero Information</h2>
+        <button id="refreshInfo" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mb-4">Refresh Info</button>
+        <div id="heroInfo" class="space-y-2">
+            <!-- Hero information will be displayed here -->
+        </div>
+    </div>
+
+    <!-- Message Display -->
+    <div class="fixed bottom-0 right-0 p-4">
+        <div id="messageDisplay" class="bg-gray-800 text-white p-4 rounded-lg shadow-lg hidden"></div>
+    </div>
+
+    <script type="module" src="../js/move-hero.js"></script>
+</body>
+</html> 

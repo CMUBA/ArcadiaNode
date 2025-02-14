@@ -601,3 +601,35 @@ hero-test页面的逻辑：
 这样的实现避免了使用 tokenOfOwnerByIndex，而是采用了更通用的方式来查找用户拥有的 NFT。虽然这种方式在 token ID 范围很大时可能不够高效，但对于测试环境来说是可以接受的。
 6. 1. 改造所有链接钱包button：除了获取登陆地址等原来功能外，增加查询hero合约，获得此钱包注册过的nft合约和id，返回供后面业务使用
 2. http://localhost:3008/pages/hero-test.html，点击连接钱包，先获得了在hero合约注册过的nft合约和id，和查询登陆账户拥有的nft列表做对比，已经注册了hero的nft，不可以显示create hero button，而是显示hero记录信息；没有注册的才显示cteate hero
+
+
+A. ArcadiaCoin 部署和初始化
+1. 使用提供的测试账户部署 ArcadiaCoin 合约
+2. 初始化 ArcadiaCoin (调用 initialize)
+3. 给测试账户铸造 100,000 ARC (调用 mint)
+
+B. NFT 合约初始化
+1. 使用 ArcadiaCoin 地址作为参数初始化 NFT 合约
+2. 设置默认价格配置:
+   - 设置原生代币(APT)价格
+   - 设置 ARC 代币价格
+   - 设置默认支付代币为 ARC
+   - 使用APT设置价格和购买nft
+
+C. Hero NFT 购买测试
+1. 使用 ARC 代币购买单个 NFT:
+   - 检查 ARC 余额
+   - 授权 NFT 合约使用 ARC
+   - 调用 mintWithToken 购买 NFT
+   
+2. 批量购买测试:
+   - 使用 ARC 代币批量购买多个 NFT
+   - 验证 NFT 所有权
+
+D. Hero 合约交互
+1. 注册新购买的 NFT 到 Hero 合约
+2. 创建 Hero 记录:
+   - 设置 Hero 名称
+   - 选择种族和职业
+   - 调用 createHero
+3. 验证 Hero 数据

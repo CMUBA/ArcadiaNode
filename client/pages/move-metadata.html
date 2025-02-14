@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Move Metadata Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-8">
+    <!-- Navigation -->
+    <nav class="flex space-x-6 mb-8">
+        <a href="../index.html" class="text-blue-500 hover:text-blue-600 font-medium">Home</a>
+        <a href="move-hero.html" class="text-blue-500 hover:text-blue-600 font-medium">Move Hero</a>
+        <a href="move-metadata.html" class="text-blue-500 hover:text-blue-600 font-medium">Move Metadata</a>
+        <a href="move-nft.html" class="text-blue-500 hover:text-blue-600 font-medium">Move NFT</a>
+    </nav>
+
+    <!-- Wallet Connection -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold mb-4">Wallet Connection</h2>
+        <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Connect Wallet</button>
+        <p id="walletAddress" class="mt-2 text-gray-600"></p>
+    </div>
+
+    <!-- Race Management -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold mb-4">Race Management</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Race Name</label>
+                <input type="text" id="raceName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="raceDescription" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Base Stats (comma-separated)</label>
+                <input type="text" id="raceStats" placeholder="100,50,30,20" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <button id="addRace" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Add Race</button>
+        </div>
+    </div>
+
+    <!-- Class Management -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold mb-4">Class Management</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Class Name</label>
+                <input type="text" id="className" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="classDescription" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Base Skills (comma-separated)</label>
+                <input type="text" id="classSkills" placeholder="1,2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <button id="addClass" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add Class</button>
+        </div>
+    </div>
+
+    <!-- Skill Management -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold mb-4">Skill Management</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Skill Name</label>
+                <input type="text" id="skillName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="skillDescription" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Damage</label>
+                <input type="number" id="skillDamage" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Cost</label>
+                <input type="number" id="skillCost" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <button id="addSkill" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Add Skill</button>
+        </div>
+    </div>
+
+    <!-- Metadata Information -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold mb-4">Metadata Information</h2>
+        <button id="refreshMetadata" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mb-4">Refresh Metadata</button>
+        <div class="grid grid-cols-3 gap-4">
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Races</h3>
+                <div id="raceList" class="space-y-2">
+                    <!-- Race information will be displayed here -->
+                </div>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Classes</h3>
+                <div id="classList" class="space-y-2">
+                    <!-- Class information will be displayed here -->
+                </div>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Skills</h3>
+                <div id="skillList" class="space-y-2">
+                    <!-- Skill information will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Display -->
+    <div class="fixed bottom-0 right-0 p-4">
+        <div id="messageDisplay" class="bg-gray-800 text-white p-4 rounded-lg shadow-lg hidden"></div>
+    </div>
+
+    <script type="module" src="../js/move-metadata.js"></script>
+</body>
+</html> 

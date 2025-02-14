@@ -1,211 +1,177 @@
-module hero::core {
+module hero::hero {
     use std::string::String;
-    use std::error;
-    use std::signer;
     use std::vector;
-    use aptos_framework::event::{Self, EventHandle};
-    use aptos_framework::account;
+    use aptos_framework::event;
     use aptos_framework::timestamp;
-    use hero::metadata::Self;
+    use aptos_framework::signer;
+    use hero::metadata;
 
-    /// Error codes
-    const ENOT_INITIALIZED: u64 = 1;
-    const ENOT_AUTHORIZED: u64 = 2;
-    const EINVALID_HERO_ID: u64 = 3;
-    const EINVALID_RACE_ID: u64 = 4;
-    const EINVALID_CLASS_ID: u64 = 5;
-    const EINVALID_SIGNATURE: u64 = 6;
+    // Error codes
+    const ENOT_AUTHORIZED: u64 = 1;
+    const EINVALID_HERO: u64 = 2;
+    const EINSUFFICIENT_ENERGY: u64 = 3;
+    const EDAILY_LIMIT_REACHED: u64 = 4;
 
-    /// Hero data structure
-    struct HeroData has store, drop, copy {
-        id: u256,
+    // Hero data structure
+    struct Hero has key, store {
         name: String,
-        race: u8,
-        class: u8,
-        level: u8,
-        exp: u32,
-        create_time: u64,
-        last_save_time: u64,
-        signature: vector<u8>,
+        race_id: u64,
+        class_id: u64,
+        level: u64,
+        energy: u64,
+        daily_points: u64,
+        skills: vector<u64>,
+        equipment: vector<String>,
+        last_energy_update: u64,
+        last_points_update: u64,
     }
 
-    /// Hero store resource
-    struct HeroStore has key {
-        heroes: vector<HeroData>,
-        registered_nodes: vector<address>,
-        hero_counter: u256,
-        create_events: EventHandle<HeroCreatedEvent>,
-        save_events: EventHandle<HeroSavedEvent>,
-    }
-
-    /// Events
+    // Events
+    #[event]
     struct HeroCreatedEvent has drop, store {
-        hero_id: u256,
         owner: address,
         name: String,
-        race: u8,
-        class: u8,
+        race_id: u64,
+        class_id: u64,
         timestamp: u64,
     }
 
-    struct HeroSavedEvent has drop, store {
-        hero_id: u256,
+    #[event]
+    struct SkillUpdatedEvent has drop, store {
+        owner: address,
+        hero_name: String,
+        skill_id: u64,
         timestamp: u64,
     }
 
-    /// Initialize the hero system
+    #[event]
+    struct EquipmentUpdatedEvent has drop, store {
+        owner: address,
+        hero_name: String,
+        equipment: String,
+        timestamp: u64,
+    }
+
+    // Initialize module
     public entry fun initialize(account: &signer) {
-        let addr = signer::address_of(account);
-        assert!(!exists<HeroStore>(addr), error::already_exists(ENOT_INITIALIZED));
-
-        let hero_store = HeroStore {
-            heroes: vector::empty(),
-            registered_nodes: vector::empty(),
-            hero_counter: 0,
-            create_events: account::new_event_handle<HeroCreatedEvent>(account),
-            save_events: account::new_event_handle<HeroSavedEvent>(account),
-        };
-
-        move_to(account, hero_store);
+        // Initialize metadata module first
+        metadata::initialize(account);
     }
 
-    /// Create a new hero
+    // Create a new hero
     public entry fun create_hero(
         account: &signer,
         name: String,
-        race: u8,
-        class: u8,
-    ) acquires HeroStore {
-        let addr = signer::address_of(account);
-        assert!(exists<HeroStore>(addr), error::not_found(ENOT_INITIALIZED));
-        assert!(race < 5, error::invalid_argument(EINVALID_RACE_ID));
-        assert!(class < 5, error::invalid_argument(EINVALID_CLASS_ID));
+        race_id: u64,
+        class_id: u64,
+    ) {
+        // Verify race and class exist
+        let _race = metadata::get_race(race_id);
+        let _class = metadata::get_class(class_id);
 
-        // Validate race and class
-        let _race_data = metadata::get_race(race);
-        let _class_data = metadata::get_class(class);
-
-        let hero_store = borrow_global_mut<HeroStore>(addr);
-        let hero_id = hero_store.hero_counter + 1;
-        hero_store.hero_counter = hero_id;
-
-        let hero = HeroData {
-            id: hero_id,
+        let hero = Hero {
             name,
-            race,
-            class,
+            race_id,
+            class_id,
             level: 1,
-            exp: 0,
-            create_time: timestamp::now_seconds(),
-            last_save_time: timestamp::now_seconds(),
-            signature: vector::empty(),
+            energy: 100,
+            daily_points: 0,
+            skills: vector::empty(),
+            equipment: vector::empty(),
+            last_energy_update: timestamp::now_seconds(),
+            last_points_update: timestamp::now_seconds(),
         };
 
-        vector::push_back(&mut hero_store.heroes, hero);
+        move_to(account, hero);
 
-        // Emit event
-        event::emit_event(&mut hero_store.create_events, HeroCreatedEvent {
-            hero_id,
-            owner: addr,
+        event::emit(HeroCreatedEvent {
+            owner: signer::address_of(account),
             name,
-            race,
-            class,
+            race_id,
+            class_id,
             timestamp: timestamp::now_seconds(),
         });
     }
 
-    /// Load hero data
-    public fun load_hero(addr: address, hero_id: u256): HeroData acquires HeroStore {
-        assert!(exists<HeroStore>(addr), error::not_found(ENOT_INITIALIZED));
-        let hero_store = borrow_global<HeroStore>(addr);
-        let i = 0;
-        let len = vector::length(&hero_store.heroes);
-        while (i < len) {
-            let hero = vector::borrow(&hero_store.heroes, i);
-            if (hero.id == hero_id) {
-                return *hero
-            };
-            i = i + 1;
-        };
-        abort error::not_found(EINVALID_HERO_ID)
-    }
-
-    /// Save hero data
-    public entry fun save_hero(
+    // Update hero skill
+    public entry fun update_skill(
         account: &signer,
-        hero_id: u256,
-        level: u8,
-        exp: u32,
-        node_signature: vector<u8>,
-        client_signature: vector<u8>,
-    ) acquires HeroStore {
-        let addr = signer::address_of(account);
-        assert!(exists<HeroStore>(addr), error::not_found(ENOT_INITIALIZED));
+        skill_id: u64,
+    ) acquires Hero {
+        // Verify skill exists
+        let _skill = metadata::get_skill(skill_id);
 
-        let hero_store = borrow_global_mut<HeroStore>(addr);
-        let i = 0;
-        let len = vector::length(&hero_store.heroes);
-        let found = false;
-        while (i < len) {
-            let hero = vector::borrow_mut(&mut hero_store.heroes, i);
-            if (hero.id == hero_id) {
-                hero.level = level;
-                hero.exp = exp;
-                hero.last_save_time = timestamp::now_seconds();
-                hero.signature = node_signature;
-                found = true;
-                break
-            };
-            i = i + 1;
-        };
-        assert!(found, error::not_found(EINVALID_HERO_ID));
+        let hero = borrow_global_mut<Hero>(signer::address_of(account));
+        vector::push_back(&mut hero.skills, skill_id);
 
-        // Verify signatures
-        assert!(verify_signatures(node_signature, client_signature), error::invalid_argument(EINVALID_SIGNATURE));
-
-        // Emit event
-        event::emit_event(&mut hero_store.save_events, HeroSavedEvent {
-            hero_id,
+        event::emit(SkillUpdatedEvent {
+            owner: signer::address_of(account),
+            hero_name: hero.name,
+            skill_id,
             timestamp: timestamp::now_seconds(),
         });
     }
 
-    /// Register a node
-    public entry fun register_node(
+    // Update hero equipment
+    public entry fun update_equipment(
         account: &signer,
-        node_address: address,
-    ) acquires HeroStore {
-        let addr = signer::address_of(account);
-        assert!(exists<HeroStore>(addr), error::not_found(ENOT_INITIALIZED));
+        equipment: String,
+    ) acquires Hero {
+        let hero = borrow_global_mut<Hero>(signer::address_of(account));
+        vector::push_back(&mut hero.equipment, equipment);
 
-        let hero_store = borrow_global_mut<HeroStore>(addr);
-        vector::push_back(&mut hero_store.registered_nodes, node_address);
+        event::emit(EquipmentUpdatedEvent {
+            owner: signer::address_of(account),
+            hero_name: hero.name,
+            equipment,
+            timestamp: timestamp::now_seconds(),
+        });
     }
 
-    /// Public getters
-    public fun get_name(hero: &HeroData): String {
-        hero.name
+    // Consume hero energy
+    public entry fun consume_energy(
+        account: &signer,
+        amount: u64,
+    ) acquires Hero {
+        let hero = borrow_global_mut<Hero>(signer::address_of(account));
+        assert!(hero.energy >= amount, EINSUFFICIENT_ENERGY);
+        hero.energy = hero.energy - amount;
+        hero.last_energy_update = timestamp::now_seconds();
     }
 
-    public fun get_race(hero: &HeroData): u8 {
-        hero.race
+    // Add daily points
+    public entry fun add_daily_points(
+        account: &signer,
+        points: u64,
+    ) acquires Hero {
+        let hero = borrow_global_mut<Hero>(signer::address_of(account));
+        let current_time = timestamp::now_seconds();
+        
+        // Reset points if it's a new day
+        if (current_time - hero.last_points_update >= 86400) {
+            hero.daily_points = 0;
+        };
+        
+        assert!(hero.daily_points + points <= 1000, EDAILY_LIMIT_REACHED);
+        hero.daily_points = hero.daily_points + points;
+        hero.last_points_update = current_time;
     }
 
-    public fun get_class(hero: &HeroData): u8 {
-        hero.class
+    // Get hero info
+    public fun get_hero_info(owner: address): (String, u64, u64, u64, u64, u64) acquires Hero {
+        let hero = borrow_global<Hero>(owner);
+        (hero.name, hero.race_id, hero.class_id, hero.level, hero.energy, hero.daily_points)
     }
 
-    public fun get_level(hero: &HeroData): u8 {
-        hero.level
+    // Get hero skills
+    public fun get_hero_skills(owner: address): vector<u64> acquires Hero {
+        let hero = borrow_global<Hero>(owner);
+        *&hero.skills
     }
 
-    public fun get_exp(hero: &HeroData): u32 {
-        hero.exp
-    }
-
-    /// Verify signatures
-    fun verify_signatures(_node_signature: vector<u8>, _client_signature: vector<u8>): bool {
-        // TODO: Implement signature verification logic
-        true
+    // Get hero equipment
+    public fun get_hero_equipment(owner: address): vector<String> acquires Hero {
+        let hero = borrow_global<Hero>(owner);
+        *&hero.equipment
     }
 }

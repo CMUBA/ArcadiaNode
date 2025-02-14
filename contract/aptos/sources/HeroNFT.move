@@ -1,40 +1,34 @@
 module hero_nft::hero_nft {
-    use std::string::String;
-    use std::string;
-    use std::signer;
+    use std::string::{Self, String};
     use std::vector;
-    use std::error;
-    use aptos_framework::account;
-    use aptos_framework::coin::{Self as coin};
     use aptos_framework::event;
     use aptos_framework::timestamp;
-    use aptos_framework::type_info;
+    use aptos_framework::coin;
+    use aptos_framework::signer;
     use aptos_token::token;
+    use aptos_framework::type_info;
 
     // Error codes
-    const ENOT_INITIALIZED: u64 = 1;
-    const EINVALID_TOKEN_ID: u64 = 2;
-    const ETOKEN_ALREADY_EXISTS: u64 = 3;
-    const ETOKEN_NOT_EXISTS: u64 = 4;
-    const ENOT_OWNER: u64 = 5;
-    const EINVALID_PAYMENT: u64 = 6;
+    const ENOT_AUTHORIZED: u64 = 1;
+    const EINVALID_PAYMENT: u64 = 2;
+    const ETOKEN_NOT_FOUND: u64 = 3;
+    const EINVALID_TOKEN_ID: u64 = 4;
 
-    // Price configuration structure
-    struct PriceConfig has store, drop {
-        token_type: string::String,
-        price: u64,
-        is_active: bool,
-    }
-
-    // NFT collection data
+    // Collection data structure
     struct CollectionData has key {
-        name: string::String,
-        description: string::String,
-        uri: string::String,
+        admin: address,
         default_native_price: u64,
         default_token_price: u64,
-        default_token_type: string::String,
+        default_token_type: String,
         price_configs: vector<PriceConfig>,
+        registered_nfts: vector<address>,
+    }
+
+    // Price configuration for tokens
+    struct PriceConfig has store {
+        token_type: String,
+        price: u64,
+        is_active: bool,
     }
 
     // Events
@@ -42,7 +36,7 @@ module hero_nft::hero_nft {
     struct NFTMintedEvent has drop, store {
         to: address,
         token_id: u64,
-        payment_token: string::String,
+        payment_token: String,
         price: u64,
         timestamp: u64,
     }
@@ -50,45 +44,79 @@ module hero_nft::hero_nft {
     #[event]
     struct PriceConfigUpdatedEvent has drop, store {
         token_id: u64,
-        token_type: string::String,
+        token_type: String,
         price: u64,
         timestamp: u64,
     }
 
-    // Initialize the NFT collection
-    public entry fun initialize(
-        account: &signer,
-        name: string::String,
-        description: string::String,
-        uri: string::String,
-        default_token_name: string::String,
-        default_native_price: u64,
-        default_token_price: u64,
-    ) {
-        let collection_data = CollectionData {
-            name,
-            description,
-            uri,
-            default_native_price,
-            default_token_price,
-            default_token_type: default_token_name,
+    #[event]
+    struct NFTRegisteredEvent has drop, store {
+        nft_contract: address,
+        timestamp: u64,
+    }
+
+    // Initialize collection
+    public entry fun initialize(account: &signer) {
+        let admin = signer::address_of(account);
+        
+        move_to(account, CollectionData {
+            admin,
+            default_native_price: 1000000, // 1 APT
+            default_token_price: 1000000,  // 1 Token
+            default_token_type: string::utf8(b""),
             price_configs: vector::empty(),
+            registered_nfts: vector::empty(),
+        });
+    }
+
+    // Register NFT contract
+    public entry fun register_nft(account: &signer, nft_contract: address) acquires CollectionData {
+        let collection_data = borrow_global_mut<CollectionData>(@hero_nft);
+        assert!(signer::address_of(account) == collection_data.admin, ENOT_AUTHORIZED);
+        
+        vector::push_back(&mut collection_data.registered_nfts, nft_contract);
+        
+        event::emit(NFTRegisteredEvent {
+            nft_contract,
+            timestamp: timestamp::now_seconds(),
+        });
+    }
+
+    // Get registered NFTs
+    public fun get_registered_nfts(): vector<address> acquires CollectionData {
+        let collection_data = borrow_global<CollectionData>(@hero_nft);
+        *&collection_data.registered_nfts
+    }
+
+    // Check if NFT contract is registered
+    public fun is_registered(nft_contract: address): bool acquires CollectionData {
+        let collection_data = borrow_global<CollectionData>(@hero_nft);
+        vector::contains(&collection_data.registered_nfts, &nft_contract)
+    }
+
+    // Get price for token
+    public fun get_price_for_token(token_id: u64, collection_data: &CollectionData): u64 {
+        let i = 0;
+        while (i < vector::length(&collection_data.price_configs)) {
+            let config = vector::borrow(&collection_data.price_configs, i);
+            if (token_id == i && config.is_active) {
+                return config.price
+            };
+            i = i + 1;
         };
-        move_to(account, collection_data);
+        collection_data.default_native_price
+    }
 
-        let mutate_setting = vector::empty<bool>();
-        vector::push_back(&mut mutate_setting, true); // description
-        vector::push_back(&mut mutate_setting, true); // uri
-        vector::push_back(&mut mutate_setting, true); // maximum
-
-        token::create_collection(
-            account,
-            name,
-            description,
-            uri,
-            0,
-            mutate_setting,
-        );
+    // Get total price for batch of tokens
+    public fun get_total_price_for_tokens(token_ids: &vector<u64>, collection_data: &CollectionData): u64 {
+        let total = 0u64;
+        let i = 0;
+        while (i < vector::length(token_ids)) {
+            let token_id = *vector::borrow(token_ids, i);
+            total = total + get_price_for_token(token_id, collection_data);
+            i = i + 1;
+        };
+        total
     }
 
     // Mint a new NFT
@@ -103,10 +131,9 @@ module hero_nft::hero_nft {
 
         coin::transfer<CoinType>(account, @hero_nft, price);
 
-        // Create admin signer
-        let cap = account::create_test_signer_cap(@hero_nft);
-        let admin = account::create_signer_with_capability(&cap);
-        mint_internal(account, &admin, token_id);
+        // Only admin can mint
+        assert!(signer::address_of(account) == collection_data.admin, ENOT_AUTHORIZED);
+        mint_internal(account, token_id);
 
         event::emit(NFTMintedEvent {
             to: signer::address_of(account),
@@ -120,7 +147,7 @@ module hero_nft::hero_nft {
     public entry fun set_price_config(
         account: &signer,
         token_id: u64,
-        token_name: string::String,
+        token_name: String,
         price: u64,
     ) acquires CollectionData {
         assert!(signer::address_of(account) == @hero_nft, 0);
@@ -159,7 +186,7 @@ module hero_nft::hero_nft {
 
     public entry fun set_default_token_type(
         account: &signer,
-        token_name: string::String,
+        token_name: String,
     ) acquires CollectionData {
         assert!(signer::address_of(account) == @hero_nft, 0);
         
@@ -179,15 +206,14 @@ module hero_nft::hero_nft {
 
         coin::transfer<CoinType>(account, @hero_nft, total_price);
 
-        // Create admin signer
-        let cap = account::create_test_signer_cap(@hero_nft);
-        let admin = account::create_signer_with_capability(&cap);
+        // Only admin can mint
+        assert!(signer::address_of(account) == collection_data.admin, ENOT_AUTHORIZED);
 
         let i = 0;
         let len = vector::length(&token_ids);
         while (i < len) {
             let token_id = *vector::borrow(&token_ids, i);
-            mint_internal(account, &admin, token_id);
+            mint_internal(account, token_id);
 
             event::emit(NFTMintedEvent {
                 to: signer::address_of(account),
@@ -214,10 +240,7 @@ module hero_nft::hero_nft {
     }
 
     // Internal functions
-    fun mint_internal(user: &signer, admin: &signer, token_id: u64) {
-        // Check if the admin account is valid
-        let admin_addr = signer::address_of(admin);
-        assert!(admin_addr == @hero_nft, error::permission_denied(ENOT_OWNER));
+    fun mint_internal(account: &signer, token_id: u64) {
         let token_name = string::utf8(b"");
         string::append(&mut token_name, string::utf8(b"HERO #"));
         string::append(&mut token_name, string::utf8(num_to_string(token_id)));
@@ -226,9 +249,9 @@ module hero_nft::hero_nft {
         let description = string::utf8(b"Hero NFT Collection");
         let uri = string::utf8(b"https://hero.example.com/nft/");
 
-        // Create token data using admin account
+        // Create token data
         let token_data_id = token::create_tokendata(
-            admin,
+            account,
             collection,
             token_name,
             description,
@@ -251,39 +274,11 @@ module hero_nft::hero_nft {
             vector::empty<String>(), // property types
         );
 
-        // Mint token using admin account
-        let token_id = token::mint_token(
-            admin,
+        token::mint_token(
+            account,
             token_data_id,
             1, // amount
         );
-
-        // Transfer token to user
-        token::direct_transfer(admin, user, token_id, 1);
-    }
-
-    fun get_total_price_for_tokens(token_ids: &vector<u64>, collection_data: &CollectionData): u64 {
-        let total = 0u64;
-        let i = 0;
-        let len = vector::length(token_ids);
-        while (i < len) {
-            let token_id = *vector::borrow(token_ids, i);
-            total = total + get_price_for_token(token_id, collection_data);
-            i = i + 1;
-        };
-        total
-    }
-
-    fun get_price_for_token(token_id: u64, collection_data: &CollectionData): u64 {
-        let i = 0;
-        while (i < vector::length(&collection_data.price_configs)) {
-            let config = vector::borrow(&collection_data.price_configs, i);
-            if (token_id == i && config.is_active) {
-                return config.price
-            };
-            i = i + 1;
-        };
-        collection_data.default_native_price
     }
 
     fun num_to_string(num: u64): vector<u8> {
@@ -320,5 +315,27 @@ module hero_nft::hero_nft {
             i = i + 1;
         };
         collection_data.default_token_price
+    }
+
+    // Get default native price
+    public fun get_default_native_price(): u64 acquires CollectionData {
+        let collection_data = borrow_global<CollectionData>(@hero_nft);
+        collection_data.default_native_price
+    }
+
+    // Check if token exists
+    public fun token_exists(token_id: u64): bool {
+        token::check_tokendata_exists(@hero_nft, string::utf8(b"Hero NFT"), string::utf8(num_to_string(token_id)))
+    }
+
+    // Get token owner
+    public fun owner_of(token_id: u64, account: address): bool {
+        let token_name = string::utf8(b"");
+        string::append(&mut token_name, string::utf8(b"HERO #"));
+        string::append(&mut token_name, string::utf8(num_to_string(token_id)));
+        let token_data_id = token::create_token_data_id(@hero_nft, string::utf8(b"Hero NFT"), token_name);
+        let property_version = 0;
+        let token = token::create_token_id(token_data_id, property_version);
+        token::balance_of(account, token) > 0
     }
 } 

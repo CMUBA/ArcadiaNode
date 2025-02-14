@@ -1,5 +1,5 @@
 module hero::metadata {
-    use std::string;
+    use std::string::{Self, String};
     use std::vector;
     use std::signer;
     use aptos_framework::event;
@@ -8,105 +8,92 @@ module hero::metadata {
     /// Error codes
     const ENOT_INITIALIZED: u64 = 1;
     const ENOT_AUTHORIZED: u64 = 2;
-    const EINVALID_RACE_ID: u64 = 3;
-    const EINVALID_CLASS_ID: u64 = 4;
-    const EINVALID_SKILL_ID: u64 = 5;
+    const EINVALID_RACE: u64 = 3;
+    const EINVALID_CLASS: u64 = 4;
+    const EINVALID_SKILL: u64 = 5;
+    const EALREADY_INITIALIZED: u64 = 6;
 
-    /// Race attributes
-    struct RaceAttributes has store, drop, copy {
-        id: u8,
-        name: string::String,
-        description: string::String,
-        base_hp: u32,
-        base_mp: u32,
-        base_attack: u32,
-        base_defense: u32,
+    /// Metadata structures
+    struct Race has store, drop, copy {
+        id: u64,
+        name: String,
+        description: String,
+        base_stats: vector<u64>,
     }
 
-    /// Class attributes
-    struct ClassAttributes has store, drop, copy {
-        id: u8,
-        name: string::String,
-        description: string::String,
-        hp_per_level: u32,
-        mp_per_level: u32,
-        attack_per_level: u32,
-        defense_per_level: u32,
+    struct Class has store, drop, copy {
+        id: u64,
+        name: String,
+        description: String,
+        base_skills: vector<u64>,
     }
 
-    /// Skill attributes
-    struct SkillAttributes has store, drop, copy {
-        id: u8,
-        name: string::String,
-        description: string::String,
-        mp_cost: u32,
-        cooldown: u32,
-        required_level: u8,
-        required_class: vector<u8>,
+    struct Skill has store, drop, copy {
+        id: u64,
+        name: String,
+        description: String,
+        damage: u64,
+        cost: u64,
     }
 
     /// Metadata store resource
     struct MetadataStore has key {
-        races: vector<RaceAttributes>,
-        classes: vector<ClassAttributes>,
-        skills: vector<SkillAttributes>,
+        races: vector<Race>,
+        classes: vector<Class>,
+        skills: vector<Skill>,
     }
 
     // Events
     #[event]
     struct RaceAddedEvent has drop, store {
-        race_id: u8,
-        name: string::String,
+        race_id: u64,
+        name: String,
         timestamp: u64,
     }
 
     #[event]
     struct ClassAddedEvent has drop, store {
-        class_id: u8,
-        name: string::String,
+        class_id: u64,
+        name: String,
         timestamp: u64,
     }
 
     #[event]
     struct SkillAddedEvent has drop, store {
-        skill_id: u8,
-        name: string::String,
+        skill_id: u64,
+        name: String,
         timestamp: u64,
     }
 
     /// Initialize metadata
     public entry fun initialize(admin: &signer) {
         let admin_addr = signer::address_of(admin);
-        assert!(!exists<MetadataStore>(admin_addr), ENOT_INITIALIZED);
-
-        move_to(admin, MetadataStore {
-            races: vector::empty(),
-            classes: vector::empty(),
-            skills: vector::empty(),
-        });
+        assert!(admin_addr == @hero_nft, ENOT_AUTHORIZED);
+        if (!exists<MetadataStore>(admin_addr)) {
+            // Create empty metadata store
+            move_to(admin, MetadataStore {
+                races: vector::empty(),
+                classes: vector::empty(),
+                skills: vector::empty(),
+            });
+        };
     }
 
     /// Add a new race
     public entry fun add_race(
         admin: &signer,
-        name: string::String,
-        description: string::String,
-        base_hp: u32,
-        base_mp: u32,
-        base_attack: u32,
-        base_defense: u32,
+        name: String,
+        description: String,
+        base_stats: vector<u64>,
     ) acquires MetadataStore {
         assert!(signer::address_of(admin) == @hero, ENOT_AUTHORIZED);
         let store = borrow_global_mut<MetadataStore>(@hero);
         
-        let race = RaceAttributes {
-            id: vector::length(&store.races) as u8,
+        let race = Race {
+            id: vector::length(&store.races) as u64,
             name,
             description,
-            base_hp,
-            base_mp,
-            base_attack,
-            base_defense,
+            base_stats,
         };
 
         vector::push_back(&mut store.races, race);
@@ -122,24 +109,18 @@ module hero::metadata {
     /// Add a new class
     public entry fun add_class(
         admin: &signer,
-        name: string::String,
-        description: string::String,
-        hp_per_level: u32,
-        mp_per_level: u32,
-        attack_per_level: u32,
-        defense_per_level: u32,
+        name: String,
+        description: String,
+        base_skills: vector<u64>,
     ) acquires MetadataStore {
         assert!(signer::address_of(admin) == @hero, ENOT_AUTHORIZED);
         let store = borrow_global_mut<MetadataStore>(@hero);
         
-        let class = ClassAttributes {
-            id: vector::length(&store.classes) as u8,
+        let class = Class {
+            id: vector::length(&store.classes) as u64,
             name,
             description,
-            hp_per_level,
-            mp_per_level,
-            attack_per_level,
-            defense_per_level,
+            base_skills,
         };
 
         vector::push_back(&mut store.classes, class);
@@ -155,24 +136,20 @@ module hero::metadata {
     /// Add a new skill
     public entry fun add_skill(
         admin: &signer,
-        name: string::String,
-        description: string::String,
-        mp_cost: u32,
-        cooldown: u32,
-        required_level: u8,
-        required_class: vector<u8>,
+        name: String,
+        description: String,
+        damage: u64,
+        cost: u64,
     ) acquires MetadataStore {
         assert!(signer::address_of(admin) == @hero, ENOT_AUTHORIZED);
         let store = borrow_global_mut<MetadataStore>(@hero);
         
-        let skill = SkillAttributes {
-            id: vector::length(&store.skills) as u8,
+        let skill = Skill {
+            id: vector::length(&store.skills) as u64,
             name,
             description,
-            mp_cost,
-            cooldown,
-            required_level,
-            required_class,
+            damage,
+            cost,
         };
 
         vector::push_back(&mut store.skills, skill);
@@ -185,44 +162,109 @@ module hero::metadata {
         });
     }
 
-    /// Get race attributes
-    public fun get_race(race_id: u8): RaceAttributes acquires MetadataStore {
+    /// Get race by ID
+    public fun get_race(race_id: u64): Race acquires MetadataStore {
         let store = borrow_global<MetadataStore>(@hero);
-        assert!(race_id < (vector::length(&store.races) as u8), EINVALID_RACE_ID);
-        *vector::borrow(&store.races, race_id as u64)
+        assert!(race_id < vector::length(&store.races), EINVALID_RACE);
+        *vector::borrow(&store.races, race_id)
     }
 
-    /// Get class attributes
-    public fun get_class(class_id: u8): ClassAttributes acquires MetadataStore {
+    /// Get class by ID
+    public fun get_class(class_id: u64): Class acquires MetadataStore {
         let store = borrow_global<MetadataStore>(@hero);
-        assert!(class_id < (vector::length(&store.classes) as u8), EINVALID_CLASS_ID);
-        *vector::borrow(&store.classes, class_id as u64)
+        assert!(class_id < vector::length(&store.classes), EINVALID_CLASS);
+        *vector::borrow(&store.classes, class_id)
+    }
+
+    /// Get skill by ID
+    public fun get_skill(skill_id: u64): Skill acquires MetadataStore {
+        let store = borrow_global<MetadataStore>(@hero);
+        assert!(skill_id < vector::length(&store.skills), EINVALID_SKILL);
+        *vector::borrow(&store.skills, skill_id)
+    }
+
+    /// Getter functions for Race
+    public fun get_race_name(race: Race): String {
+        race.name
+    }
+
+    public fun get_race_description(race: Race): String {
+        race.description
+    }
+
+    public fun get_race_stats(race: Race): vector<u64> {
+        race.base_stats
+    }
+
+    /// Getter functions for Class
+    public fun get_class_name(class: Class): String {
+        class.name
+    }
+
+    public fun get_class_description(class: Class): String {
+        class.description
+    }
+
+    public fun get_class_skills(class: Class): vector<u64> {
+        class.base_skills
+    }
+
+    /// Getter functions for Skill
+    public fun get_skill_name(skill: Skill): String {
+        skill.name
+    }
+
+    public fun get_skill_description(skill: Skill): String {
+        skill.description
+    }
+
+    public fun get_skill_damage(skill: Skill): u64 {
+        skill.damage
+    }
+
+    public fun get_skill_cost(skill: Skill): u64 {
+        skill.cost
+    }
+
+    /// Get all races
+    public fun get_all_races(): vector<Race> acquires MetadataStore {
+        let store = borrow_global<MetadataStore>(@hero);
+        *&store.races
+    }
+
+    /// Get all classes
+    public fun get_all_classes(): vector<Class> acquires MetadataStore {
+        let store = borrow_global<MetadataStore>(@hero);
+        *&store.classes
+    }
+
+    /// Get all skills
+    public fun get_all_skills(): vector<Skill> acquires MetadataStore {
+        let store = borrow_global<MetadataStore>(@hero);
+        *&store.skills
     }
 
     // Set race attributes
     public entry fun set_race(
         admin: &signer,
-        race_id: u8,
-        name: string::String,
-        base_attributes: vector<u32>
+        race_id: u64,
+        name: String,
+        base_attributes: vector<u64>
     ) acquires MetadataStore {
         assert!(signer::address_of(admin) == @hero, ENOT_AUTHORIZED);
         let store = borrow_global_mut<MetadataStore>(@hero);
         
-        let race = RaceAttributes {
+        let race = Race {
             id: race_id,
             name,
             description: string::utf8(b""),
-            base_hp: *vector::borrow(&base_attributes, 0),
-            base_mp: *vector::borrow(&base_attributes, 1),
-            base_attack: *vector::borrow(&base_attributes, 2),
-            base_defense: *vector::borrow(&base_attributes, 3),
+            base_stats: base_attributes,
         };
 
-        if (race_id >= (vector::length(&store.races) as u8)) {
+        if (race_id >= (vector::length(&store.races) as u64)) {
             vector::push_back(&mut store.races, race);
         } else {
-            *vector::borrow_mut(&mut store.races, race_id as u64) = race;
+            *vector::borrow_mut(&mut store.races, race_id) = race;
         };
 
         event::emit(RaceAddedEvent {
@@ -235,27 +277,24 @@ module hero::metadata {
     // Set class attributes
     public entry fun set_class(
         admin: &signer,
-        class_id: u8,
-        name: string::String,
-        base_attributes: vector<u32>
+        class_id: u64,
+        name: String,
+        base_attributes: vector<u64>
     ) acquires MetadataStore {
         assert!(signer::address_of(admin) == @hero, ENOT_AUTHORIZED);
         let store = borrow_global_mut<MetadataStore>(@hero);
         
-        let class = ClassAttributes {
+        let class = Class {
             id: class_id,
             name,
             description: string::utf8(b""),
-            hp_per_level: *vector::borrow(&base_attributes, 0),
-            mp_per_level: *vector::borrow(&base_attributes, 1),
-            attack_per_level: *vector::borrow(&base_attributes, 2),
-            defense_per_level: *vector::borrow(&base_attributes, 3),
+            base_skills: base_attributes,
         };
 
-        if (class_id >= (vector::length(&store.classes) as u8)) {
+        if (class_id >= (vector::length(&store.classes) as u64)) {
             vector::push_back(&mut store.classes, class);
         } else {
-            *vector::borrow_mut(&mut store.classes, class_id as u64) = class;
+            *vector::borrow_mut(&mut store.classes, class_id) = class;
         };
 
         event::emit(ClassAddedEvent {
@@ -265,10 +304,8 @@ module hero::metadata {
         });
     }
 
-    /// Get skill attributes
-    public fun get_skill(skill_id: u8): SkillAttributes acquires MetadataStore {
-        let store = borrow_global<MetadataStore>(@hero);
-        assert!(skill_id < (vector::length(&store.skills) as u8), EINVALID_SKILL_ID);
-        *vector::borrow(&store.skills, skill_id as u64)
+    /// Check if metadata is initialized
+    public fun is_initialized(): bool {
+        exists<MetadataStore>(@hero)
     }
 }

@@ -1,212 +1,219 @@
 #[test_only]
 module hero_nft::hero_nft_tests {
-    use std::signer;
     use std::string;
     use std::vector;
     use aptos_framework::account;
     use aptos_framework::timestamp;
-    use aptos_framework::coin;
+    use aptos_framework::signer;
+    use aptos_framework::coin::{Self, BurnCapability, MintCapability};
     use aptos_framework::aptos_coin::{Self, AptosCoin};
     use hero_nft::hero_nft;
 
-    // Test account addresses
-    const ADMIN: address = @hero_nft;
-    const USER: address = @0x123;
+    const NATIVE_PRICE: u64 = 1000000;
+    const TOKEN_PRICE: u64 = 500000;
+    const APT_AMOUNT: u64 = 10000000; // 10 APT for testing
 
-    // Test data
-    const NATIVE_PRICE: u64 = 100000000; // 0.1 APT
-    const TOKEN_PRICE: u64 = 1000000000; // 1 APT
-
-    #[test(admin = @hero_nft, framework = @0x1)]
-    public fun test_initialize(admin: &signer, framework: &signer) {
-        // Initialize timestamp for testing
-        timestamp::set_time_has_started_for_testing(framework);
-        // Create admin account
-        account::create_account_for_test(signer::address_of(admin));
-
-        // Initialize contract
-        hero_nft::initialize(
-            admin,
-            string::utf8(b"Hero NFT"),
-            string::utf8(b"A collection of hero NFTs"),
-            string::utf8(b"https://hero.nft/"),
-            string::utf8(b"AptosCoin"),
-            NATIVE_PRICE,
-            TOKEN_PRICE,
-        );
+    struct TestCapabilities has key {
+        mint_cap: MintCapability<AptosCoin>,
+        burn_cap: BurnCapability<AptosCoin>
     }
 
-    #[test(admin = @hero_nft, user = @0x123, framework = @0x1)]
-    public fun test_mint_with_native(admin: &signer, user: &signer, framework: &signer) {
-        // Initialize timestamp for testing
-        timestamp::set_time_has_started_for_testing(framework);
-        // Setup test environment
-        account::create_account_for_test(ADMIN);
-        account::create_account_for_test(USER);
-        
-        // Initialize Aptos coin for testing
-        let framework_signer = account::create_account_for_test(@0x1);
-        let (burn_cap, mint_cap) = aptos_coin::initialize_for_test(&framework_signer);
-        
-        // Register admin and user for AptosCoin
-        coin::register<AptosCoin>(admin);
-        coin::register<AptosCoin>(user);
-        
-        // Give user some APT
-        let coins = coin::mint<AptosCoin>(NATIVE_PRICE * 2, &mint_cap);
-        coin::deposit(signer::address_of(user), coins);
-        coin::destroy_burn_cap(burn_cap);
-        coin::destroy_mint_cap(mint_cap);
+    fun setup_test_coins(framework: &signer, account: &signer) acquires TestCapabilities {
+        let account_addr = signer::address_of(account);
+        if (!account::exists_at(account_addr)) {
+            account::create_account_for_test(account_addr);
+        };
 
-        // Initialize contract
-        hero_nft::initialize(
-            admin,
-            string::utf8(b"Hero NFT"),
-            string::utf8(b"A collection of hero NFTs"),
-            string::utf8(b"https://hero.nft/"),
-            string::utf8(b"AptosCoin"),
-            NATIVE_PRICE,
-            TOKEN_PRICE,
-        );
-
-        // Mint NFT
-        hero_nft::mint_with_native<AptosCoin>(
-            user,
-            1, // token_id
-            NATIVE_PRICE,
-        );
+        if (!coin::is_coin_initialized<AptosCoin>()) {
+            let (burn_cap, mint_cap) = aptos_coin::initialize_for_test(framework);
+            move_to(framework, TestCapabilities { mint_cap, burn_cap });
+        };
+        
+        if (!coin::is_account_registered<AptosCoin>(account_addr)) {
+            coin::register<AptosCoin>(account);
+            let caps = borrow_global<TestCapabilities>(@0x1);
+            let coins = coin::mint(APT_AMOUNT, &caps.mint_cap);
+            coin::deposit(account_addr, coins);
+        };
     }
 
-    #[test(admin = @hero_nft, user = @0x123, framework = @0x1)]
-    public fun test_mint_batch_with_native(admin: &signer, user: &signer, framework: &signer) {
-        // Initialize timestamp for testing
+    #[test(framework = @0x1, admin = @hero_nft)]
+    public fun test_initialize(framework: &signer, admin: &signer) {
+        // Set up timestamp for testing
         timestamp::set_time_has_started_for_testing(framework);
-        // Setup test environment
-        account::create_account_for_test(ADMIN);
-        account::create_account_for_test(USER);
         
-        // Initialize Aptos coin for testing
-        let framework_signer = account::create_account_for_test(@0x1);
-        let (burn_cap, mint_cap) = aptos_coin::initialize_for_test(&framework_signer);
+        // Initialize modules
+        hero_nft::initialize(admin);
         
-        // Register admin and user for AptosCoin
-        coin::register<AptosCoin>(admin);
-        coin::register<AptosCoin>(user);
+        // Set default prices
+        hero_nft::set_default_prices(admin, NATIVE_PRICE, TOKEN_PRICE);
         
-        // Give user some APT
-        let coins = coin::mint<AptosCoin>(NATIVE_PRICE * 4, &mint_cap);
-        coin::deposit(signer::address_of(user), coins);
-        coin::destroy_burn_cap(burn_cap);
-        coin::destroy_mint_cap(mint_cap);
+        // Register admin's NFT contract
+        let admin_addr = signer::address_of(admin);
+        hero_nft::register_nft(admin, admin_addr);
+        
+        // Verify initialization
+        assert!(hero_nft::is_registered(admin_addr), 0);
+    }
 
-        // Initialize contract
-        hero_nft::initialize(
-            admin,
-            string::utf8(b"Hero NFT"),
-            string::utf8(b"A collection of hero NFTs"),
-            string::utf8(b"https://hero.nft/"),
-            string::utf8(b"AptosCoin"),
-            NATIVE_PRICE,
-            TOKEN_PRICE,
-        );
+    #[test(framework = @0x1, admin = @hero_nft)]
+    public fun test_set_default_prices(framework: &signer, admin: &signer) {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Set new prices
+        let new_native_price = 2000000;
+        let new_token_price = 1000000;
+        hero_nft::set_default_prices(admin, new_native_price, new_token_price);
+    }
 
-        // Prepare token IDs
+    #[test(framework = @0x1, admin = @hero_nft)]
+    public fun test_set_default_token_type(framework: &signer, admin: &signer) {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Set token type
+        let token_type = string::utf8(b"ARC");
+        hero_nft::set_default_token_type(admin, token_type);
+    }
+
+    #[test(framework = @0x1, admin = @hero_nft)]
+    public fun test_set_price_config(framework: &signer, admin: &signer) {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Set price config
+        let token_id = 1;
+        let token_type = string::utf8(b"ARC");
+        let price = 1500000;
+        hero_nft::set_price_config(admin, token_id, token_type, price);
+    }
+
+    #[test(framework = @0x1, admin = @hero_nft)]
+    public fun test_set_apt_price(framework: &signer, admin: &signer) acquires TestCapabilities {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Setup test coins
+        setup_test_coins(framework, admin);
+        
+        // Set APT price
+        let apt_price = 1000000; // 1 APT
+        hero_nft::set_default_prices(admin, apt_price, TOKEN_PRICE);
+        
+        // Verify price
+        let price = hero_nft::get_default_native_price();
+        assert!(price == apt_price, 0);
+    }
+
+    #[test(framework = @0x1, admin = @hero_nft)]
+    public fun test_mint_with_apt(framework: &signer, admin: &signer) acquires TestCapabilities {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Setup test coins
+        setup_test_coins(framework, admin);
+        
+        // Set APT price
+        hero_nft::set_default_prices(admin, NATIVE_PRICE, TOKEN_PRICE);
+        
+        // Create test account
+        let user = account::create_account_for_test(@0x123);
+        setup_test_coins(framework, &user);
+        
+        // Register NFT contract
+        hero_nft::register_nft(admin, signer::address_of(&user));
+        
+        // Mint NFT with APT
+        let token_id = 1;
+        hero_nft::mint_with_native<AptosCoin>(admin, token_id, NATIVE_PRICE);
+        
+        // Verify NFT ownership
+        assert!(hero_nft::token_exists(token_id), 0);
+        assert!(hero_nft::owner_of(token_id, signer::address_of(admin)), 1);
+    }
+
+    #[test(framework = @0x1, admin = @hero_nft)]
+    public fun test_batch_mint_with_apt(framework: &signer, admin: &signer) acquires TestCapabilities {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Setup test coins
+        setup_test_coins(framework, admin);
+        
+        // Set APT price
+        hero_nft::set_default_prices(admin, NATIVE_PRICE, TOKEN_PRICE);
+        
+        // Create test account
+        let user = account::create_account_for_test(@0x123);
+        setup_test_coins(framework, &user);
+        
+        // Register NFT contract
+        hero_nft::register_nft(admin, signer::address_of(&user));
+        
+        // Create token IDs for batch mint
         let token_ids = vector::empty<u64>();
         vector::push_back(&mut token_ids, 1);
         vector::push_back(&mut token_ids, 2);
-        vector::push_back(&mut token_ids, 3);
-
-        // Batch mint NFTs
-        hero_nft::mint_batch_with_native<AptosCoin>(
-            user,
-            token_ids,
-            NATIVE_PRICE * 3,
-        );
+        
+        // Mint NFTs with APT
+        hero_nft::mint_batch_with_native<AptosCoin>(admin, token_ids, NATIVE_PRICE * 2);
+        
+        // Verify NFT ownership
+        let admin_addr = signer::address_of(admin);
+        assert!(hero_nft::token_exists(1), 0);
+        assert!(hero_nft::token_exists(2), 1);
+        assert!(hero_nft::owner_of(1, admin_addr), 2);
+        assert!(hero_nft::owner_of(2, admin_addr), 3);
     }
 
-    #[test(admin = @hero_nft, framework = @0x1)]
-    public fun test_set_price_config(admin: &signer, framework: &signer) {
-        // Initialize timestamp for testing
-        timestamp::set_time_has_started_for_testing(framework);
-        // Setup test environment
-        account::create_account_for_test(ADMIN);
-
-        // Initialize contract
-        hero_nft::initialize(
-            admin,
-            string::utf8(b"Hero NFT"),
-            string::utf8(b"A collection of hero NFTs"),
-            string::utf8(b"https://hero.nft/"),
-            string::utf8(b"AptosCoin"),
-            NATIVE_PRICE,
-            TOKEN_PRICE,
-        );
-
-        // Set price configuration
-        hero_nft::set_price_config(
-            admin,
-            1, // token_id
-            string::utf8(b"AptosCoin"),
-            NATIVE_PRICE * 2,
-        );
+    #[test(framework = @0x1, admin = @hero_nft)]
+    #[expected_failure(abort_code = 65537, location = hero_nft::hero_nft)] // EINVALID_PAYMENT
+    public fun test_insufficient_payment(framework: &signer, admin: &signer) acquires TestCapabilities {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Setup test coins
+        setup_test_coins(framework, admin);
+        
+        // Set APT price
+        hero_nft::set_default_prices(admin, NATIVE_PRICE, TOKEN_PRICE);
+        
+        // Try to mint with insufficient payment
+        let token_id = 1;
+        hero_nft::mint_with_native<AptosCoin>(admin, token_id, NATIVE_PRICE - 1);
     }
 
-    #[test(user = @0x123, framework = @0x1)]
-    #[expected_failure(abort_code = 0, location = hero_nft::hero_nft)]
-    public fun test_set_price_config_unauthorized(user: &signer, framework: &signer) {
-        // Initialize timestamp for testing
-        timestamp::set_time_has_started_for_testing(framework);
-        // Setup test environment
-        account::create_account_for_test(USER);
-
-        // Unauthorized user attempts to set price
-        hero_nft::set_price_config(
-            user,
-            1,
-            string::utf8(b"AptosCoin"),
-            NATIVE_PRICE,
-        );
+    #[test(framework = @0x1, admin = @hero_nft)]
+    #[expected_failure(abort_code = 65536, location = hero_nft::hero_nft)] // ENOT_AUTHORIZED
+    public fun test_unauthorized_mint(framework: &signer, admin: &signer) acquires TestCapabilities {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Setup test coins
+        setup_test_coins(framework, admin);
+        
+        // Create unauthorized user
+        let user = account::create_account_for_test(@0x123);
+        setup_test_coins(framework, &user);
+        
+        // Try to mint with unauthorized user
+        let token_id = 1;
+        hero_nft::mint_with_native<AptosCoin>(&user, token_id, NATIVE_PRICE);
     }
 
-    #[test(admin = @hero_nft, framework = @0x1)]
-    public fun test_set_default_prices(admin: &signer, framework: &signer) {
-        // Initialize timestamp for testing
-        timestamp::set_time_has_started_for_testing(framework);
-        // Setup test environment
-        account::create_account_for_test(ADMIN);
-
-        // Initialize contract
-        hero_nft::initialize(
-            admin,
-            string::utf8(b"Hero NFT"),
-            string::utf8(b"A collection of hero NFTs"),
-            string::utf8(b"https://hero.nft/"),
-            string::utf8(b"AptosCoin"),
-            NATIVE_PRICE,
-            TOKEN_PRICE,
-        );
-
-        // Set default prices
-        hero_nft::set_default_prices(
-            admin,
-            NATIVE_PRICE * 2,
-            TOKEN_PRICE * 2,
-        );
+    #[test(framework = @0x1, admin = @hero_nft)]
+    public fun test_register_nft(framework: &signer, admin: &signer) {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Create test account
+        let user = account::create_account_for_test(@0x123);
+        
+        // Register NFT contract
+        hero_nft::register_nft(admin, signer::address_of(&user));
+        
+        // Verify registration
+        assert!(hero_nft::is_registered(signer::address_of(&user)), 0);
     }
-
-    #[test(user = @0x123, framework = @0x1)]
-    #[expected_failure(abort_code = 0, location = hero_nft::hero_nft)]
-    public fun test_set_default_prices_unauthorized(user: &signer, framework: &signer) {
-        // Initialize timestamp for testing
-        timestamp::set_time_has_started_for_testing(framework);
-        // Setup test environment
-        account::create_account_for_test(USER);
-
-        // Unauthorized user attempts to set default prices
-        hero_nft::set_default_prices(
-            user,
-            NATIVE_PRICE,
-            TOKEN_PRICE,
-        );
-    }
-} 
+}
