@@ -633,3 +633,49 @@ D. Hero 合约交互
    - 选择种族和职业
    - 调用 createHero
 3. 验证 Hero 数据
+
+### 2025-02-13
+
+#### Move Contract Deployments
+
+1. 部署步骤：
+   ```bash
+   # 1. 编译合约
+   cd contract/aptos
+   aptos move compile
+   
+   # 2. 部署 HeroNFT 合约
+   aptos move publish --named-addresses hero_nft=53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8
+   
+   # 3. 部署 HeroMetadata 合约
+   aptos move publish --named-addresses hero_metadata=53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8
+   
+   # 4. 部署 Hero 合约
+   aptos move publish --named-addresses hero=53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8
+   ```
+
+2. 初始化步骤：
+   ```bash
+   # 1. 初始化 HeroNFT
+   aptos move run --function-id $HERO_NFT_ADDRESS::hero_nft::initialize
+   
+   # 2. 初始化 HeroMetadata
+   aptos move run --function-id $HERO_METADATA_ADDRESS::metadata::initialize
+   
+   # 3. 初始化 Hero
+   aptos move run --function-id $HERO_ADDRESS::hero::initialize
+   ```
+
+3. 合约地址：
+   ```
+   MOVE_HERO_NFT_ADDRESS=0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8
+   MOVE_HERO_METADATA_ADDRESS=0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8
+   MOVE_HERO_ADDRESS=0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8
+   ```
+
+4. 初始化数据：
+   - 添加了基础种族：Human
+   - 添加了基础职业：Warrior
+   - 添加了初始技能：Slash
+   - 注册了 HeroNFT 为官方 NFT
+   - 创建了第一个 Hero NFT

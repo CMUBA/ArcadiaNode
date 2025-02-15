@@ -36,6 +36,18 @@ async function connectWallet() {
     }
 }
 
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        if (window.aptos?.isConnected) {
+            await connectWallet();
+        }
+    } catch (error) {
+        console.error('Error during page initialization:', error);
+        showMessage(`Error during initialization: ${error.message}`);
+    }
+});
+
 // Initialize contract
 async function initializeContract() {
     try {
