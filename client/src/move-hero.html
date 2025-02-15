@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero Contract Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="js/hero-test.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Hero Contract Test</h1>
+
+        <!-- Wallet Connection -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Wallet Connection</h2>
+            <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                Connect Wallet
+            </button>
+            <p id="walletStatus" class="mt-2 text-gray-600"></p>
+        </div>
+
+        <!-- Hero Creation -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Create Hero</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Hero Name</label>
+                    <input type="text" id="heroName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Race</label>
+                    <select id="heroRace" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="0">Human</option>
+                        <option value="1">Elf</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Class</label>
+                    <select id="heroClass" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="0">Warrior</option>
+                        <option value="1">Mage</option>
+                    </select>
+                </div>
+                <button id="createHero" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    Create Hero
+                </button>
+            </div>
+        </div>
+
+        <!-- Hero List -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Your Heroes</h2>
+            <div id="heroList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Heroes will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="bg-white rounded-lg shadow p-6 mt-8">
+            <h2 class="text-xl font-semibold mb-4">Event Log</h2>
+            <div id="eventLog" class="bg-gray-100 p-4 rounded h-48 overflow-y-auto font-mono text-sm">
+                <!-- Events will be logged here -->
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

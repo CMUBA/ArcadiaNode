@@ -117,12 +117,8 @@ module hero_nft::hero_nft_tests {
         // Set APT price
         hero_nft::set_default_prices(admin, NATIVE_PRICE, TOKEN_PRICE);
         
-        // Create test account
-        let user = account::create_account_for_test(@0x123);
-        setup_test_coins(framework, &user);
-        
-        // Register NFT contract
-        hero_nft::register_nft(admin, signer::address_of(&user));
+        // Initialize token collection
+        hero_nft::initialize_token_collection(admin);
         
         // Mint NFT with APT
         let token_id = 1;
@@ -144,12 +140,8 @@ module hero_nft::hero_nft_tests {
         // Set APT price
         hero_nft::set_default_prices(admin, NATIVE_PRICE, TOKEN_PRICE);
         
-        // Create test account
-        let user = account::create_account_for_test(@0x123);
-        setup_test_coins(framework, &user);
-        
-        // Register NFT contract
-        hero_nft::register_nft(admin, signer::address_of(&user));
+        // Initialize token collection
+        hero_nft::initialize_token_collection(admin);
         
         // Create token IDs for batch mint
         let token_ids = vector::empty<u64>();

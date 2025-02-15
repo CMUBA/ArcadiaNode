@@ -304,6 +304,38 @@ module hero::metadata {
         });
     }
 
+    // Set skill attributes
+    public entry fun set_skill(
+        admin: &signer,
+        skill_id: u64,
+        name: String,
+        attributes: vector<u64>,
+    ) acquires MetadataStore {
+        assert!(signer::address_of(admin) == @hero, ENOT_AUTHORIZED);
+        assert!(vector::length(&attributes) >= 2, EINVALID_SKILL);
+        let store = borrow_global_mut<MetadataStore>(@hero);
+        
+        let skill = Skill {
+            id: skill_id,
+            name,
+            description: string::utf8(b""),
+            damage: *vector::borrow(&attributes, 0),
+            cost: *vector::borrow(&attributes, 1),
+        };
+
+        if (skill_id >= (vector::length(&store.skills) as u64)) {
+            vector::push_back(&mut store.skills, skill);
+        } else {
+            *vector::borrow_mut(&mut store.skills, skill_id) = skill;
+        };
+
+        event::emit(SkillAddedEvent {
+            skill_id,
+            name,
+            timestamp: timestamp::now_seconds(),
+        });
+    }
+
     /// Check if metadata is initialized
     public fun is_initialized(): bool {
         exists<MetadataStore>(@hero)

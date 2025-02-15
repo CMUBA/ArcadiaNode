@@ -9,10 +9,10 @@ module hero_nft::hero_nft {
     use aptos_framework::type_info;
 
     // Error codes
-    const ENOT_AUTHORIZED: u64 = 1;
-    const EINVALID_PAYMENT: u64 = 2;
-    const ETOKEN_NOT_FOUND: u64 = 3;
-    const EINVALID_TOKEN_ID: u64 = 4;
+    const ENOT_AUTHORIZED: u64 = 65536;
+    const EINVALID_PAYMENT: u64 = 65537;
+    const ETOKEN_NOT_FOUND: u64 = 65538;
+    const EINVALID_TOKEN_ID: u64 = 65539;
 
     // Collection data structure
     struct CollectionData has key {
@@ -249,36 +249,30 @@ module hero_nft::hero_nft {
         let description = string::utf8(b"Hero NFT Collection");
         let uri = string::utf8(b"https://hero.example.com/nft/");
 
-        // Create token data
-        let token_data_id = token::create_tokendata(
-            account,
-            collection,
-            token_name,
-            description,
-            1, // maximum
-            uri,
-            @hero_nft, // royalty payee address
-            100, // royalty points denominator
-            5, // royalty points numerator (5%)
-            {
-                let mutate_setting = vector::empty<bool>();
-                vector::push_back(&mut mutate_setting, true); // maximum
-                vector::push_back(&mut mutate_setting, true); // uri
-                vector::push_back(&mut mutate_setting, true); // royalty
-                vector::push_back(&mut mutate_setting, true); // description
-                vector::push_back(&mut mutate_setting, true); // properties
-                token::create_token_mutability_config(&mutate_setting)
-            }, // token mutate config
-            vector::empty<String>(), // property keys
-            vector::empty<vector<u8>>(), // property values
-            vector::empty<String>(), // property types
-        );
+        // Create token data if it doesn't exist
+        if (!token::check_tokendata_exists(@hero_nft, collection, token_name)) {
+            let token_data_id = token::create_tokendata(
+                account,
+                collection,
+                token_name,
+                description,
+                1, // maximum
+                uri,
+                @hero_nft, // royalty payee address
+                100, // royalty points denominator
+                5, // royalty points numerator (5%)
+                token::create_token_mutability_config(&vector<bool>[false, false, false, false, false]), // token mutate config
+                vector::empty<String>(), // property keys
+                vector::empty<vector<u8>>(), // property values
+                vector::empty<String>(), // property types
+            );
 
-        token::mint_token(
-            account,
-            token_data_id,
-            1, // amount
-        );
+            token::mint_token(
+                account,
+                token_data_id,
+                1, // amount
+            );
+        };
     }
 
     fun num_to_string(num: u64): vector<u8> {
@@ -325,7 +319,10 @@ module hero_nft::hero_nft {
 
     // Check if token exists
     public fun token_exists(token_id: u64): bool {
-        token::check_tokendata_exists(@hero_nft, string::utf8(b"Hero NFT"), string::utf8(num_to_string(token_id)))
+        let token_name = string::utf8(b"");
+        string::append(&mut token_name, string::utf8(b"HERO #"));
+        string::append(&mut token_name, string::utf8(num_to_string(token_id)));
+        token::check_tokendata_exists(@hero_nft, string::utf8(b"Hero NFT"), token_name)
     }
 
     // Get token owner
@@ -337,5 +334,22 @@ module hero_nft::hero_nft {
         let property_version = 0;
         let token = token::create_token_id(token_data_id, property_version);
         token::balance_of(account, token) > 0
+    }
+
+    // Initialize token collection
+    public entry fun initialize_token_collection(account: &signer) {
+        let collection = string::utf8(b"Hero NFT");
+        let description = string::utf8(b"Hero NFT Collection");
+        let uri = string::utf8(b"https://hero.example.com/nft/");
+        let maximum = 10000;
+
+        token::create_collection(
+            account,
+            collection,
+            description,
+            uri,
+            maximum,
+            vector<bool>[true, true, true], // mutate_setting
+        );
     }
 } 

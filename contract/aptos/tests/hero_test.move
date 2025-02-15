@@ -53,16 +53,44 @@ module hero::hero_test {
     }
 
     #[test(framework = @0x1, admin = @hero, account = @0x1)]
-    public fun test_create_hero(framework: &signer, admin: &signer, account: &signer) {
-        // Initialize
-        test_initialize(framework, admin);
+    public fun test_create_hero(framework: &signer, admin: &signer) {
+        // Set up test environment
+        setup_test(framework, admin);
+        
+        // Initialize modules
+        hero::initialize(admin);
+        metadata::initialize(admin);
+        
+        // Set up race attributes
+        let race_attrs = vector::empty<u64>();
+        vector::push_back(&mut race_attrs, 100); // strength
+        vector::push_back(&mut race_attrs, 80);  // agility
+        
+        // Set up races
+        metadata::set_race(admin, 0, string::utf8(b"Human"), race_attrs);
+        let race_attrs = vector::empty<u64>();
+        vector::push_back(&mut race_attrs, 80);  // strength
+        vector::push_back(&mut race_attrs, 100); // agility
+        metadata::set_race(admin, 1, string::utf8(b"Elf"), race_attrs);
+        
+        // Set up class attributes
+        let class_attrs = vector::empty<u64>();
+        vector::push_back(&mut class_attrs, 1); // basic attack
+        vector::push_back(&mut class_attrs, 2); // defense
+        
+        // Set up classes
+        metadata::set_class(admin, 0, string::utf8(b"Warrior"), class_attrs);
+        let class_attrs = vector::empty<u64>();
+        vector::push_back(&mut class_attrs, 3); // magic attack
+        vector::push_back(&mut class_attrs, 4); // magic defense
+        metadata::set_class(admin, 1, string::utf8(b"Mage"), class_attrs);
         
         // Create hero
         let name = string::utf8(b"Hero1");
-        hero::create_hero(account, name, 0, 0);
+        hero::create_hero(admin, name, 0, 0);
         
         // Get hero info
-        let account_addr = signer::address_of(account);
+        let account_addr = signer::address_of(admin);
         let (hero_name, race_id, class_id, level, energy, daily_points) = 
             hero::get_hero_info(account_addr);
             
@@ -74,37 +102,45 @@ module hero::hero_test {
         assert!(daily_points == 0, 5);
     }
 
-    #[test(framework = @0x1, admin = @hero, account = @0x1)]
-    #[expected_failure(abort_code = 65540, location = hero::hero)] // EINVALID_RACE
-    public fun test_create_hero_invalid_race(framework: &signer, admin: &signer, account: &signer) {
-        // Initialize
-        test_initialize(framework, admin);
-        
-        // Try to create hero with invalid race
-        let name = string::utf8(b"Hero1");
-        hero::create_hero(account, name, 999, 0);
-    }
-
-    #[test(framework = @0x1, admin = @hero, account = @0x1)]
-    #[expected_failure(abort_code = 65541, location = hero::hero)] // EINVALID_CLASS
-    public fun test_create_hero_invalid_class(framework: &signer, admin: &signer, account: &signer) {
+    #[test(framework = @0x1, admin = @hero)]
+    #[expected_failure(abort_code = 4, location = hero::metadata)] // EINVALID_CLASS
+    public fun test_create_hero_invalid_class(framework: &signer, admin: &signer) {
         // Initialize
         test_initialize(framework, admin);
         
         // Try to create hero with invalid class
         let name = string::utf8(b"Hero1");
-        hero::create_hero(account, name, 0, 999);
+        hero::create_hero(admin, name, 0, 999);
+    }
+
+    #[test(framework = @0x1, admin = @hero)]
+    #[expected_failure(abort_code = 3, location = hero::metadata)] // EINVALID_RACE
+    public fun test_create_hero_invalid_race(framework: &signer, admin: &signer) {
+        // Initialize
+        test_initialize(framework, admin);
+        
+        // Try to create hero with invalid race
+        let name = string::utf8(b"Hero1");
+        hero::create_hero(admin, name, 999, 0);
     }
 
     #[test(framework = @0x1, admin = @hero, account = @0x1)]
     public fun test_update_hero(framework: &signer, admin: &signer, account: &signer) {
         // Initialize and create hero
         test_initialize(framework, admin);
+        
+        // Set up skill first
+        let skill_attrs = vector::empty<u64>();
+        vector::push_back(&mut skill_attrs, 100); // damage
+        vector::push_back(&mut skill_attrs, 50);  // cost
+        metadata::set_skill(admin, 0, string::utf8(b"Slash"), skill_attrs);
+        
+        // Create hero
         let name = string::utf8(b"Hero1");
         hero::create_hero(account, name, 0, 0);
         
         // Update skill
-        hero::update_skill(account, 1);
+        hero::update_skill(account, 0);
         
         // Update equipment
         let equipment = string::utf8(b"Sword");
