@@ -1,9 +1,13 @@
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 import { showMessage } from '../utils/message.js';
+import { config as envConfig } from '../config/index.js';
 
 const NODE_URL = Network.DEVNET;
 const config = new AptosConfig({ network: NODE_URL });
 const aptos = new Aptos(config);
+
+const HERO_CONTRACT_ADDRESS = envConfig.contractAddresses.MOVE_HERO_ADDRESS;
+const HERO_NFT_ADDRESS = envConfig.contractAddresses.MOVE_HERO_NFT_ADDRESS;
 
 let account = null;
 
@@ -45,12 +49,19 @@ async function createHero() {
         const name = document.getElementById('heroName').value;
         const race = Number.parseInt(document.getElementById('heroRace').value);
         const class_ = Number.parseInt(document.getElementById('heroClass').value);
+        const nftContract = document.getElementById('nftContract').value;
+        const tokenId = document.getElementById('tokenId').value;
+
+        if (!name || !nftContract || !tokenId) {
+            showMessage('Please provide hero name, NFT contract, and token ID', true);
+            return;
+        }
 
         const payload = {
             type: "entry_function_payload",
-            function: "hero::hero::create_hero",
+            function: `${HERO_CONTRACT_ADDRESS}::hero::create_hero`,
             type_arguments: [],
-            arguments: [name, race, class_]
+            arguments: [name, race, class_, nftContract, tokenId]
         };
 
         const response = await window.aptos.signAndSubmitTransaction(payload);
@@ -58,49 +69,59 @@ async function createHero() {
         showMessage('Hero created successfully');
         refreshHeroInfo();
     } catch (error) {
-        showMessage(`Error creating hero: ${error.message}`);
+        showMessage(`Error creating hero: ${error.message}`, true);
     }
 }
 
-// Add skill
-async function addSkill() {
+// Register NFT contract
+async function registerNFTContract() {
     try {
-        const skillId = Number.parseInt(document.getElementById('skillSelect').value);
+        const nftContract = document.getElementById('registerNftContract').value;
+
+        if (!nftContract) {
+            showMessage('Please provide NFT contract address', true);
+            return;
+        }
 
         const payload = {
             type: "entry_function_payload",
-            function: "hero::hero::update_skill",
+            function: `${HERO_CONTRACT_ADDRESS}::hero::register_nft_contract`,
             type_arguments: [],
-            arguments: [skillId]
+            arguments: [nftContract]
         };
 
         const response = await window.aptos.signAndSubmitTransaction(payload);
         await aptos.waitForTransaction({ hash: response.hash });
-        showMessage('Skill added successfully');
-        refreshHeroInfo();
+        showMessage('NFT contract registered successfully');
+        await refreshHeroInfo();
     } catch (error) {
-        showMessage(`Error adding skill: ${error.message}`);
+        showMessage(`Error registering NFT contract: ${error.message}`, true);
     }
 }
 
-// Add equipment
-async function addEquipment() {
+// Get NFT contracts
+async function getNFTContracts() {
     try {
-        const equipment = document.getElementById('equipmentName').value;
+        const contracts = await aptos.view({
+            payload: {
+                function: `${HERO_CONTRACT_ADDRESS}::hero::get_nft_contracts`,
+                type_arguments: [],
+                functionArguments: []
+            }
+        });
 
-        const payload = {
-            type: "entry_function_payload",
-            function: "hero::hero::update_equipment",
-            type_arguments: [],
-            arguments: [equipment]
-        };
-
-        const response = await window.aptos.signAndSubmitTransaction(payload);
-        await aptos.waitForTransaction({ hash: response.hash });
-        showMessage('Equipment added successfully');
-        refreshHeroInfo();
+        const contractList = document.getElementById('nftContractList');
+        if (contracts && contracts.length > 0) {
+            contractList.innerHTML = contracts.map(contract => `
+                <div class="p-4 bg-white rounded-lg shadow mb-2">
+                    <p class="font-mono text-sm">${contract}</p>
+                </div>
+            `).join('');
+        } else {
+            contractList.innerHTML = '<p class="text-gray-500">No NFT contracts registered</p>';
+        }
     } catch (error) {
-        showMessage(`Error adding equipment: ${error.message}`);
+        showMessage(`Error getting NFT contracts: ${error.message}`, true);
     }
 }
 
@@ -191,10 +212,8 @@ async function refreshHeroInfo() {
 // Event listeners
 window.connectWallet = connectWallet;
 window.createHero = createHero;
-window.addSkill = addSkill;
-window.addEquipment = addEquipment;
-window.consumeEnergy = consumeEnergy;
-window.addDailyPoints = addDailyPoints;
+window.registerNFTContract = registerNFTContract;
+window.getNFTContracts = getNFTContracts;
 window.refreshHeroInfo = refreshHeroInfo;
 
 // Initialize on page load

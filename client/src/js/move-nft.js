@@ -6,6 +6,9 @@ const NODE_URL = Network.DEVNET;
 const config = new AptosConfig({ network: NODE_URL });
 const aptos = new Aptos(config);
 
+const HERO_CONTRACT_ADDRESS = envConfig.contractAddresses.MOVE_HERO_ADDRESS;
+const HERO_NFT_ADDRESS = envConfig.contractAddresses.MOVE_HERO_NFT_ADDRESS;
+
 let account = null;
 
 // Display contract information
@@ -50,6 +53,74 @@ async function connectWallet() {
     }
 }
 
+// Query hero contract's NFT list
+async function queryHeroNFTList() {
+    try {
+        const resource = await aptos.getAccountResource({
+            accountAddress: HERO_CONTRACT_ADDRESS,
+            resourceType: `${HERO_CONTRACT_ADDRESS}::hero::HeroData`
+        });
+
+        const nftList = document.getElementById('nftContractList');
+        nftList.innerHTML = '';
+
+        if (resource && resource.data.nft_contracts) {
+            const contracts = resource.data.nft_contracts;
+            contracts.forEach(contract => {
+                const div = document.createElement('div');
+                div.className = 'p-4 bg-gray-50 rounded mb-2';
+                div.textContent = `NFT Contract: ${contract}`;
+                nftList.appendChild(div);
+            });
+        } else {
+            nftList.innerHTML = '<p class="text-gray-500">No NFT contracts found</p>';
+        }
+    } catch (error) {
+        showMessage(error.message, true);
+    }
+}
+
+// Query NFT price
+async function queryNFTPrice() {
+    const contractAddress = document.getElementById('contractAddress').value;
+    const tokenId = document.getElementById('tokenId').value;
+
+    if (!contractAddress || !tokenId) {
+        showMessage('Please provide both contract address and token ID', true);
+        return;
+    }
+
+    try {
+        // Query native token price
+        const nativePrice = await aptos.view({
+            payload: {
+                function: `${HERO_NFT_ADDRESS}::hero_nft::get_native_price`,
+                typeArguments: [],
+                functionArguments: [contractAddress, tokenId]
+            }
+        });
+
+        // Query token price
+        const tokenPrice = await aptos.view({
+            payload: {
+                function: `${HERO_NFT_ADDRESS}::hero_nft::get_token_price`,
+                typeArguments: [],
+                functionArguments: [contractAddress, tokenId]
+            }
+        });
+
+        const priceInfo = document.getElementById('priceInfo');
+        priceInfo.innerHTML = `
+            <div class="bg-gray-50 p-4 rounded">
+                <p class="mb-2"><strong>Native Price (APT):</strong> ${nativePrice}</p>
+                <p><strong>Token Price (ARC):</strong> ${tokenPrice}</p>
+            </div>
+        `;
+    } catch (error) {
+        showMessage(error.message, true);
+    }
+}
+
 // Export functions to window object
 Object.assign(window, {
     connectWallet,
@@ -60,7 +131,9 @@ Object.assign(window, {
     batchMintNFT,
     loadNFTs,
     burnNFT,
-    getDefaultPrices
+    getDefaultPrices,
+    queryHeroNFTList,
+    queryNFTPrice
 });
 
 // Initialize on page load

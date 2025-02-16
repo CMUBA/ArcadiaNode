@@ -24,5 +24,14 @@ export const routes = {
     },
     '/pages/node-registry-info.html': {
         page: 'pages/node-registry-info.html'
+    },
+    '/pages/move-nft.html': {
+        page: 'pages/move-nft.html'
+    },
+    '/pages/move-metadata.html': {
+        page: 'pages/move-metadata.html'
+    },
+    '/pages/move-hero.html': {
+        page: 'pages/move-hero.html'
     }
 }; 

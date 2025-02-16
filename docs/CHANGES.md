@@ -1022,3 +1022,77 @@ Transaction submitted: https://explorer.aptoslabs.com/txn/0x23f732d6c12da78803b4
     "vm_status": "Executed successfully"
   }
 }
+
+----
+
+1.move 合约四个已经完成编译和测试、发布，可以查询 resource 细节：
+ aptos move list --account 53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8
+
+package hero
+  upgrade_policy: compatible
+  upgrade_number: 3
+  source_digest: 5A5BD4A58C73B409A2F804B06CB0645B159149E89B1D8AA65A8F2979D1C55951
+  modules: arcadia_coin, metadata, hero, hero_nft
+{
+  "Result": "list succeeded"
+}
+
+2.已经完成了三个页面：move-nft.html,move-hero.html,move-metadata.html，借鉴的是 client/src/pages/hero-test 等页面
+
+3. move-nft.html,：
+- 需要在 top menu 下新增一个 hero 合约查询，首先查询 hero 合约接受的 nft 合约列表，显示出来
+- 移动 NFT Minting 到第一行，同时我要确认，hero 合约是支持新增其他 nft 合约注册的，请检查合约接口
+- 需要增加一个区域在第二行，然后查询指定合约和 token id 的价格（native token 和其他 token 价格）
+
+4. move-hero.html：
+- 借鉴 move-nft 页面，top menu 增加链接：Home
+Move Hero
+Move Metadata
+Move NFT
+- 借鉴 move-nft 页面，链接 petra 钱包，然后进行 hero 合约的所有接口测试交互，请帮助我参考 hero 合约和整体设计完成页面开发，包括对应的 js 文件，借鉴 move-nft.js
+
+5.move-metadata.html：
+- 借鉴 move-nft 页面，top menu 增加链接：Home
+Move Hero
+Move Metadata
+Move NFT
+- 借鉴 move-nft 页面，链接 petra 钱包，然后进行 metadata 合约的所有接口测试交互，请帮助我参考 metadata 合约和整体设计完成页面开发，包括对应的 js 文件，借鉴 move-nft.js
+
+6.相关参考信息：
+
+A. ArcadiaCoin 部署和初始化
+1. 使用提供的测试账户部署 ArcadiaCoin 合约
+2. 初始化 ArcadiaCoin (调用 initialize)
+3. 给测试账户铸造 100,000 ARC (调用 mint)
+
+B. NFT 合约初始化
+1. 使用 ArcadiaCoin 地址作为参数初始化 NFT 合约
+2. 设置默认价格配置：
+   - 设置原生代币 (APT) 价格
+   - 设置 ARC 代币价格
+   - 设置默认支付代币为 ARC
+   - 使用 APT 设置价格和购买 nft
+
+C. NFT 购买测试
+1. 使用 ARC 代币购买单个 NFT:
+   - 检查 ARC 余额
+   - 授权 NFT 合约使用 ARC
+   - 调用 mintWithToken 购买 NFT
+2. 使用 APT 购买 NFT:
+   - 检查 APT 余额
+   - 调用 mintWithToken 购买 NFT
+2. 批量购买测试：
+   - 使用 ARC 代币批量购买多个 NFT
+   - 验证 NFT 所有权
+
+D. Hero 合约交互
+1. 注册新购买的 NFT 到 Hero 合约
+2. 创建 Hero 记录：
+   - 设置 Hero 名称
+   - 选择种族和职业
+   - 调用 createHero
+3. 根据 NFT 和 id，查询和验证 Hero 数据
+
+7.其他错误：
+http://localhost:3008/pages/nft-contract.html
+此页面我修改引用，import config from '../config/hero.js';替换了../config/index.js，为何浏览器还在寻找 index.js，如何每次启动强制刷新缓存？有其他解决思路么？

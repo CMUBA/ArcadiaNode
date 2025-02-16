@@ -1,9 +1,12 @@
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 import { showMessage } from '../utils/message.js';
+import { config as envConfig } from '../config/index.js';
 
 const NODE_URL = Network.DEVNET;
 const config = new AptosConfig({ network: NODE_URL });
 const aptos = new Aptos(config);
+
+const METADATA_CONTRACT_ADDRESS = envConfig.contractAddresses.MOVE_HERO_METADATA_ADDRESS;
 
 let account = null;
 
@@ -39,77 +42,93 @@ async function connectWallet() {
     }
 }
 
-// Add race
-async function addRace() {
+// Set metadata for a token
+async function setMetadata() {
     try {
-        const name = document.getElementById('raceName').value;
-        const description = document.getElementById('raceDescription').value;
-        const stats = document.getElementById('raceStats').value
-            .split(',')
-            .map(x => Number.parseInt(x.trim()));
+        const tokenId = document.getElementById('tokenId').value;
+        const metadataUri = document.getElementById('metadataUri').value;
+
+        if (!tokenId || !metadataUri) {
+            showMessage('Please provide both token ID and metadata URI', true);
+            return;
+        }
 
         const payload = {
             type: "entry_function_payload",
-            function: "hero::metadata::add_race",
+            function: `${METADATA_CONTRACT_ADDRESS}::metadata::set_token_metadata`,
             type_arguments: [],
-            arguments: [name, description, stats]
+            arguments: [tokenId, metadataUri]
         };
 
         const response = await window.aptos.signAndSubmitTransaction(payload);
         await aptos.waitForTransaction({ hash: response.hash });
-        showMessage('Race added successfully');
-        refreshMetadata();
+        showMessage('Metadata set successfully');
+        await getMetadata();
     } catch (error) {
-        showMessage(`Error adding race: ${error.message}`);
+        showMessage(`Error setting metadata: ${error.message}`, true);
     }
 }
 
-// Add class
-async function addClass() {
+// Get metadata for a token
+async function getMetadata() {
     try {
-        const name = document.getElementById('className').value;
-        const description = document.getElementById('classDescription').value;
-        const skills = document.getElementById('classSkills').value
-            .split(',')
-            .map(x => Number.parseInt(x.trim()));
+        const tokenId = document.getElementById('tokenId').value;
 
-        const payload = {
-            type: "entry_function_payload",
-            function: "hero::metadata::add_class",
-            type_arguments: [],
-            arguments: [name, description, skills]
-        };
+        if (!tokenId) {
+            showMessage('Please provide a token ID', true);
+            return;
+        }
 
-        const response = await window.aptos.signAndSubmitTransaction(payload);
-        await aptos.waitForTransaction({ hash: response.hash });
-        showMessage('Class added successfully');
-        refreshMetadata();
+        const metadata = await aptos.view({
+            payload: {
+                function: `${METADATA_CONTRACT_ADDRESS}::metadata::get_token_metadata`,
+                type_arguments: [],
+                functionArguments: [tokenId]
+            }
+        });
+
+        const metadataInfo = document.getElementById('metadataInfo');
+        if (metadata) {
+            metadataInfo.innerHTML = `
+                <div class="space-y-2">
+                    <p><strong>Token ID:</strong> ${metadata.token_id}</p>
+                    <p><strong>URI:</strong> ${metadata.uri}</p>
+                    <p><strong>Last Updated:</strong> ${new Date(metadata.last_updated * 1000).toLocaleString()}</p>
+                </div>
+            `;
+        } else {
+            metadataInfo.innerHTML = '<p class="text-gray-500">No metadata found for this token</p>';
+        }
     } catch (error) {
-        showMessage(`Error adding class: ${error.message}`);
+        showMessage(`Error getting metadata: ${error.message}`, true);
     }
 }
 
-// Add skill
-async function addSkill() {
+// Refresh token list
+async function refreshTokenList() {
     try {
-        const name = document.getElementById('skillName').value;
-        const description = document.getElementById('skillDescription').value;
-        const damage = Number.parseInt(document.getElementById('skillDamage').value);
-        const cost = Number.parseInt(document.getElementById('skillCost').value);
+        const tokens = await aptos.view({
+            payload: {
+                function: `${METADATA_CONTRACT_ADDRESS}::metadata::get_all_tokens`,
+                type_arguments: [],
+                functionArguments: []
+            }
+        });
 
-        const payload = {
-            type: "entry_function_payload",
-            function: "hero::metadata::add_skill",
-            type_arguments: [],
-            arguments: [name, description, damage, cost]
-        };
-
-        const response = await window.aptos.signAndSubmitTransaction(payload);
-        await aptos.waitForTransaction({ hash: response.hash });
-        showMessage('Skill added successfully');
-        refreshMetadata();
+        const tokenList = document.getElementById('tokenList');
+        if (tokens && tokens.length > 0) {
+            tokenList.innerHTML = tokens.map(token => `
+                <div class="p-4 bg-white rounded-lg shadow">
+                    <h3 class="font-semibold text-lg mb-2">Token ${token.token_id}</h3>
+                    <p class="text-sm text-gray-600 mb-2"><strong>URI:</strong> ${token.uri}</p>
+                    <p class="text-sm text-gray-600"><strong>Last Updated:</strong> ${new Date(token.last_updated * 1000).toLocaleString()}</p>
+                </div>
+            `).join('');
+        } else {
+            tokenList.innerHTML = '<p class="text-gray-500">No tokens found</p>';
+        }
     } catch (error) {
-        showMessage(`Error adding skill: ${error.message}`);
+        showMessage(`Error refreshing token list: ${error.message}`, true);
     }
 }
 
@@ -176,10 +195,9 @@ async function refreshMetadata() {
 
 // Event listeners
 window.connectWallet = connectWallet;
-window.addRace = addRace;
-window.addClass = addClass;
-window.addSkill = addSkill;
-window.refreshMetadata = refreshMetadata;
+window.setMetadata = setMetadata;
+window.getMetadata = getMetadata;
+window.refreshTokenList = refreshTokenList;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
