@@ -1,30 +1,36 @@
 // Message display utility
-export function showMessage(message, duration = 3000) {
-    const messageElement = document.getElementById('message');
+export function showMessage(message, isError = false, duration = 5000) {
+    const messageElement = document.getElementById(isError ? 'error' : 'message');
     if (!messageElement) return;
 
-    messageElement.textContent = message;
-    messageElement.classList.remove('hidden');
-    messageElement.classList.add('bg-green-500');
+    // Clear any existing timeouts
+    if (messageElement._hideTimeout) {
+        clearTimeout(messageElement._hideTimeout);
+    }
 
+    // Set message and show
+    messageElement.textContent = message;
+    messageElement.style.opacity = '0';
+    messageElement.classList.remove('hidden');
+
+    // Fade in
     setTimeout(() => {
-        messageElement.classList.add('hidden');
+        messageElement.style.opacity = '1';
+    }, 10);
+
+    // Set timeout to fade out
+    messageElement._hideTimeout = setTimeout(() => {
+        messageElement.style.opacity = '0';
+        setTimeout(() => {
+            messageElement.classList.add('hidden');
+        }, 500); // Wait for fade out animation
     }, duration);
 }
 
 // Error display utility
 export function showError(message, error = null) {
-    const messageElement = document.getElementById('message');
-    if (!messageElement) return;
-
     const errorMessage = error ? `${message}: ${error.message}` : message;
-    messageElement.textContent = errorMessage;
-    messageElement.classList.remove('hidden', 'bg-green-500');
-    messageElement.classList.add('bg-red-500');
-
-    setTimeout(() => {
-        messageElement.classList.add('hidden');
-    }, 5000);
+    showMessage(errorMessage, true);
 
     if (error) {
         console.error(error);

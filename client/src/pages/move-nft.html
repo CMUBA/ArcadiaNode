@@ -32,41 +32,57 @@
     <!-- Add margin-top to main content to account for fixed header -->
     <div class="mt-20 max-w-4xl mx-auto">
         <!-- Messages -->
-        <div id="message" class="hidden fixed top-20 right-4 bg-green-500 text-white p-4 rounded shadow-lg z-50"></div>
-        <div id="error" class="hidden fixed top-20 right-4 bg-red-500 text-white p-4 rounded shadow-lg z-50"></div>
+        <div id="message" class="hidden fixed top-20 right-4 bg-green-500 text-white p-4 rounded shadow-lg z-50 transition-opacity duration-500"></div>
+        <div id="error" class="hidden fixed top-20 right-4 bg-red-500 text-white p-4 rounded shadow-lg z-50 transition-opacity duration-500"></div>
 
-        <!-- Wallet Connection -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 class="text-2xl font-bold mb-4">Wallet Connection</h2>
-            <button id="connectButton" onclick="connectWallet()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                Connect Wallet
-            </button>
-            <p id="walletAddress" class="mt-2 text-gray-600"></p>
-        </div>
+
 
         <!-- NFT Minting Section (Moved to top) -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
             <h2 class="text-2xl font-bold mb-4">NFT Minting</h2>
             <div class="mb-6">
                 <h3 class="text-xl font-semibold mb-3">Single Mint</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="singleTokenId">Token ID:</label>
+                        <input type="number" id="singleTokenId" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="singleAmount">Amount:</label>
+                        <input type="number" id="singleAmount" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0" step="0.000001">
+                    </div>
+                </div>
                 <button onclick="mintNFT(false)" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mr-2">Mint with Native Token</button>
-                <button onclick="mintNFT(true)" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Mint with ERC20 Token</button>
+                <button onclick="mintNFT(true)" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Mint with Other Token</button>
             </div>
             <div>
                 <h3 class="text-xl font-semibold mb-3">Batch Mint</h3>
-                <div class="flex items-center space-x-4 mb-4">
-                    <input type="number" id="batchSize" min="1" max="10" value="2" class="border p-2 rounded w-24">
-                    <button onclick="batchMintNFT(false)" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Batch Mint (Native)</button>
-                    <button onclick="batchMintNFT(true)" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Batch Mint (Token)</button>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="batchTokenIds">Token IDs (comma-separated):</label>
+                        <input type="text" id="batchTokenIds" placeholder="1,2,3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="batchAmount">Amount per Token:</label>
+                        <input type="number" id="batchAmount" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0" step="0.000001">
+                    </div>
                 </div>
+                <button onclick="batchMintNFT(false)" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mr-2">Batch Mint (Native)</button>
+                <button onclick="batchMintNFT(true)" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Batch Mint (Token)</button>
             </div>
         </div>
 
-        <!-- Hero Contract NFT List Query -->
+        <!-- NFT List -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 class="text-2xl font-bold mb-4">Hero Contract NFT List</h2>
-            <button onclick="queryHeroNFTList()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-4">Query NFT List</button>
-            <div id="nftList" class="bg-gray-100 p-4 rounded overflow-auto"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">My NFTs</h2>
+                <button onclick="queryHeroNFTList()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Refresh NFTs
+                </button>
+            </div>
+            <div id="nftList" class="space-y-4 bg-gray-50 p-4 rounded">
+                <!-- NFTs will be loaded here -->
+            </div>
         </div>
 
         <!-- NFT Price Query -->
@@ -176,9 +192,7 @@
             </div>
         </div>
 
-        <!-- NFT List -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <div class="flex justify-between items-center mb-4">
+items-center mb-4">
                 <h2 class="text-2xl font-bold">My NFTs</h2>
                 <button onclick="loadNFTs()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
                     Refresh NFTs

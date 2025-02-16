@@ -65,27 +65,46 @@ async function queryHeroNFTList() {
             throw new Error('Please connect wallet first');
         }
 
+        console.log('Querying NFT contracts from Hero contract:', HERO_CONTRACT_ADDRESS);
+
         const payload = {
             function: `${HERO_CONTRACT_ADDRESS}::hero::get_nft_contracts`,
             type_arguments: [],
-            arguments: []
+            arguments: [account]
         };
 
+        console.log('Query payload:', payload);
+
         const response = await aptos.view(payload);
+        console.log('Query response:', response);
+
         const nftList = document.getElementById('nftList');
         
         if (response && response.length > 0) {
-            const nftContracts = response[0];
-            nftList.innerHTML = `<h3 class="text-lg font-semibold mb-2">Registered NFT Contracts:</h3>`;
-            nftContracts.forEach((contract, index) => {
-                nftList.innerHTML += `<p class="mb-1">${index + 1}. ${contract}</p>`;
+            const nfts = response[0];
+            console.log('Found NFTs:', nfts);
+            let html = '<h3 class="text-lg font-semibold mb-2">Your NFTs:</h3>';
+            nfts.forEach((nft, index) => {
+                html += `
+                    <div class="bg-white p-4 rounded shadow mb-4">
+                        <p class="font-medium">NFT #${index + 1}</p>
+                        <p>Token ID: ${nft.token_id}</p>
+                        <p>Owner: ${nft.owner}</p>
+                        <button onclick="burnNFT('${nft.token_id}')" class="mt-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
+                            Burn NFT
+                        </button>
+                    </div>
+                `;
             });
+            nftList.innerHTML = html;
         } else {
-            nftList.innerHTML = '<p>No NFT contracts registered</p>';
+            console.log('No NFTs found in response');
+            nftList.innerHTML = '<p>No NFTs found</p>';
         }
 
-        showMessage('NFT contracts retrieved successfully');
+        showMessage('NFTs retrieved successfully');
     } catch (error) {
+        console.error('Error querying NFTs:', error);
         showMessage(`Error querying NFT list: ${error.message}`, 'error');
     }
 }
@@ -232,48 +251,95 @@ async function setPriceConfig() {
 }
 
 // Mint NFT
-async function mintNFT() {
+async function mintNFT(useToken = false) {
     try {
-        const tokenId = Number.parseInt(document.getElementById('tokenId').value);
-        const amount = Number.parseInt(document.getElementById('amount').value);
+        if (!account) {
+            throw new Error('Please connect wallet first');
+        }
+
+        console.log('Minting NFT with parameters:', { useToken, account });
+
+        const tokenId = document.getElementById('singleTokenId').value;
+        const amount = document.getElementById('singleAmount').value;
+
+        if (!tokenId || !amount) {
+            throw new Error('Please provide both token ID and amount');
+        }
+
+        console.log('Mint parameters:', { tokenId, amount });
+
+        const functionName = useToken ? 'mint_with_token' : 'mint_with_native';
+        const typeArgs = useToken ? 
+            ['0x1::aptos_coin::AptosCoin'] : // For token minting
+            ['0x1::aptos_coin::AptosCoin']; // For native minting
 
         const payload = {
-            type: "entry_function_payload",
-            function: "hero_nft::hero_nft::mint_with_native",
-            type_arguments: [],
-            arguments: [tokenId, amount]
+            type: 'entry_function_payload',
+            function: `${HERO_NFT_ADDRESS}::hero_nft::${functionName}`,
+            type_arguments: typeArgs,
+            arguments: [parseInt(tokenId), parseInt(amount)]
         };
 
+        console.log('Mint payload:', payload);
+
         const response = await window.aptos.signAndSubmitTransaction(payload);
-        await aptos.waitForTransaction({ hash: response.hash });
+        console.log('Mint transaction submitted:', response);
+
+        await aptos.waitForTransaction({ transactionHash: response.hash });
+        console.log('Mint transaction confirmed');
+
         showMessage('NFT minted successfully');
-        loadNFTs();
+        await queryHeroNFTList();
     } catch (error) {
-        showMessage(`Error minting NFT: ${error.message}`);
+        console.error('Error minting NFT:', error);
+        showMessage(`Error minting NFT: ${error.message}`, true);
     }
 }
 
 // Batch mint NFTs
-async function batchMintNFT() {
+async function batchMintNFT(useToken = false) {
     try {
-        const tokenIds = document.getElementById('batchTokenIds').value
-            .split(',')
-            .map(id => Number.parseInt(id.trim()));
-        const amount = Number.parseInt(document.getElementById('batchAmount').value);
+        if (!account) {
+            throw new Error('Please connect wallet first');
+        }
+
+        console.log('Batch minting NFTs with parameters:', { useToken, account });
+
+        const tokenIdsStr = document.getElementById('batchTokenIds').value;
+        const amount = document.getElementById('batchAmount').value;
+
+        if (!tokenIdsStr || !amount) {
+            throw new Error('Please provide both token IDs and amount');
+        }
+
+        const tokenIds = tokenIdsStr.split(',').map(id => parseInt(id.trim()));
+        console.log('Batch mint parameters:', { tokenIds, amount });
+
+        const functionName = useToken ? 'mint_batch_with_token' : 'mint_batch_with_native';
+        const typeArgs = useToken ? 
+            ['0x1::aptos_coin::AptosCoin'] : // For token minting
+            ['0x1::aptos_coin::AptosCoin']; // For native minting
 
         const payload = {
-            type: "entry_function_payload",
-            function: "hero_nft::hero_nft::mint_batch_with_native",
-            type_arguments: [],
-            arguments: [tokenIds, amount]
+            type: 'entry_function_payload',
+            function: `${HERO_NFT_ADDRESS}::hero_nft::${functionName}`,
+            type_arguments: typeArgs,
+            arguments: [tokenIds, parseInt(amount)]
         };
 
+        console.log('Batch mint payload:', payload);
+
         const response = await window.aptos.signAndSubmitTransaction(payload);
-        await aptos.waitForTransaction({ hash: response.hash });
+        console.log('Batch mint transaction submitted:', response);
+
+        await aptos.waitForTransaction({ transactionHash: response.hash });
+        console.log('Batch mint transaction confirmed');
+
         showMessage('NFTs minted successfully');
-        loadNFTs();
+        await queryHeroNFTList();
     } catch (error) {
-        showMessage(`Error batch minting NFTs: ${error.message}`);
+        console.error('Error batch minting NFTs:', error);
+        showMessage(`Error batch minting NFTs: ${error.message}`, true);
     }
 }
 
@@ -285,21 +351,29 @@ async function loadNFTs() {
             return;
         }
 
+        console.log('Loading NFTs for account:', account);
+        console.log('Using NFT contract:', HERO_NFT_ADDRESS);
+
         const resources = await aptos.getAccountResources({
             accountAddress: account,
         });
 
+        console.log('Account resources:', resources);
+
         const nftResource = resources?.find(r => 
-            r.type === `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::TokenStore`
+            r.type === `${HERO_NFT_ADDRESS}::hero_nft::TokenStore`
         );
+
+        console.log('NFT resource:', nftResource);
 
         const nftList = document.getElementById('nftList');
         nftList.innerHTML = '';
 
         if (nftResource?.data?.tokens) {
+            console.log('Found tokens:', nftResource.data.tokens);
             for (const [tokenId, amount] of Object.entries(nftResource.data.tokens)) {
                 const nftElement = document.createElement('div');
-                nftElement.className = 'bg-white p-4 rounded shadow';
+                nftElement.className = 'bg-white p-4 rounded shadow mb-4';
                 nftElement.innerHTML = `
                     <h3 class="text-lg font-bold">Hero NFT</h3>
                     <p>Token ID: ${tokenId}</p>
@@ -313,9 +387,11 @@ async function loadNFTs() {
         }
 
         if (nftList.children.length === 0) {
+            console.log('No NFTs found');
             nftList.innerHTML = '<p class="text-gray-500">No NFTs found</p>';
         }
     } catch (error) {
+        console.error('Error loading NFTs:', error);
         showMessage(`Error loading NFTs: ${error.message}`);
     }
 }
@@ -342,21 +418,30 @@ async function burnNFT(tokenId) {
 // Get default prices
 async function getDefaultPrices() {
     try {
-        const tokenId = Number.parseInt(document.getElementById('queryTokenId').value);
+        if (!account) {
+            throw new Error('Please connect wallet first');
+        }
+
+        console.log('Getting default prices from contract:', HERO_NFT_ADDRESS);
         
         const resource = await aptos.getAccountResource({
-            accountAddress: envConfig.MOVE_HERO_NFT_ADDRESS,
-            resourceType: `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::TokenPriceConfig`
+            accountAddress: HERO_NFT_ADDRESS,
+            resourceType: `${HERO_NFT_ADDRESS}::hero_nft::TokenPriceConfig`
         });
+
+        console.log('Price resource:', resource);
 
         if (resource && resource.data) {
             const priceConfig = resource.data;
+            console.log('Price config:', priceConfig);
             document.getElementById('currentNativePrice').textContent = `Default Native Price: ${priceConfig.native_price} APT`;
             document.getElementById('currentTokenPrice').textContent = `Default Token Price: ${priceConfig.token_price}`;
         } else {
+            console.log('No price configuration found');
             showMessage('Price configuration not found');
         }
     } catch (error) {
+        console.error('Error getting default prices:', error);
         showMessage(`Error getting default prices: ${error.message}`);
     }
 } 
