@@ -6,26 +6,36 @@ import config from '../config/hero.js';
 function getElement(id) {
     const element = document.getElementById(id);
     if (!element) {
-        console.warn(`Element with id ${id} not found`);
+        console.warn(`Element with id '${id}' not found`);
     }
     return element;
 }
 
 function showMessage(message) {
-    const messageArea = getElement('messageArea');
-    if (messageArea) {
-        messageArea.textContent = message;
-        messageArea.className = 'text-green-500';
+    console.log(message);
+    const messageElement = getElement('message');
+    if (messageElement) {
+        messageElement.textContent = message;
+        messageElement.classList.remove('hidden');
+        setTimeout(() => {
+            messageElement.classList.add('hidden');
+        }, 3000);
     }
 }
 
 function showError(error) {
-    const messageArea = getElement('messageArea');
-    if (messageArea) {
-        messageArea.textContent = error.message || error;
-        messageArea.className = 'text-red-500';
+    const errorMessage = error.message || error.toString();
+    console.error(errorMessage);
+    const messageElement = getElement('message');
+    if (messageElement) {
+        messageElement.textContent = `Error: ${errorMessage}`;
+        messageElement.classList.remove('hidden');
+        messageElement.classList.add('bg-red-500');
+        setTimeout(() => {
+            messageElement.classList.add('hidden');
+            messageElement.classList.remove('bg-red-500');
+        }, 5000);
     }
-    console.error(error);
 }
 
 function validateAddress(address) {
@@ -374,6 +384,304 @@ async function getApproved(tokenId) {
     }
 }
 
+// Price Configuration Functions
+async function setPriceConfig() {
+    try {
+        const tokenId = Number(getElement('priceConfigTokenId').value);
+        const tokenAddress = getElement('priceConfigTokenAddress').value;
+        const amount = getElement('priceConfigAmount').value;
+
+        if (!validateNumber(tokenId)) {
+            throw new Error('Please enter a valid token ID');
+        }
+        if (!validateAddress(tokenAddress)) {
+            throw new Error('Please enter a valid token address');
+        }
+        if (!amount || Number.isNaN(Number(amount))) {
+            throw new Error('Please enter a valid amount');
+        }
+
+        const tx = await heroNFTContract.setPriceConfig(
+            tokenId,
+            tokenAddress,
+            ethers.parseUnits(amount, 18)
+        );
+        showMessage('Setting price configuration... Please wait for confirmation');
+        await tx.wait();
+        showMessage('Price configuration set successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function getPriceConfig() {
+    try {
+        const tokenId = Number(getElement('priceConfigTokenId').value);
+        if (!validateNumber(tokenId)) {
+            throw new Error('Please enter a valid token ID');
+        }
+
+        const config = await heroNFTContract.getPriceConfig(tokenId);
+        const priceConfigInfo = getElement('priceConfigInfo');
+        if (priceConfigInfo) {
+            priceConfigInfo.textContent = 
+                `Token Address: ${config.tokenAddress}\n` +
+                `Price: ${ethers.formatUnits(config.price, 18)}\n` +
+                `Active: ${config.isActive}`;
+        }
+        showMessage('Price configuration retrieved successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+// Token Management Functions
+async function checkTokenExists() {
+    try {
+        const tokenId = Number(getElement('tokenId').value);
+        if (!validateNumber(tokenId)) {
+            throw new Error('Please enter a valid token ID');
+        }
+
+        const exists = await heroNFTContract.exists(tokenId);
+        const tokenInfo = getElement('tokenInfo');
+        if (tokenInfo) {
+            tokenInfo.textContent = `Token ${tokenId} ${exists ? 'exists' : 'does not exist'}`;
+        }
+        showMessage('Token existence checked successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function checkTokenApproval() {
+    try {
+        const tokenId = Number(getElement('tokenId').value);
+        const operator = getElement('operatorAddress').value;
+
+        if (!validateNumber(tokenId)) {
+            throw new Error('Please enter a valid token ID');
+        }
+        if (!validateAddress(operator)) {
+            throw new Error('Please enter a valid operator address');
+        }
+
+        const isApproved = await heroNFTContract.isApprovedForToken(operator, tokenId);
+        const tokenInfo = getElement('tokenInfo');
+        if (tokenInfo) {
+            tokenInfo.textContent = 
+                `Operator ${operator} is ${isApproved ? 'approved' : 'not approved'} for token ${tokenId}`;
+        }
+        showMessage('Token approval checked successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function getAcceptedTokens() {
+    try {
+        const tokenId = Number(getElement('tokenId').value);
+        if (!validateNumber(tokenId)) {
+            throw new Error('Please enter a valid token ID');
+        }
+
+        const tokens = await heroNFTContract.getAcceptedTokens(tokenId);
+        const tokenInfo = getElement('tokenInfo');
+        if (tokenInfo) {
+            tokenInfo.textContent = 
+                `Accepted tokens for token ${tokenId}:\n${tokens.join('\n')}`;
+        }
+        showMessage('Accepted tokens retrieved successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+// Default Payment Settings
+async function getDefaultPaymentToken() {
+    try {
+        const token = await heroNFTContract.getDefaultPaymentToken();
+        const defaultPaymentToken = getElement('defaultPaymentToken');
+        if (defaultPaymentToken) {
+            defaultPaymentToken.value = token;
+        }
+        showMessage('Default payment token retrieved successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function getDefaultNativePrice() {
+    try {
+        const price = await heroNFTContract.getDefaultNativePrice();
+        const defaultNativePrice = getElement('defaultNativePrice');
+        if (defaultNativePrice) {
+            defaultNativePrice.value = ethers.formatEther(price);
+        }
+        showMessage('Default native price retrieved successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function getDefaultTokenPrice() {
+    try {
+        const price = await heroNFTContract.getDefaultTokenPrice();
+        const defaultTokenPrice = getElement('defaultTokenPrice');
+        if (defaultTokenPrice) {
+            defaultTokenPrice.value = ethers.formatUnits(price, 18);
+        }
+        showMessage('Default token price retrieved successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function setDefaultNativePrice() {
+    try {
+        const price = getElement('defaultNativePrice').value;
+        if (!price || Number.isNaN(Number(price))) {
+            throw new Error('Please enter a valid price amount');
+        }
+
+        const tx = await heroNFTContract.setDefaultNativePrice(ethers.parseEther(price));
+        showMessage('Setting default native price... Please wait for confirmation');
+        await tx.wait();
+        showMessage('Default native price set successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function setDefaultTokenPrice() {
+    try {
+        const price = getElement('defaultTokenPrice').value;
+        if (!price || Number.isNaN(Number(price))) {
+            throw new Error('Please enter a valid price amount');
+        }
+
+        const tx = await heroNFTContract.setDefaultTokenPrice(ethers.parseUnits(price, 18));
+        showMessage('Setting default token price... Please wait for confirmation');
+        await tx.wait();
+        showMessage('Default token price set successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+// Add NFT price checking and minting functions
+async function checkNFTPrice() {
+    try {
+        const tokenId = Number(getElement('mintTokenId').value);
+        if (!validateNumber(tokenId)) {
+            throw new Error('Please enter a valid token ID');
+        }
+
+        const ethPrice = await heroNFTContract.getDefaultNativePrice();
+        const tokenPrice = await heroNFTContract.getDefaultTokenPrice();
+        
+        getElement('ethPrice').textContent = `${ethers.formatEther(ethPrice)} ETH`;
+        getElement('tokenPrice').textContent = `${ethers.formatUnits(tokenPrice, 18)} Tokens`;
+
+        // Get balances
+        const ethBalance = await provider.getBalance(connectedAddress);
+        getElement('ethBalance').textContent = `${ethers.formatEther(ethBalance)} ETH`;
+
+        const tokenContract = new ethers.Contract(
+            await heroNFTContract.getDefaultPaymentToken(),
+            ['function balanceOf(address) view returns (uint256)'],
+            provider
+        );
+        const tokenBalance = await tokenContract.balanceOf(connectedAddress);
+        getElement('tokenBalance').textContent = `${ethers.formatUnits(tokenBalance, 18)} Tokens`;
+
+        showMessage('Price information updated successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function mintWithEth() {
+    try {
+        const tokenId = Number(getElement('mintTokenId').value);
+        if (!validateNumber(tokenId)) {
+            throw new Error('Please enter a valid token ID');
+        }
+
+        const price = await heroNFTContract.getDefaultNativePrice();
+        const tx = await heroNFTContract.mint(tokenId, { value: price });
+        showMessage('Minting NFT... Please wait for confirmation');
+        await tx.wait();
+        showMessage('NFT minted successfully with ETH');
+        await checkNFTPrice(); // Refresh balances
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function mintWithToken() {
+    try {
+        const tokenId = Number(getElement('mintTokenId').value);
+        if (!validateNumber(tokenId)) {
+            throw new Error('Please enter a valid token ID');
+        }
+
+        const paymentToken = await heroNFTContract.getDefaultPaymentToken();
+        const tx = await heroNFTContract.mintWithToken(tokenId, paymentToken);
+        showMessage('Minting NFT... Please wait for confirmation');
+        await tx.wait();
+        showMessage('NFT minted successfully with token');
+        await checkNFTPrice(); // Refresh balances
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function batchMintWithEth() {
+    try {
+        const tokenIds = getElement('batchTokenIds').value
+            .split(',')
+            .map(id => Number(id.trim()))
+            .filter(id => !Number.isNaN(id));
+
+        if (tokenIds.length === 0) {
+            throw new Error('Please enter valid token IDs');
+        }
+
+        const price = await heroNFTContract.getDefaultNativePrice();
+        const totalPrice = price * BigInt(tokenIds.length);
+        const tx = await heroNFTContract.mintBatch(tokenIds, { value: totalPrice });
+        showMessage('Batch minting NFTs... Please wait for confirmation');
+        await tx.wait();
+        showMessage('NFTs batch minted successfully with ETH');
+        await checkNFTPrice(); // Refresh balances
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function batchMintWithToken() {
+    try {
+        const tokenIds = getElement('batchTokenIds').value
+            .split(',')
+            .map(id => Number(id.trim()))
+            .filter(id => !Number.isNaN(id));
+
+        if (tokenIds.length === 0) {
+            throw new Error('Please enter valid token IDs');
+        }
+
+        const paymentToken = await heroNFTContract.getDefaultPaymentToken();
+        const tx = await heroNFTContract.mintBatchWithToken(tokenIds, paymentToken);
+        showMessage('Batch minting NFTs... Please wait for confirmation');
+        await tx.wait();
+        showMessage('NFTs batch minted successfully with token');
+        await checkNFTPrice(); // Refresh balances
+    } catch (error) {
+        showError(error);
+    }
+}
+
 // Export functions for use in HTML
 window.connectWallet = connectWallet;
 window.mintNFT = mintNFT;
@@ -389,6 +697,11 @@ window.getDefaultNativePrice = getDefaultNativePrice;
 window.getDefaultTokenPrice = getDefaultTokenPrice;
 window.setDefaultNativePrice = setDefaultNativePrice;
 window.setDefaultTokenPrice = setDefaultTokenPrice;
+window.checkNFTPrice = checkNFTPrice;
+window.mintWithEth = mintWithEth;
+window.mintWithToken = mintWithToken;
+window.batchMintWithEth = batchMintWithEth;
+window.batchMintWithToken = batchMintWithToken;
 
 // Export additional functions to window object
 Object.assign(window, {
@@ -410,7 +723,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             await connectWallet();
         }
         await updateContractInfo();
-        await checkWalletConnection();
     } catch (error) {
         console.error('Error during page initialization:', error);
         showError(error);
