@@ -17,7 +17,7 @@ module hero::arcadia_coin {
     struct ArcadiaCoin {}
 
     /// Initialize the module
-    public fun initialize(admin: &signer) {
+    public entry fun initialize(admin: &signer) {
         let (burn_cap, freeze_cap, mint_cap) = coin::initialize<ArcadiaCoin>(
             admin,
             string::utf8(b"Arcadia Coin"),

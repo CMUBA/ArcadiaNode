@@ -1,5 +1,6 @@
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 import { showMessage } from '../utils/message.js';
+import { config as envConfig } from '../config/index.js';
 
 const NODE_URL = Network.DEVNET;
 const config = new AptosConfig({ network: NODE_URL });
@@ -7,16 +8,29 @@ const aptos = new Aptos(config);
 
 let account = null;
 
+// Display contract information
+function displayContractInfo() {
+    const contractInfo = document.getElementById('contractInfo');
+    if (contractInfo) {
+        contractInfo.innerHTML = `
+            <p>NFT Contract: ${envConfig.MOVE_HERO_NFT_ADDRESS}</p>
+            <p>Hero Contract: ${envConfig.MOVE_HERO_ADDRESS}</p>
+            <p>Metadata Contract: ${envConfig.MOVE_HERO_METADATA_ADDRESS}</p>
+        `;
+    }
+}
+
 // Connect wallet using Wallet Standard
 async function connectWallet() {
     try {
-        // Check if Petra wallet is installed
-        if (!window.aptos) {
-            throw new Error('Please install Petra wallet extension');
+        // Check if any wallet is available
+        if (!('aptos' in window)) {
+            throw new Error('Please install a wallet that supports the Aptos Wallet Standard');
         }
 
         // Use Wallet Standard to connect
-        const response = await window.aptos.connect();
+        const walletStandard = window.aptos;
+        const response = await walletStandard.connect();
         account = response.address;
         
         // Update UI
@@ -36,12 +50,28 @@ async function connectWallet() {
     }
 }
 
+// Export functions to window object
+Object.assign(window, {
+    connectWallet,
+    initializeContract,
+    setDefaultPrices,
+    setPriceConfig,
+    mintNFT,
+    batchMintNFT,
+    loadNFTs,
+    burnNFT,
+    getDefaultPrices
+});
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        displayContractInfo();
         if (window.aptos?.isConnected) {
             await connectWallet();
         }
+        // 自动加载NFTs
+        await loadNFTs();
     } catch (error) {
         console.error('Error during page initialization:', error);
         showMessage(`Error during initialization: ${error.message}`);
@@ -163,26 +193,35 @@ async function loadNFTs() {
             return;
         }
 
-        const nfts = await aptos.getAccountNFTs({
+        const resources = await aptos.getAccountResources({
             accountAddress: account,
-            collectionName: "Hero NFT"
         });
+
+        const nftResource = resources?.find(r => 
+            r.type === `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::TokenStore`
+        );
 
         const nftList = document.getElementById('nftList');
         nftList.innerHTML = '';
 
-        for (const nft of nfts) {
-            const nftElement = document.createElement('div');
-            nftElement.className = 'bg-white p-4 rounded shadow';
-            nftElement.innerHTML = `
-                <h3 class="text-lg font-bold">${nft.name}</h3>
-                <p>Token ID: ${nft.token_id}</p>
-                <p>Amount: ${nft.amount}</p>
-                <button onclick="burnNFT('${nft.token_id}')" class="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                    Burn NFT
-                </button>
-            `;
-            nftList.appendChild(nftElement);
+        if (nftResource?.data?.tokens) {
+            for (const [tokenId, amount] of Object.entries(nftResource.data.tokens)) {
+                const nftElement = document.createElement('div');
+                nftElement.className = 'bg-white p-4 rounded shadow';
+                nftElement.innerHTML = `
+                    <h3 class="text-lg font-bold">Hero NFT</h3>
+                    <p>Token ID: ${tokenId}</p>
+                    <p>Amount: ${amount}</p>
+                    <button onclick="burnNFT('${tokenId}')" class="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                        Burn NFT
+                    </button>
+                `;
+                nftList.appendChild(nftElement);
+            }
+        }
+
+        if (nftList.children.length === 0) {
+            nftList.innerHTML = '<p class="text-gray-500">No NFTs found</p>';
         }
     } catch (error) {
         showMessage(`Error loading NFTs: ${error.message}`);
@@ -208,12 +247,24 @@ async function burnNFT(tokenId) {
     }
 }
 
-// Event listeners
-window.connectWallet = connectWallet;
-window.initializeContract = initializeContract;
-window.setDefaultPrices = setDefaultPrices;
-window.setPriceConfig = setPriceConfig;
-window.mintNFT = mintNFT;
-window.batchMintNFT = batchMintNFT;
-window.loadNFTs = loadNFTs;
-window.burnNFT = burnNFT; 
+// Get default prices
+async function getDefaultPrices() {
+    try {
+        const tokenId = Number.parseInt(document.getElementById('queryTokenId').value);
+        
+        const resource = await aptos.getAccountResource({
+            accountAddress: envConfig.MOVE_HERO_NFT_ADDRESS,
+            resourceType: `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::TokenPriceConfig`
+        });
+
+        if (resource && resource.data) {
+            const priceConfig = resource.data;
+            document.getElementById('currentNativePrice').textContent = `Default Native Price: ${priceConfig.native_price} APT`;
+            document.getElementById('currentTokenPrice').textContent = `Default Token Price: ${priceConfig.token_price}`;
+        } else {
+            showMessage('Price configuration not found');
+        }
+    } catch (error) {
+        showMessage(`Error getting default prices: ${error.message}`);
+    }
+} 
