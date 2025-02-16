@@ -1096,3 +1096,5 @@ D. Hero 合约交互
 7.其他错误：
 http://localhost:3008/pages/nft-contract.html
 此页面我修改引用，import config from '../config/hero.js';替换了../config/index.js，为何浏览器还在寻找 index.js，如何每次启动强制刷新缓存？有其他解决思路么？
+
+

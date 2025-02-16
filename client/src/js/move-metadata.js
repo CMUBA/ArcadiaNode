@@ -1,17 +1,19 @@
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 import { showMessage } from '../utils/message.js';
-import { config as envConfig } from '../config/index.js';
+import heroConfig from '../config/hero.js';
 
 const NODE_URL = Network.DEVNET;
 const config = new AptosConfig({ network: NODE_URL });
 const aptos = new Aptos(config);
 
-const METADATA_CONTRACT_ADDRESS = envConfig.contractAddresses.MOVE_HERO_METADATA_ADDRESS;
+const METADATA_CONTRACT_ADDRESS = heroConfig.contractAddresses.MOVE_HERO_METADATA_ADDRESS;
 
 let account = null;
 
 // Connect wallet using Wallet Standard
 async function connectWallet() {
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+
     try {
         // Check if Petra wallet is installed
         if (!window.aptos) {
@@ -24,6 +26,9 @@ async function connectWallet() {
         
         // Update UI
         document.getElementById('walletAddress').textContent = `Connected: ${account}`;
+        connectWalletBtn.textContent = 'Connected';
+        connectWalletBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+        connectWalletBtn.classList.add('bg-green-500', 'hover:bg-green-600');
         showMessage('Wallet connected successfully');
         
         // Enable buttons that require wallet connection
@@ -42,88 +47,123 @@ async function connectWallet() {
     }
 }
 
-// Set metadata for a token
-async function setMetadata() {
-    try {
-        const tokenId = document.getElementById('tokenId').value;
-        const metadataUri = document.getElementById('metadataUri').value;
+// Display contract information
+function displayContractInfo() {
+    const contractInfo = document.getElementById('contractInfo');
+    if (contractInfo) {
+        contractInfo.innerHTML = `
+            <p>Metadata Contract: ${heroConfig.contractAddresses.MOVE_HERO_METADATA_ADDRESS}</p>
+        `;
+    }
+}
 
-        if (!tokenId || !metadataUri) {
-            showMessage('Please provide both token ID and metadata URI', true);
-            return;
+// Set token metadata
+async function setTokenMetadata() {
+    try {
+        if (!account) {
+            throw new Error('Please connect wallet first');
         }
 
+        const tokenId = document.getElementById('tokenId').value;
+        const name = document.getElementById('tokenName').value;
+        const description = document.getElementById('tokenDescription').value;
+        const image = document.getElementById('tokenImage').value;
+
+        if (!tokenId || !name || !description || !image) {
+            throw new Error('Please fill in all metadata fields');
+        }
+
+        const metadata = {
+            name,
+            description,
+            image
+        };
         const payload = {
             type: "entry_function_payload",
             function: `${METADATA_CONTRACT_ADDRESS}::metadata::set_token_metadata`,
             type_arguments: [],
-            arguments: [tokenId, metadataUri]
+            arguments: [tokenId, JSON.stringify(metadata)]
         };
 
         const response = await window.aptos.signAndSubmitTransaction(payload);
         await aptos.waitForTransaction({ hash: response.hash });
-        showMessage('Metadata set successfully');
-        await getMetadata();
+        showMessage('Token metadata set successfully');
+        await getTokenMetadata();
     } catch (error) {
-        showMessage(`Error setting metadata: ${error.message}`, true);
+        showMessage(`Error setting token metadata: ${error.message}`, 'error');
     }
 }
 
-// Get metadata for a token
-async function getMetadata() {
+// Get token metadata
+async function getTokenMetadata() {
     try {
-        const tokenId = document.getElementById('tokenId').value;
-
-        if (!tokenId) {
-            showMessage('Please provide a token ID', true);
-            return;
+        if (!account) {
+            throw new Error('Please connect wallet first');
         }
 
-        const metadata = await aptos.view({
-            payload: {
-                function: `${METADATA_CONTRACT_ADDRESS}::metadata::get_token_metadata`,
-                type_arguments: [],
-                functionArguments: [tokenId]
-            }
-        });
+        const tokenId = document.getElementById('queryTokenId').value;
+        if (!tokenId) {
+            throw new Error('Please enter token ID');
+        }
 
-        const metadataInfo = document.getElementById('metadataInfo');
-        if (metadata) {
-            metadataInfo.innerHTML = `
-                <div class="space-y-2">
-                    <p><strong>Token ID:</strong> ${metadata.token_id}</p>
-                    <p><strong>URI:</strong> ${metadata.uri}</p>
-                    <p><strong>Last Updated:</strong> ${new Date(metadata.last_updated * 1000).toLocaleString()}</p>
-                </div>
+        const payload = {
+            function: `${METADATA_CONTRACT_ADDRESS}::metadata::get_token_metadata`,
+            type_arguments: [],
+            arguments: [tokenId]
+        };
+
+        const response = await aptos.view(payload);
+        const tokenMetadata = document.getElementById('tokenMetadata');
+        
+        if (response && response.length > 0) {
+            const metadata = JSON.parse(response[0]);
+            tokenMetadata.innerHTML = `
+                <h3 class="text-lg font-semibold mb-2">Token Metadata:</h3>
+                <p>Name: ${metadata.name}</p>
+                <p>Description: ${metadata.description}</p>
+                <p>Image: ${metadata.image}</p>
             `;
         } else {
-            metadataInfo.innerHTML = '<p class="text-gray-500">No metadata found for this token</p>';
+            tokenMetadata.innerHTML = '<p>No metadata found for this token</p>';
         }
+
+        showMessage('Token metadata retrieved successfully');
     } catch (error) {
-        showMessage(`Error getting metadata: ${error.message}`, true);
+        showMessage(`Error getting token metadata: ${error.message}`, 'error');
     }
 }
 
-// Refresh token list
-async function refreshTokenList() {
+// Get all tokens
+async function getAllTokens() {
     try {
-        const tokens = await aptos.view({
-            payload: {
-                function: `${METADATA_CONTRACT_ADDRESS}::metadata::get_all_tokens`,
-                type_arguments: [],
-                functionArguments: []
-            }
-        });
+        if (!account) {
+            throw new Error('Please connect wallet first');
+        }
 
+        const payload = {
+            function: `${METADATA_CONTRACT_ADDRESS}::metadata::get_all_tokens`,
+            type_arguments: [],
+            arguments: []
+        };
+
+        const response = await aptos.view(payload);
         const tokenList = document.getElementById('tokenList');
-        if (tokens && tokens.length > 0) {
-            tokenList.innerHTML = tokens.map(token => `
-                <div class="p-4 bg-white rounded-lg shadow">
-                    <h3 class="font-semibold text-lg mb-2">Token ${token.token_id}</h3>
-                    <p class="text-sm text-gray-600 mb-2"><strong>URI:</strong> ${token.uri}</p>
-                    <p class="text-sm text-gray-600"><strong>Last Updated:</strong> ${new Date(token.last_updated * 1000).toLocaleString()}</p>
-                </div>
-            `).join('');
+        
+        if (response && response.length > 0) {
+            const tokens = response[0];
+            tokenList.innerHTML = `<h3 class="text-lg font-semibold mb-2">Token List:</h3>`;
+            tokens.forEach((token, index) => {
+                const metadata = JSON.parse(token.metadata);
+                tokenList.innerHTML += `
+                    <div class="p-4 bg-gray-50 rounded mb-2">
+                        <p class="font-semibold">Token #${index + 1}</p>
+                        <p>ID: ${token.id}</p>
+                        <p>Name: ${metadata.name}</p>
+                        <p>Description: ${metadata.description}</p>
+                        <p>Image: ${metadata.image}</p>
+                    </div>
+                `;
+            });
         } else {
             tokenList.innerHTML = '<p class="text-gray-500">No tokens found</p>';
         }
@@ -135,35 +175,14 @@ async function refreshTokenList() {
 // Refresh metadata information
 async function refreshMetadata() {
     try {
-        if (!account) {
-            showMessage('Please connect wallet first');
-            return;
+        displayContractInfo();
+        if (account) {
+            await getAllTokens();
         }
-
-        const races = await aptos.view({
-            function: "hero::metadata::get_all_races",
-            type_arguments: [],
-            arguments: []
-        });
-
-        const classes = await aptos.view({
-            function: "hero::metadata::get_all_classes",
-            type_arguments: [],
-            arguments: []
-        });
-
-        const skills = await aptos.view({
-            function: "hero::metadata::get_all_skills",
-            type_arguments: [],
-            arguments: []
-        });
-
-        // Display races
-        const raceList = document.getElementById('raceList');
-        raceList.innerHTML = races.map(race => `
-            <div class="p-2 bg-gray-100 rounded">
-                <p><strong>Name:</strong> ${race.name}</p>
-                <p><strong>Description:</strong> ${race.description}</p>
+    } catch (error) {
+        showMessage(`Error refreshing metadata: ${error.message}`, 'error');
+    }
+}
                 <p><strong>Base Stats:</strong> ${race.base_stats.join(', ')}</p>
             </div>
         `).join('');
@@ -193,11 +212,18 @@ async function refreshMetadata() {
     }
 }
 
+// Initialize the page
+function initializePage() {
+    displayContractInfo();
+}
+
 // Event listeners
+window.addEventListener('load', initializePage);
 window.connectWallet = connectWallet;
-window.setMetadata = setMetadata;
-window.getMetadata = getMetadata;
-window.refreshTokenList = refreshTokenList;
+window.setTokenMetadata = setTokenMetadata;
+window.getTokenMetadata = getTokenMetadata;
+window.getAllTokens = getAllTokens;
+
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {

@@ -1,52 +1,90 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Move Metadata</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module" src="../js/move-metadata.js"></script>
+    <title>Move Metadata Testing</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="../js/move-metadata.js" type="module"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <!-- Navigation Menu -->
-    <nav class="bg-white shadow-lg mb-8">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between">
-                <div class="flex space-x-7">
-                    <div class="flex items-center py-4 px-2">
-                        <span class="font-semibold text-gray-500 text-lg">Arcadia</span>
-                    </div>
-                    <div class="hidden md:flex items-center space-x-1">
-                        <a href="/" class="py-4 px-2 text-gray-500 hover:text-green-500 transition duration-300">Home</a>
-                        <a href="move-hero.html" class="py-4 px-2 text-gray-500 hover:text-green-500 transition duration-300">Move Hero</a>
-                        <a href="move-metadata.html" class="py-4 px-2 text-green-500 border-b-2 border-green-500 font-semibold">Move Metadata</a>
-                        <a href="move-nft.html" class="py-4 px-2 text-gray-500 hover:text-green-500 transition duration-300">Move NFT</a>
-                    </div>
+<body class="bg-gray-100 min-h-screen p-8">
+    <!-- Navigation Bar -->
+    <div class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold text-gray-800">Move Metadata Testing</h1>
+                    <nav class="flex space-x-6">
+                        <a href="../index.html" class="text-blue-500 hover:text-blue-600 font-medium">Home</a>
+                        <a href="move-hero.html" class="text-blue-500 hover:text-blue-600 font-medium">Move Hero</a>
+                        <a href="move-metadata.html" class="text-blue-500 hover:text-blue-600 font-medium">Move Metadata</a>
+                        <a href="move-nft.html" class="text-blue-500 hover:text-blue-600 font-medium">Move NFT</a>
+                    </nav>
                 </div>
             </div>
         </div>
-    </nav>
+    </div>
 
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-8">Move Metadata</h1>
+    <!-- Add margin-top to main content to account for fixed header -->
+    <div class="mt-20 max-w-4xl mx-auto">
+        <!-- Messages -->
+        <div id="message" class="hidden fixed top-20 right-4 bg-green-500 text-white p-4 rounded shadow-lg z-50"></div>
+        <div id="error" class="hidden fixed top-20 right-4 bg-red-500 text-white p-4 rounded shadow-lg z-50"></div>
 
         <!-- Wallet Connection -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4">Wallet Connection</h2>
-            <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">Wallet Connection</h2>
+            <button id="connectButton" onclick="connectWallet()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
                 Connect Wallet
             </button>
-            <p id="walletStatus" class="mt-2 text-gray-600"></p>
+            <p id="walletAddress" class="mt-2 text-gray-600"></p>
         </div>
 
-        <!-- Metadata Management -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4">Metadata Management</h2>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Token ID</label>
-                    <input type="text" id="tokenId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                </div>
+        <!-- Contract Information -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">Contract Information</h2>
+            <pre id="contractInfo" class="bg-gray-100 p-4 rounded overflow-auto"></pre>
+        </div>
+
+        <!-- Set Token Metadata -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">Set Token Metadata</h2>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="tokenId">Token ID:</label>
+                <input type="text" id="tokenId" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="tokenName">Token Name:</label>
+                <input type="text" id="tokenName" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="tokenDescription">Token Description:</label>
+                <textarea id="tokenDescription" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="3"></textarea>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="tokenImage">Token Image URL:</label>
+                <input type="text" id="tokenImage" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <button onclick="setTokenMetadata()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Set Metadata</button>
+        </div>
+
+        <!-- Get Token Metadata -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">Get Token Metadata</h2>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="queryTokenId">Token ID:</label>
+                <input type="text" id="queryTokenId" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <button onclick="getTokenMetadata()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Get Metadata</button>
+            <div id="tokenMetadata" class="mt-4 bg-gray-100 p-4 rounded overflow-auto"></div>
+        </div>
+
+        <!-- Token List -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">Token List</h2>
+            <button onclick="getAllTokens()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-4">Refresh Token List</button>
+            <div id="tokenList" class="bg-gray-100 p-4 rounded overflow-auto"></div>
+        </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Metadata URI</label>
                     <input type="text" id="metadataUri" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">

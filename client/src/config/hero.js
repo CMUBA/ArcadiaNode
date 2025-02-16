@@ -1,7 +1,6 @@
 import { heroAbi } from '../js/abi/hero.js';
 import { heroMetadataAbi } from '../js/abi/heroMetadata.js';
 import { heroNFTAbi } from '../js/abi/heroNFT.js';
-import baseConfig from './index.js';
 
 // Hero 相关配置
 export const heroConfig = {
@@ -40,5 +39,11 @@ export const heroConfig = {
         seasons: ['Spring', 'Summer', 'Autumn', 'Winter'],
         maxSkillLevel: 10,
         maxSkillId: 4
+    },
+    contractAddresses: {
+        MOVE_HERO_NFT_ADDRESS: '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8',
+        MOVE_HERO_ADDRESS: '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8',
+        MOVE_HERO_METADATA_ADDRESS: '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8'
     }
 }; 
+export default heroConfig;

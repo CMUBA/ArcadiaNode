@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { heroNFTAbi } from './abi/heroNFT.js';
-import config from '../config/index.js';
+import config from '../config/hero.js';
 
 // Utility functions
 function getElement(id) {

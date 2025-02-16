@@ -1,13 +1,13 @@
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 import { showMessage } from '../utils/message.js';
-import { config as envConfig } from '../config/index.js';
+import heroConfig from '../config/hero.js';
 
 const NODE_URL = Network.DEVNET;
 const config = new AptosConfig({ network: NODE_URL });
 const aptos = new Aptos(config);
 
-const HERO_CONTRACT_ADDRESS = envConfig.contractAddresses.MOVE_HERO_ADDRESS;
-const HERO_NFT_ADDRESS = envConfig.contractAddresses.MOVE_HERO_NFT_ADDRESS;
+const HERO_CONTRACT_ADDRESS = heroConfig.contractAddresses.MOVE_HERO_ADDRESS;
+const HERO_NFT_ADDRESS = heroConfig.contractAddresses.MOVE_HERO_NFT_ADDRESS;
 
 let account = null;
 
@@ -16,15 +16,17 @@ function displayContractInfo() {
     const contractInfo = document.getElementById('contractInfo');
     if (contractInfo) {
         contractInfo.innerHTML = `
-            <p>NFT Contract: ${envConfig.MOVE_HERO_NFT_ADDRESS}</p>
-            <p>Hero Contract: ${envConfig.MOVE_HERO_ADDRESS}</p>
-            <p>Metadata Contract: ${envConfig.MOVE_HERO_METADATA_ADDRESS}</p>
+            <p>NFT Contract: ${heroConfig.contractAddresses.MOVE_HERO_NFT_ADDRESS}</p>
+            <p>Hero Contract: ${heroConfig.contractAddresses.MOVE_HERO_ADDRESS}</p>
+            <p>Metadata Contract: ${heroConfig.contractAddresses.MOVE_HERO_METADATA_ADDRESS}</p>
         `;
     }
 }
 
 // Connect wallet using Wallet Standard
 async function connectWallet() {
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+
     try {
         // Check if any wallet is available
         if (!('aptos' in window)) {
@@ -38,6 +40,9 @@ async function connectWallet() {
         
         // Update UI
         document.getElementById('walletAddress').textContent = `Connected: ${account}`;
+        connectWalletBtn.textContent = 'Connected';
+        connectWalletBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+        connectWalletBtn.classList.add('bg-green-500', 'hover:bg-green-600');
         showMessage('Wallet connected successfully');
         
         // Enable buttons that require wallet connection
@@ -56,85 +61,87 @@ async function connectWallet() {
 // Query hero contract's NFT list
 async function queryHeroNFTList() {
     try {
-        const resource = await aptos.getAccountResource({
-            accountAddress: HERO_CONTRACT_ADDRESS,
-            resourceType: `${HERO_CONTRACT_ADDRESS}::hero::HeroData`
-        });
+        if (!account) {
+            throw new Error('Please connect wallet first');
+        }
 
-        const nftList = document.getElementById('nftContractList');
-        nftList.innerHTML = '';
+        const payload = {
+            function: `${HERO_CONTRACT_ADDRESS}::hero::get_nft_contracts`,
+            type_arguments: [],
+            arguments: []
+        };
 
-        if (resource && resource.data.nft_contracts) {
-            const contracts = resource.data.nft_contracts;
-            contracts.forEach(contract => {
-                const div = document.createElement('div');
-                div.className = 'p-4 bg-gray-50 rounded mb-2';
-                div.textContent = `NFT Contract: ${contract}`;
-                nftList.appendChild(div);
+        const response = await aptos.view(payload);
+        const nftList = document.getElementById('nftList');
+        
+        if (response && response.length > 0) {
+            const nftContracts = response[0];
+            nftList.innerHTML = `<h3 class="text-lg font-semibold mb-2">Registered NFT Contracts:</h3>`;
+            nftContracts.forEach((contract, index) => {
+                nftList.innerHTML += `<p class="mb-1">${index + 1}. ${contract}</p>`;
             });
         } else {
-            nftList.innerHTML = '<p class="text-gray-500">No NFT contracts found</p>';
+            nftList.innerHTML = '<p>No NFT contracts registered</p>';
         }
+
+        showMessage('NFT contracts retrieved successfully');
     } catch (error) {
-        showMessage(error.message, true);
+        showMessage(`Error querying NFT list: ${error.message}`, 'error');
     }
 }
 
 // Query NFT price
 async function queryNFTPrice() {
-    const contractAddress = document.getElementById('contractAddress').value;
-    const tokenId = document.getElementById('tokenId').value;
-
-    if (!contractAddress || !tokenId) {
-        showMessage('Please provide both contract address and token ID', true);
-        return;
-    }
-
     try {
+        if (!account) {
+            throw new Error('Please connect wallet first');
+        }
+
+        const contractAddress = document.getElementById('contractAddress').value;
+        const tokenId = document.getElementById('tokenId').value;
+
+        if (!contractAddress || !tokenId) {
+            throw new Error('Please provide both contract address and token ID');
+        }
+
         // Query native token price
-        const nativePrice = await aptos.view({
-            payload: {
-                function: `${HERO_NFT_ADDRESS}::hero_nft::get_native_price`,
-                typeArguments: [],
-                functionArguments: [contractAddress, tokenId]
-            }
-        });
+        const nativePayload = {
+            function: `${HERO_NFT_ADDRESS}::hero_nft::get_native_price`,
+            type_arguments: [],
+            arguments: [contractAddress, tokenId]
+        };
 
         // Query token price
-        const tokenPrice = await aptos.view({
-            payload: {
-                function: `${HERO_NFT_ADDRESS}::hero_nft::get_token_price`,
-                typeArguments: [],
-                functionArguments: [contractAddress, tokenId]
-            }
-        });
+        const tokenPayload = {
+            function: `${HERO_NFT_ADDRESS}::hero_nft::get_token_price`,
+            type_arguments: [],
+            arguments: [contractAddress, tokenId]
+        };
+
+        const [nativeResponse, tokenResponse] = await Promise.all([
+            aptos.view(nativePayload),
+            aptos.view(tokenPayload)
+        ]);
 
         const priceInfo = document.getElementById('priceInfo');
         priceInfo.innerHTML = `
             <div class="bg-gray-50 p-4 rounded">
-                <p class="mb-2"><strong>Native Price (APT):</strong> ${nativePrice}</p>
-                <p><strong>Token Price (ARC):</strong> ${tokenPrice}</p>
+                <h3 class="text-lg font-semibold mb-2">Price Information:</h3>
+                <p class="mb-2"><strong>Native Price (APT):</strong> ${nativeResponse[0]}</p>
+                <p><strong>Token Price (ARC):</strong> ${tokenResponse[0]}</p>
             </div>
         `;
+
+        showMessage('Price information retrieved successfully');
     } catch (error) {
-        showMessage(error.message, true);
+        showMessage(`Error querying price: ${error.message}`, 'error');
     }
 }
 
-// Export functions to window object
-Object.assign(window, {
-    connectWallet,
-    initializeContract,
-    setDefaultPrices,
-    setPriceConfig,
-    mintNFT,
-    batchMintNFT,
-    loadNFTs,
-    burnNFT,
-    getDefaultPrices,
-    queryHeroNFTList,
-    queryNFTPrice
-});
+// Initialize page
+function initializePage() {
+    displayContractInfo();
+}
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -143,13 +150,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.aptos?.isConnected) {
             await connectWallet();
         }
-        // 自动加载NFTs
         await loadNFTs();
     } catch (error) {
         console.error('Error during page initialization:', error);
         showMessage(`Error during initialization: ${error.message}`);
     }
 });
+
+// Export functions to window object
+window.connectWallet = connectWallet;
+window.initializeContract = initializeContract;
+window.setDefaultPrices = setDefaultPrices;
+window.setPriceConfig = setPriceConfig;
+window.mintNFT = mintNFT;
+window.batchMintNFT = batchMintNFT;
+window.loadNFTs = loadNFTs;
+window.burnNFT = burnNFT;
+window.getDefaultPrices = getDefaultPrices;
+window.queryHeroNFTList = queryHeroNFTList;
+window.queryNFTPrice = queryNFTPrice;
 
 // Initialize contract
 async function initializeContract() {
