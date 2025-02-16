@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Arcadia Node Server",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
@@ -17,6 +18,5 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "nodemon": "^3.0.2"
-  },
-  "type": "module"
+  }
 }

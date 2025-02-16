@@ -227,6 +227,153 @@ async function burnNFT() {
     }
 }
 
+// Additional NFT Contract Functions
+async function approveOperator(operator, tokenId) {
+    try {
+        if (!validateAddress(operator)) {
+            throw new Error('Invalid operator address');
+        }
+        if (!validateNumber(tokenId)) {
+            throw new Error('Invalid token ID');
+        }
+
+        const tx = await heroNFTContract.approve(operator, tokenId);
+        showMessage('Approving operator... Please wait for confirmation');
+        await tx.wait();
+        showMessage('Operator approved successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function setApprovalForAll(operator, approved) {
+    try {
+        if (!validateAddress(operator)) {
+            throw new Error('Invalid operator address');
+        }
+
+        const tx = await heroNFTContract.setApprovalForAll(operator, approved);
+        showMessage('Setting approval for all... Please wait for confirmation');
+        await tx.wait();
+        showMessage('Approval for all set successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function transferFrom(from, to, tokenId) {
+    try {
+        if (!validateAddress(from) || !validateAddress(to)) {
+            throw new Error('Invalid address');
+        }
+        if (!validateNumber(tokenId)) {
+            throw new Error('Invalid token ID');
+        }
+
+        const tx = await heroNFTContract.transferFrom(from, to, tokenId);
+        showMessage('Transferring NFT... Please wait for confirmation');
+        await tx.wait();
+        showMessage('NFT transferred successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function safeTransferFrom(from, to, tokenId, data = "0x") {
+    try {
+        if (!validateAddress(from) || !validateAddress(to)) {
+            throw new Error('Invalid address');
+        }
+        if (!validateNumber(tokenId)) {
+            throw new Error('Invalid token ID');
+        }
+
+        const tx = await heroNFTContract["safeTransferFrom(address,address,uint256,bytes)"](
+            from, to, tokenId, data
+        );
+        showMessage('Safely transferring NFT... Please wait for confirmation');
+        await tx.wait();
+        showMessage('NFT safely transferred successfully');
+    } catch (error) {
+        showError(error);
+    }
+}
+
+async function ownerOf(tokenId) {
+    try {
+        if (!validateNumber(tokenId)) {
+            throw new Error('Invalid token ID');
+        }
+
+        const owner = await heroNFTContract.ownerOf(tokenId);
+        showMessage('Owner retrieved successfully');
+        return owner;
+    } catch (error) {
+        showError(error);
+        return null;
+    }
+}
+
+async function balanceOf(owner) {
+    try {
+        if (!validateAddress(owner)) {
+            throw new Error('Invalid owner address');
+        }
+
+        const balance = await heroNFTContract.balanceOf(owner);
+        showMessage('Balance retrieved successfully');
+        return balance;
+    } catch (error) {
+        showError(error);
+        return null;
+    }
+}
+
+async function tokenURI(tokenId) {
+    try {
+        if (!validateNumber(tokenId)) {
+            throw new Error('Invalid token ID');
+        }
+
+        const uri = await heroNFTContract.tokenURI(tokenId);
+        showMessage('Token URI retrieved successfully');
+        return uri;
+    } catch (error) {
+        showError(error);
+        return null;
+    }
+}
+
+async function isApprovedForAll(owner, operator) {
+    try {
+        if (!validateAddress(owner) || !validateAddress(operator)) {
+            throw new Error('Invalid address');
+        }
+
+        const isApproved = await heroNFTContract.isApprovedForAll(owner, operator);
+        showMessage('Approval status checked successfully');
+        return isApproved;
+    } catch (error) {
+        showError(error);
+        return false;
+    }
+}
+
+async function getApproved(tokenId) {
+    try {
+        if (!validateNumber(tokenId)) {
+            throw new Error('Invalid token ID');
+        }
+
+        const approved = await heroNFTContract.getApproved(tokenId);
+        showMessage('Approved address retrieved successfully');
+        return approved;
+    } catch (error) {
+        showError(error);
+        return null;
+    }
+}
+
 // Export functions for use in HTML
 window.connectWallet = connectWallet;
 window.mintNFT = mintNFT;
@@ -242,6 +389,19 @@ window.getDefaultNativePrice = getDefaultNativePrice;
 window.getDefaultTokenPrice = getDefaultTokenPrice;
 window.setDefaultNativePrice = setDefaultNativePrice;
 window.setDefaultTokenPrice = setDefaultTokenPrice;
+
+// Export additional functions to window object
+Object.assign(window, {
+    approveOperator,
+    setApprovalForAll,
+    transferFrom,
+    safeTransferFrom,
+    ownerOf,
+    balanceOf,
+    tokenURI,
+    isApprovedForAll,
+    getApproved
+});
 
 // Add event listener for page load
 document.addEventListener('DOMContentLoaded', async () => {

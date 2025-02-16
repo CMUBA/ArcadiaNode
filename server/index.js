@@ -3,6 +3,7 @@ import cors from 'cors';
 import heroApi from './chain/hero-api.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { nodeRouter } from './node/index.js';
 
 // Server configuration
 const config = {
@@ -36,18 +37,19 @@ function checkServices() {
         console.log(`  ${value === 'Not set' ? '❌' : '✅'} ${key}: ${value}`);
     }
 
-    // 检查API端点
+    // 检查 API 端点
     console.log('\n📌 Available API Endpoints:');
     const endpoints = [
         { method: 'GET', path: '/api/health', desc: 'Service health check' },
-        { method: 'GET', path: '/api/hero', desc: 'Hero API' }
+        { method: 'GET', path: '/api/hero', desc: 'Hero API' },
+        { method: 'GET', path: '/api/v1/node', desc: 'Node API' }
     ];
     
     for (const ep of endpoints) {
         console.log(`  ${ep.method.padEnd(6)} ${ep.path.padEnd(40)} ${ep.desc}`);
     }
 
-    // 检查CORS配置
+    // 检查 CORS 配置
     console.log('\n📌 CORS Configuration:');
     const corsOrigins = [
         `http://localhost:${process.env.CLIENT_PORT || 3008}`,
@@ -70,7 +72,11 @@ checkServices();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:3008', 'http://localhost:3017'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'signature', 'message', 'address']
+}));
 app.use(express.json());
 
 // Basic route for testing
@@ -80,6 +86,9 @@ app.get('/api/health', (req, res) => {
 
 // Hero API
 app.use('/api/hero', heroApi);
+
+// Node API
+app.use('/api/v1/node', nodeRouter);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {

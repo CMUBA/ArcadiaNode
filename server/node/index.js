@@ -1,10 +1,60 @@
-const express = require('express');
-const { randomBytes } = require('node:crypto');
-const { ethers } = require('ethers');
+import express from 'express';
+import { randomBytes } from 'node:crypto';
+import { ethers } from 'ethers';
 const router = express.Router();
 
 // 存储挑战字符串
 const challengeStore = new Map();
+
+// 路由列表
+router.post('/routes-list', (req, res) => {
+    try {
+        const routes = [
+            { path: '/api/v1/node/get-challenge', method: 'GET', description: 'Get challenge string' },
+            { path: '/api/v1/node/routes-list', method: 'POST', description: 'Get available routes' },
+            { path: '/api/v1/node/heartbeat', method: 'POST', description: 'Node heartbeat check' },
+            { path: '/api/v1/node/register', method: 'POST', description: 'Register node' }
+        ];
+        res.json({
+            code: 0,
+            message: 'success',
+            data: routes
+        });
+    } catch (error) {
+        console.error('Error in routes-list:', error);
+        res.status(500).json({
+            code: 1001,
+            message: 'Failed to get routes list',
+            details: error.message
+        });
+    }
+});
+
+// 心跳检测
+router.post('/heartbeat', (req, res) => {
+    try {
+        const timestamp = Date.now();
+        const uptime = process.uptime();
+        
+        res.json({
+            code: 0,
+            message: 'success',
+            data: {
+                timestamp,
+                uptime,
+                status: 'healthy',
+                memory: process.memoryUsage()
+            }
+        });
+    } catch (error) {
+        console.error('Error in heartbeat:', error);
+        res.status(500).json({
+            code: 1001,
+            message: 'Heartbeat check failed',
+            details: error.message
+        });
+    }
+});
 
 // 生成随机挑战字符串
 router.get('/get-challenge', (req, res) => {
@@ -32,6 +82,12 @@ router.get('/get-challenge', (req, res) => {
             used: false
         });
 
+        console.log('Generated challenge:', {
+            challenge,
+            expires,
+            storeSize: challengeStore.size
+        });
+
         res.json({
             code: 0,
             message: 'success',
@@ -41,7 +97,7 @@ router.get('/get-challenge', (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Challenge generation error:', error);
+        console.error('Error generating challenge:', error);
         res.status(500).json({
             code: 1001,
             message: 'Failed to generate challenge',
@@ -347,6 +403,9 @@ function cleanExpiredChallenges() {
     }
 }
 
+// 定期清理过期的挑战字符串
+setInterval(cleanExpiredChallenges, 60000); // 每分钟清理一次
+
 // 节点认证
 router.post('/auth', (req, res) => {
     const { timestamp } = req.body;
@@ -354,4 +413,4 @@ router.post('/auth', (req, res) => {
     res.json({ message: 'Node authenticated successfully' });
 });
 
-module.exports = router; 
+export { router as nodeRouter };
