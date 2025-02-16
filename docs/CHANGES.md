@@ -1,327 +1,327 @@
-# Arcadia changes
+import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
+import { showMessage } from '../utils/message.js';
+import { config as envConfig } from '../config/index.js';
 
-## Tree
+const NODE_URL = Network.DEVNET;
+const config = new AptosConfig({ network: NODE_URL });
+const aptos = new Aptos(config);
 
-ArcadiaNode
-├── README.md
-├── client
-├── contract
-├── data
-├── dev.sh
-├── docs
-└── server
+let account = null;
 
-## Changes
+// Display contract information
+function displayContractInfo() {
+    const contractInfo = document.getElementById('contractInfo');
+    if (contractInfo) {
+        contractInfo.innerHTML = `
+            <p>NFT Contract: ${envConfig.MOVE_HERO_NFT_ADDRESS}</p>
+            <p>Hero Contract: ${envConfig.MOVE_HERO_ADDRESS}</p>
+            <p>Metadata Contract: ${envConfig.MOVE_HERO_METADATA_ADDRESS}</p>
+        `;
+    }
+}
 
-### 2025-02-10
+// Connect wallet using Wallet Standard
+async function connectWallet() {
+    try {
+        // Check if any wallet is available
+        if (!('aptos' in window)) {
+            throw new Error('Please install a wallet that supports the Aptos Wallet Standard');
+        }
 
-#### contract 总结
+        // Use Wallet Standard to connect
+        const walletStandard = window.aptos;
+        const response = await walletStandard.connect();
+        account = response.address;
+        
+        // Update UI
+        document.getElementById('walletAddress').textContent = `Connected: ${account}`;
+        showMessage('Wallet connected successfully');
+        
+        // Enable buttons that require wallet connection
+        const walletButtons = document.querySelectorAll('.requires-wallet');
+        for (const button of walletButtons) {
+            button.disabled = false;
+        }
+        
+        return true;
+    } catch (error) {
+        showMessage(`Error connecting wallet: ${error.message}`);
+        return false;
+    }
+}
 
-让我帮你分析这个问题：
+// Export functions to window object
+Object.assign(window, {
+    connectWallet,
+    initializeContract,
+    setDefaultPrices,
+    setPriceConfig,
+    mintNFT,
+    batchMintNFT,
+    loadNFTs,
+    burnNFT,
+    getDefaultPrices
+});
 
-1. 首先，我看到根目录下的 `script` 目录中的文件已经被正确合并到 `contract/hero/script` 目录下了。从文件内容来看，`contract/hero/script` 目录下的文件是最新的、最完整的版本。
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        displayContractInfo();
+        if (window.aptos?.isConnected) {
+            await connectWallet();
+        }
+        // 自动加载 NFTs
+        await loadNFTs();
+    } catch (error) {
+        console.error('Error during page initialization:', error);
+        showMessage(`Error during initialization: ${error.message}`);
+    }
+});
 
-2. 关于 Hero 合约版本的分析：
+// Initialize contract
+async function initializeContract() {
+    try {
+        const payload = {
+            type: "entry_function_payload",
+            function: "hero_nft::hero_nft::initialize",
+            type_arguments: [],
+            arguments: []
+        };
 
-让我们对比四个版本的主要特点：
+        const response = await window.aptos.signAndSubmitTransaction(payload);
+        await aptos.waitForTransaction({ hash: response.hash });
+        showMessage('Contract initialized successfully');
+    } catch (error) {
+        showMessage(`Error initializing contract: ${error.message}`);
+    }
+}
 
-**Hero.sol (V1)**
-- 基础功能：NFT 注册管理
-- 简单的状态变量：officialNFT, isRegistered 映射
-- 基本的注册/注销功能
-- 版本号："1.0.1"
+// Set default prices
+async function setDefaultPrices() {
+    try {
+        const nativePrice = Number.parseInt(document.getElementById('defaultNativePrice').value);
+        const tokenPrice = Number.parseInt(document.getElementById('defaultTokenPrice').value);
 
-**HeroV2.sol**
-- 在 V1 基础上添加了版本号变量
-- 使用 `reinitializer(2)` 进行初始化
-- 改进了 `getRegisteredNFTs` 函数，只返回活跃的 NFT
-- 版本号："2.0.0"
+        const payload = {
+            type: "entry_function_payload",
+            function: "hero_nft::hero_nft::set_default_prices",
+            type_arguments: [],
+            arguments: [nativePrice, tokenPrice]
+        };
 
-**HeroV3.sol**
-- 添加了 UUPS 升级模式
-- 引入了 HeroRecord 结构体，支持完整的英雄数据管理
-- 添加了英雄等级、经验、技能系统
-- 支持英雄记录的创建和更新
-- 版本号："3.0.0"
+        const response = await window.aptos.signAndSubmitTransaction(payload);
+        await aptos.waitForTransaction({ hash: response.hash });
+        showMessage('Default prices set successfully');
+    } catch (error) {
+        showMessage(`Error setting default prices: ${error.message}`);
+    }
+}
 
-**HeroV4.sol (最新版本)**
-- 完整的英雄属性系统（种族、性别、季节）
-- 更细致的技能结构（SeasonSkills）
-- 装备系统的支持
-- 能量值和每日积分系统
-- 常量定义（MAX_DAILY_ENERGY, MAX_DAILY_POINTS 等）
-- 版本号："4.0.0"
+// Set price configuration
+async function setPriceConfig() {
+    try {
+        const tokenId = Number.parseInt(document.getElementById('priceTokenId').value);
+        const tokenName = document.getElementById('priceTokenName').value;
+        const price = Number.parseInt(document.getElementById('tokenPrice').value);
 
-根据你提供的合约设计要求，我建议使用 **HeroV4** 版本，原因如下：
+        const payload = {
+            type: "entry_function_payload",
+            function: "hero_nft::hero_nft::set_price_config",
+            type_arguments: [],
+            arguments: [tokenId, tokenName, price]
+        };
 
-1. **完整的数据结构支持**：
-   - 支持设计文档中提到的所有种族 {Human, Elf, Dwarf, Orc, Undead}
-   - 支持四季技能系统 {Spring, Summer, Autumn, Winter}
-   - 支持装备系统 {Weapon, Armor, Accessory}
+        const response = await window.aptos.signAndSubmitTransaction(payload);
+        await aptos.waitForTransaction({ hash: response.hash });
+        showMessage('Price configuration set successfully');
+    } catch (error) {
+        showMessage(`Error setting price configuration: ${error.message}`);
+    }
+}
 
-2. **游戏机制支持**：
-   - 实现了每日能量限制（100）和积分上限（1000）
-   - 支持装备 NFT 的绑定和管理
-   - 提供了完整的技能升级系统
+// Mint NFT
+async function mintNFT(useToken = false) {
+    try {
+        const tokenId = Number.parseInt(document.getElementById('singleTokenId').value);
+        const amount = Number.parseInt(document.getElementById('singleAmount').value);
 
-3. **数据管理优化**：
-   - 使用映射和结构体优化数据存储
-   - 提供了完整的事件系统，便于前端追踪状态变化
-   - 包含了必要的访问控制和安全检查
+        let payload;
+        if (useToken) {
+            // 使用 ArcadiaCoin 支付
+            payload = {
+                type: "entry_function_payload",
+                function: `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::mint_with_native`,
+                type_arguments: [`${envConfig.MOVE_COIN_ADDRESS}::arcadia_coin::ArcadiaCoin`],
+                arguments: [tokenId, amount]
+            };
+        } else {
+            // 使用原生 APT 支付
+            payload = {
+                type: "entry_function_payload",
+                function: `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::mint_with_native`,
+                type_arguments: ["0x1::aptos_coin::AptosCoin"],
+                arguments: [tokenId, amount]
+            };
+        }
 
-4. **升级兼容性**：
-   - 保持了 UUPS 升级模式
-   - 使用 `reinitializer(4)` 确保安全升级
-   - 保留了之前版本的核心功能
+        const response = await window.aptos.signAndSubmitTransaction(payload);
+        await aptos.waitForTransaction({ hash: response.hash });
+        showMessage('NFT minted successfully');
+        loadNFTs();
+    } catch (error) {
+        showMessage(`Error minting NFT: ${error.message}`);
+    }
+}
 
-5. **符合设计要求**：
-   - 完全匹配 README-hero.md 中描述的数据结构要求
-   - 支持 NFT 合约地址和 tokenId 的绑定机制
-   - 实现了所有依赖的数据表功能
+// Batch mint NFTs
+async function batchMintNFT(useToken = false) {
+    try {
+        const tokenIds = document.getElementById('batchTokenIds').value
+            .split(',')
+            .map(id => Number.parseInt(id.trim()));
+        const amount = Number.parseInt(document.getElementById('batchAmount').value);
 
-因此，我建议使用 HeroV4 作为当前的实现版本，它不仅提供了最完整的功能集，而且完全符合设计文档中的要求。同时，它的架构也为未来的扩展预留了空间。
+        let payload;
+        if (useToken) {
+            // 使用 ArcadiaCoin 支付
+            payload = {
+                type: "entry_function_payload",
+                function: `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::mint_batch_with_native`,
+                type_arguments: [`${envConfig.MOVE_COIN_ADDRESS}::arcadia_coin::ArcadiaCoin`],
+                arguments: [tokenIds, amount]
+            };
+        } else {
+            // 使用原生 APT 支付
+            payload = {
+                type: "entry_function_payload",
+                function: `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::mint_batch_with_native`,
+                type_arguments: ["0x1::aptos_coin::AptosCoin"],
+                arguments: [tokenIds, amount]
+            };
+        }
 
-需要注意的是，在使用 HeroV4 时，我们需要确保：
-1. 正确部署相关的元数据合约
-2. 设置适当的初始参数
-3. 确保升级脚本（UpgradeHeroNFT.s.sol）正确配置
+        const response = await window.aptos.signAndSubmitTransaction(payload);
+        await aptos.waitForTransaction({ hash: response.hash });
+        showMessage('NFTs minted successfully');
+        loadNFTs();
+    } catch (error) {
+        showMessage(`Error batch minting NFTs: ${error.message}`);
+    }
+}
 
+// Load NFTs
+async function loadNFTs() {
+    try {
+        if (!account) {
+            showMessage('Please connect wallet first');
+            return;
+        }
 
-### 2025-02-12
-herov5
-### 读取函数
-- `getHeroInfo(address nftContract, uint256 tokenId)` - 获取英雄基本信息（名字、种族、性别、等级、能量、每日点数）
-- `getHeroSkills(address nftContract, uint256 tokenId, Season season)` - 获取英雄在特定季节的技能等级
-- `getHeroEquipment(address nftContract, uint256 tokenId)` - 获取英雄装备信息
-- `getRegisteredNFTs()` - 获取所有已注册的 NFT 合约地址
-- `isRegistered(address)` - 检查 NFT 合约是否已注册
-- `officialNFT()` - 获取官方 NFT 合约地址
-- `owner()` - 获取合约所有者地址
-- `VERSION()` - 获取合约版本
+        const resources = await aptos.getAccountResources({
+            accountAddress: account,
+        });
 
-### 写入函数
-- `createHero(address nftContract, uint256 tokenId, string name, Race race, Gender gender)` - 创建新英雄
-- `updateSkill(address nftContract, uint256 tokenId, Season season, uint8 skillIndex, uint8 level)` - 更新英雄技能
-- `updateEquipment(address nftContract, uint256 tokenId, uint8 slot, address equipContract, uint256 equipTokenId)` - 更新英雄装备
-- `addDailyPoints(address nftContract, uint256 tokenId, uint256 amount)` - 增加每日点数
-- `consumeEnergy(address nftContract, uint256 tokenId, uint256 amount)` - 消耗能量
-- `registerNFT(address nftContract, bool isOfficial)` - 注册 NFT 合约
-- `unregisterNFT(address nftContract)` - 注销 NFT 合约
-- `transferOwnership(address newOwner)` - 转移合约所有权
-- `renounceOwnership()` - 放弃合约所有权
+        const nftResource = resources?.find(r => 
+            r.type === `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::TokenStore`
+        );
 
-### 事件
-- `HeroCreated(address indexed nftContract, uint256 indexed tokenId, string name)`
-- `HeroPointsUpdated(address indexed nftContract, uint256 indexed tokenId, uint256 newPoints)`
-- `HeroEnergyUpdated(address indexed nftContract, uint256 indexed tokenId, uint256 newEnergy)`
-- `HeroEquipmentUpdated(address indexed nftContract, uint256 indexed tokenId, uint8 slot, address equipContract, uint256 equipTokenId)`
-- `NFTRegistered(address indexed nftContract, bool isOfficial)`
-- `NFTUnregistered(address indexed nftContract)`
-- `OwnershipTransferred(address indexed previousOwner, address indexed newOwner)`
+        const nftList = document.getElementById('nftList');
+        nftList.innerHTML = '';
 
-metadata
-### 读取函数
-- `getSkill(uint8 seasonId, uint8 skillId, uint8 level)` - 获取技能信息
-- `getRace(uint8 raceId)` - 获取种族属性
-- `getClass(uint8 classId)` - 获取职业属性
-- `owner()` - 获取合约所有者
-- `VERSION()` - 获取合约版本
+        if (nftResource?.data?.tokens) {
+            for (const [tokenId, amount] of Object.entries(nftResource.data.tokens)) {
+                const nftElement = document.createElement('div');
+                nftElement.className = 'bg-white p-4 rounded shadow';
+                nftElement.innerHTML = `
+                    <h3 class="text-lg font-bold">Hero NFT</h3>
+                    <p>Token ID: ${tokenId}</p>
+                    <p>Amount: ${amount}</p>
+                    <button onclick="burnNFT('${tokenId}')" class="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                        Burn NFT
+                    </button>
+                `;
+                nftList.appendChild(nftElement);
+            }
+        }
 
-### 写入函数
-- `setSkill(uint8 seasonId, uint8 skillId, uint8 level, string name, uint16 points, bool isActive)` - 设置技能
-- `setRace(uint8 raceId, uint16[4] baseAttributes, string description, bool isActive)` - 设置种族
-- `setClass(uint8 classId, uint16[4] baseAttributes, uint16[4] growthRates, string description, bool isActive)` - 设置职业
-- `transferOwnership(address newOwner)` - 转移合约所有权
-- `renounceOwnership()` - 放弃合约所有权
+        if (nftList.children.length === 0) {
+            nftList.innerHTML = '<p class="text-gray-500">No NFTs found</p>';
+        }
+    } catch (error) {
+        showMessage(`Error loading NFTs: ${error.message}`);
+    }
+}
 
-### 事件
-- `SkillUpdated(uint8 seasonId, uint8 skillId, uint8 level, string name, uint16 points)`
-- `RaceUpdated(uint8 raceId, uint16[4] baseAttributes, string description)`
-- `ClassUpdated(uint8 classId, uint16[4] baseAttributes, uint16[4] growthRates, string description)`
-- `OwnershipTransferred(address indexed previousOwner, address indexed newOwner)`
+// Burn NFT
+async function burnNFT(tokenId) {
+    try {
+        const payload = {
+            type: "entry_function_payload",
+            function: "hero_nft::hero_nft::burn",
+            type_arguments: [],
+            arguments: [tokenId]
+        };
 
-NFT
-### 读取函数
-- `balanceOf(address owner)` - 获取账户拥有的 NFT 数量
-- `ownerOf(uint256 tokenId)` - 获取 NFT 所有者
-- `name()` - 获取 NFT 名称
-- `symbol()` - 获取 NFT 符号
-- `tokenURI(uint256 tokenId)` - 获取 NFT 元数据 URI
-- `getApproved(uint256 tokenId)` - 获取 NFT 授权地址
-- `isApprovedForAll(address owner, address operator)` - 检查是否全部授权
-- `isApprovedForToken(address operator, uint256 tokenId)` - 检查特定 NFT 是否授权
-- `exists(uint256 tokenId)` - 检查 NFT 是否存在
-- `getAcceptedTokens(uint256 tokenId)` - 获取接受的支付代币
-- `getPriceConfig(uint256 tokenId)` - 获取价格配置
-- `getDefaultPaymentToken()` - 获取默认支付代币
-- `getDefaultNativePrice()` - 获取默认原生代币价格
-- `getDefaultTokenPrice()` - 获取默认代币价格
-- `owner()` - 获取合约所有者
-- `VERSION()` - 获取合约版本
+        const response = await window.aptos.signAndSubmitTransaction(payload);
+        await aptos.waitForTransaction({ hash: response.hash });
+        showMessage('NFT burned successfully');
+        loadNFTs();
+    } catch (error) {
+        showMessage(`Error burning NFT: ${error.message}`);
+    }
+}
 
-### 写入函数
-- `mint(address to, uint256 tokenId)` - 使用原生代币铸造 NFT
-- `mintWithToken(address to, uint256 tokenId, address paymentToken)` - 使用代币铸造 NFT
-- `mintBatch(address to, uint256[] tokenIds)` - 批量使用原生代币铸造 NFT
-- `mintBatchWithToken(address to, uint256[] tokenIds, address paymentToken)` - 批量使用代币铸造 NFT
-- `burn(uint256 tokenId)` - 销毁 NFT
-- `approve(address to, uint256 tokenId)` - 授权 NFT
-- `setApprovalForAll(address operator, bool approved)` - 设置全部授权
-- `transferFrom(address from, address to, uint256 tokenId)` - 转移 NFT
-- `safeTransferFrom(address from, address to, uint256 tokenId)` - 安全转移 NFT
-- `setPriceConfig(uint256 tokenId, address tokenAddress, uint256 price)` - 设置价格配置
-- `setDefaultPaymentToken(address token)` - 设置默认支付代币
-- `setDefaultPrices(uint256 nativePrice, uint256 tokenPrice)` - 设置默认价格
-- `transferOwnership(address newOwner)` - 转移合约所有权
-- `renounceOwnership()` - 放弃合约所有权
+// Get default prices
+async function getDefaultPrices() {
+    try {
+        const tokenId = Number.parseInt(document.getElementById('queryTokenId').value);
+        
+        const resource = await aptos.getAccountResource({
+            accountAddress: envConfig.MOVE_HERO_NFT_ADDRESS,
+            resourceType: `${envConfig.MOVE_HERO_NFT_ADDRESS}::hero_nft::TokenPriceConfig`
+        });
 
-### 事件
-- `Transfer(address indexed from, address indexed to, uint256 indexed tokenId)`
-- `Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)`
-- `ApprovalForAll(address indexed owner, address indexed operator, bool approved)`
-- `NFTMinted(address indexed to, uint256 indexed tokenId, address paymentToken, uint256 price, uint256 timestamp)`
-- `PriceConfigUpdated(uint256 indexed tokenId, address tokenAddress, uint256 price, uint256 timestamp)`
-- `OwnershipTransferred(address indexed previousOwner, address indexed newOwner)`
-用户可以通过这个测试页面完整地测试所有合约功能，包括：
-NFT 的铸造、批量铸造和销毁
-2. 价格配置的设置和查询
-英雄的创建和属性管理
-英雄技能的更新和查询
-装备的更新和查询
-每日点数和能量的管理
-NFT 合约的注册和查询
-代币的授权和查询
-默认支付设置的查询
+        if (resource && resource.data) {
+            const priceConfig = resource.data;
+            document.getElementById('currentNativePrice').textContent = `Default Native Price: ${priceConfig.native_price} APT`;
+            document.getElementById('currentTokenPrice').textContent = `Default Token Price: ${priceConfig.token_price}`;
+        } else {
+            showMessage('Price configuration not found');
+        }
+    } catch (error) {
+        showMessage(`Error getting default prices: ${error.message}`);
+    }
+}
 
-#### deploy log
-./deploy-all.sh
-[⠒] Compiling...
-No files changed, compilation skipped
-Traces:
-  [4995880] DeployAndInitScript::run()
-    ├─ [0] VM::envBytes32("HERO_PRIVATE_KEY") [staticcall]
-    │   └─ ← [Return] <env var value>
-    ├─ [0] VM::addr(<pk>) [staticcall]
-    │   └─ ← [Return] 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
-    ├─ [0] VM::startBroadcast(<pk>)
-    │   └─ ← [Return]
-    ├─ [1754954] → new HeroNFT@0x776f3f1137bc5f7363EE2c25116546661d2B8131
-    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
-    │   └─ ← [Return] 8178 bytes of code
-    ├─ [0] console::log("HeroNFT deployed to:", HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [1087396] → new HeroMetadata@0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
-    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
-    │   └─ ← [Return] 5313 bytes of code
-    ├─ [0] console::log("HeroMetadata deployed to:", HeroMetadata: [0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [1207516] → new HeroV5@0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
-    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
-    │   └─ ← [Return] 5913 bytes of code
-    ├─ [0] console::log("HeroV5 deployed to:", HeroV5: [0x5B34103d15C848b9a58e311f1bC6D913395AcB1C]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [49499] HeroMetadata::setSkill(0, 0, 1, "Eagle Eye", 2, true)
-    │   ├─ emit SkillUpdated(seasonId: 0, skillId: 0, level: 1, name: "Eagle Eye", points: 2)
-    │   └─ ← [Stop]
-    ├─ [49499] HeroMetadata::setSkill(0, 1, 1, "Spider Sense", 1, true)
-    │   ├─ emit SkillUpdated(seasonId: 0, skillId: 1, level: 1, name: "Spider Sense", points: 1)
-    │   └─ ← [Stop]
-    ├─ [49499] HeroMetadata::setSkill(0, 2, 1, "Holy Counter", 1, true)
-    │   ├─ emit SkillUpdated(seasonId: 0, skillId: 2, level: 1, name: "Holy Counter", points: 1)
-    │   └─ ← [Stop]
-    ├─ [118632] HeroMetadata::setRace(0, [10, 10, 10, 10], "Human race with balanced attributes", true)
-    │   ├─ emit RaceUpdated(raceId: 0, baseAttributes: [10, 10, 10, 10], description: "Human race with balanced attributes")
-    │   └─ ← [Stop]
-    ├─ [144202] HeroMetadata::setClass(0, [12, 15, 20, 18], [2, 3, 4, 3], "Warrior class focused on strength", true)
-    │   ├─ emit ClassUpdated(classId: 0, baseAttributes: [12, 15, 20, 18], growthRates: [2, 3, 4, 3], description: "Warrior class focused on strength")
-    │   └─ ← [Stop]
-    ├─ [91119] HeroV5::registerNFT(HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], true)
-    │   ├─ emit NFTRegistered(nftContract: HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], isOfficial: true)
-    │   └─ ← [Return]
-    ├─ [0] console::log("Registered NFT contract in Hero system") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [72796] HeroNFT::mint{value: 10000000000000000}(0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, 1)
-    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1)
-    │   ├─ emit NFTMinted(to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1, paymentToken: 0x0000000000000000000000000000000000000000, price: 10000000000000000 [1e16], timestamp: 1739327542 [1.739e9])
-    │   └─ ← [Return]
-    ├─ [0] console::log("Successfully minted first NFT to deployer") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [163703] HeroV5::createHero(HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], 1, "Genesis Hero", 0, 0)
-    │   ├─ emit HeroCreated(nftContract: HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131], tokenId: 1, name: "Genesis Hero")
-    │   └─ ← [Return]
-    ├─ [0] console::log("Successfully created first hero record") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] VM::stopBroadcast()
-    │   └─ ← [Return]
-    ├─ [0] console::log("\n=== Hero System Deployment Information ===") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("Deployer Address: %s", 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("\nContract Addresses:") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("HeroNFT: %s", HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("HeroMetadata: %s", HeroMetadata: [0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("HeroV5: %s", HeroV5: [0x5B34103d15C848b9a58e311f1bC6D913395AcB1C]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("\nInitial Setup:") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("- Deployed core contracts") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("- Initialized metadata (skills, race, class)") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("- Registered NFT contract") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("- Minted first NFT (ID: 1)") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("- Created first hero record") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("\nFor environment file (.env):") [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("VITE_HERO_NFT_ADDRESS=%s", HeroNFT: [0x776f3f1137bc5f7363EE2c25116546661d2B8131]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("VITE_HERO_METADATA_ADDRESS=%s", HeroMetadata: [0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [0] console::log("VITE_HERO_ADDRESS=%s", HeroV5: [0x5B34103d15C848b9a58e311f1bC6D913395AcB1C]) [staticcall]
-    │   └─ ← [Stop]
-    └─ ← [Return]
+// Query NFT price
+async function queryNFTPrice() {
+    try {
+        const contractAddress = document.getElementById('contractAddress').value;
+        const tokenId = Number.parseInt(document.getElementById('tokenId').value);
+        
+        if (!contractAddress || isNaN(tokenId)) {
+            throw new Error('Please enter valid contract address and token ID');
+        }
 
+        const resource = await aptos.getAccountResource({
+            accountAddress: contractAddress,
+            resourceType: `${contractAddress}::hero_nft::CollectionData`
+        });
 
-Script ran successfully.
-
-== Logs ==
-  HeroNFT deployed to: 0x776f3f1137bc5f7363EE2c25116546661d2B8131
-  HeroMetadata deployed to: 0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
-  HeroV5 deployed to: 0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
-  Registered NFT contract in Hero system
-  Successfully minted first NFT to deployer
-  Successfully created first hero record
-
-=== Hero System Deployment Information ===
-  Deployer Address: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
-
-Contract Addresses:
-  HeroNFT: 0x776f3f1137bc5f7363EE2c25116546661d2B8131
-  HeroMetadata: 0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
-  HeroV5: 0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
-
-Initial Setup:
-  - Deployed core contracts
-  - Initialized metadata (skills, race, class)
-  - Registered NFT contract
-  - Minted first NFT (ID: 1)
-  - Created first hero record
-
-For environment file (.env):
-  VITE_HERO_NFT_ADDRESS=0x776f3f1137bc5f7363EE2c25116546661d2B8131
-  VITE_HERO_METADATA_ADDRESS=0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22
-  VITE_HERO_ADDRESS=0x5B34103d15C848b9a58e311f1bC6D913395AcB1C
-
-## Setting up 1 EVM.
-==========================
-Simulated On-chain Traces:
-
+        if (resource?.data) {
+            const priceInfo = document.getElementById('priceInfo');
+            priceInfo.innerHTML = `
+                <p>Default Native Price: ${resource.data.default_native_price} APT</p>
+                <p>Default Token Price: ${resource.data.default_token_price} ARC</p>
+                <p>Default Token Type: ${resource.data.default_token_type}</p>
+            `;
+        } else {
+            showMessage('Price configuration not found');
+        }
+    } catch (error) {
+        showMessage(`Error querying price: ${error.message}`);
+    }
+} 
   [1754954] → new HeroNFT@0x776f3f1137bc5f7363EE2c25116546661d2B8131
     ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
     └─ ← [Return] 8178 bytes of code

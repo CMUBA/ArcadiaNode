@@ -14,7 +14,7 @@ const contractAddresses = window.__CONTRACT_ADDRESSES__ || {
 console.log('Contract addresses from define:', contractAddresses);
 
 // 基础配置
-export const config = {
+const config = {
     // API URLs
     SERVER_API_URL: import.meta.env.VITE_SERVER_API_URL || 'http://localhost:3017/api/v1',
     SERVERX_API_URL: import.meta.env.VITE_SERVERX_API_URL || 'http://localhost:3018/api/v1',
@@ -42,3 +42,7 @@ export const config = {
             heroMetadata: import.meta.env.VITE_HERO_METADATA_CONTRACT_ADDRESS        }
     }
 };
+
+export default config;
+
+console.log('Config:', config);
