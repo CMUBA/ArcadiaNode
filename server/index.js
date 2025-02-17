@@ -4,10 +4,13 @@ import heroApi from './chain/hero-api.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { nodeRouter } from './node/index.js';
+import dotenv from 'dotenv'; // 如果使用 ES 模块
+dotenv.config(); // 加载 .env 文件中的变量
 
 // Server configuration
 const config = {
     port: process.env.SERVER_PORT || 3017,
+    SERVER_API_URL: process.env.SERVER_API_URL,
     ethereum: {
         contracts: {
             hero: process.env.HERO_CONTRACT_ADDRESS,
@@ -16,7 +19,7 @@ const config = {
         }
     }
 };
-
+  console.log(`Register URL: ${config.SERVER_API_URL}/node/register`);
 // 执行自检
 function checkServices() {
     console.log('\n🔍 Arcadia Node Service Self-Check');
@@ -28,6 +31,7 @@ function checkServices() {
         'SERVER_PORT': process.env.SERVER_PORT || '3017 (default)',
         'CLIENT_PORT': process.env.CLIENT_PORT || '3008 (default)',
         'ETHEREUM_RPC_URL': process.env.ETHEREUM_RPC_URL ? 'Set' : 'Not set',
+        'OPTIMISM_TESTNET_RPC_URL': process.env.OPTIMISM_TESTNET_RPC_URL ? 'Set' : 'Not set',
         'HERO_CONTRACT_ADDRESS': process.env.HERO_CONTRACT_ADDRESS ? 'Set' : 'Not set',
         'HERO_NFT_CONTRACT_ADDRESS': process.env.HERO_NFT_CONTRACT_ADDRESS ? 'Set' : 'Not set',
         'HERO_METADATA_CONTRACT_ADDRESS': process.env.HERO_METADATA_CONTRACT_ADDRESS ? 'Set' : 'Not set'

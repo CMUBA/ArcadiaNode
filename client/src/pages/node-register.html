@@ -217,21 +217,21 @@
 
                 // 发送注册请求
                 const response = await api.node.register(requestData);
-                const responseData = await response.json();
+                console.log('Response register:', response);
 
                 // 显示响应信息
-                document.getElementById('responseInfo').textContent = JSON.stringify(responseData, null, 2);
+                document.getElementById('responseInfo').textContent = JSON.stringify(response, null, 2);
 
                 // 更新注册结果显示
                 const registerResult = document.getElementById('registerResult');
-                if (response.ok && responseData.code === 0) {
-                    const txHash = responseData.data.tx_hash; // 从响应数据中获取交易哈希
+                if (response.code === 0) {
+                    const txHash = response.data.tx_hash;
                     registerResult.innerHTML = `
                         <div class="success-message">
                             注册成功！<br>
                             节点地址：${nodeAddress}<br>
-                            节点 ID: ${responseData.data.nodeId}<br>
-                            注册合约：${responseData.data.registry_address}<br>
+                            节点 ID: ${response.data.nodeId}<br>
+                            注册合约：${response.data.registry_address}<br>
                             交易哈希：${txHash}<br>
                             <a href="https://sepolia-optimism.etherscan.io/tx/${txHash}" target="_blank">在区块浏览器中查看</a>
                         </div>
@@ -246,7 +246,7 @@
                 } else {
                     registerResult.innerHTML = `
                         <div class="error-message">
-                            注册失败：${responseData.message || '未知错误'}
+                            注册失败：${response.message || '未知错误'}
                         </div>
                     `;
                 }
@@ -520,6 +520,37 @@
             }
         };
 
+        // 添加查询注册函数
+        const queryRegister = async () => {
+            try {
+                const nodeAddress = document.getElementById('newNodeAddress').value;
+                if (!nodeAddress) {
+                    throw new Error('请先输入节点地址');
+                }
+
+                // 显示查询信息
+                document.getElementById('queryResult').textContent = '正在查询...';
+
+                // 发送查询请求
+                const response = await api.node.queryNode(nodeAddress);
+                const data = await response.json();
+
+                // 更新查询结果显示
+                document.getElementById('queryResult').innerHTML = `
+                    <div class="success-message">
+                        查询结果：${data.isRegistered ? '已注册' : '未注册'}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('查询失败：', error);
+                document.getElementById('queryResult').innerHTML = `
+                    <div class="error-message">
+                        查询失败：${error.message}
+                    </div>
+                `;
+            }
+        };
+
         // 初始化页面
         window.addEventListener('load', async () => {
             try {
@@ -566,6 +597,7 @@
         window.transferETH = transferETH;
         window.approveTokens = approveTokens;
         window.stakeTokens = stakeTokens;
+        window.queryRegister = queryRegister;
     </script>
 </head>
 <body>
@@ -636,20 +668,24 @@
             <table class="action-table">
                 <tr>
                     <td>
-                        <button class="btn" onclick="getChallenge()">1. 获取 Challenge</button>
+                        <button class="btn" onclick="getChallenge()">1. Get Challenge</button>
                         <div id="challengeResult" class="result"></div>
                     </td>
                     <td>
-                        <button class="btn" onclick="signChallenge()">2. 签名 Challenge</button>
+                        <button class="btn" onclick="signChallenge()">2. Sign Challenge</button>
                         <div id="signResult" class="result"></div>
                     </td>
                     <td>
-                        <button class="btn" onclick="registerNode()">3. 注册节点</button>
+                        <button class="btn" onclick="registerNode()">3. Register Node</button>
                         <div id="registerResult" class="result"></div>
+                    </td>
+                    <td>
+                        <button class="btn" onclick="queryRegister()">4. Query Node</button>
+                        <div id="queryResult" class="result"></div>
                     </td>
                 </tr>
                 <tr>
-                    <td colspan="3">
+                    <td colspan="4">
                         <div class="form-group">
                             <label for="challenge">Challenge：</label>
                             <input type="text" id="challenge" class="form-control" readonly>

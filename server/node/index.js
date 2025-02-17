@@ -355,9 +355,11 @@ router.post('/register', async (req, res) => {
             // 等待交易确认
             console.log('Waiting for transaction confirmation...');
             const receipt = await tx.wait();
+            
             console.log('Transaction confirmed:', receipt);
 
             // 返回成功和交易哈希
+            res.setHeader('Content-Type', 'application/json');
             return res.json({
                 code: 0,
                 message: 'success',
@@ -411,6 +413,61 @@ router.post('/auth', (req, res) => {
     const { timestamp } = req.body;
     // Logic for node authentication
     res.json({ message: 'Node authenticated successfully' });
+});
+
+// 查询节点是否注册
+router.post('/query', async (req, res) => {
+    try {
+        const { address } = req.body;
+
+        // 验证必要参数
+        if (!address) {
+            return res.status(400).json({
+                code: 2001,
+                message: 'Missing required parameter: address'
+            });
+        }
+
+        // 获取环境变量
+        const rpcUrl = process.env.OPTIMISM_TESTNET_RPC_URL;
+        const registryAddress = process.env.NODE_REGISTRY_ADDRESS;
+
+        // 验证必要的配置
+        if (!rpcUrl) {
+            throw new Error('OPTIMISM_TESTNET_RPC_URL not configured');
+        }
+        if (!registryAddress) {
+            throw new Error('NODE_REGISTRY_ADDRESS not configured');
+        }
+
+        // 创建 provider 和合约实例
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const abi = [
+            "function nodes(address) view returns (string memory ipOrDomain, string memory apiIndexes, uint256 registeredAt)"
+        ];
+        const contract = new ethers.Contract(registryAddress, abi, provider);
+
+        // 查询节点信息
+        const nodeInfo = await contract.nodes(address);
+
+        // 根据注册时间判断是否已注册（如果未注册，registeredAt 应该为 0）
+        const isRegistered = nodeInfo[2] > 0;
+
+        return res.json({
+            code: 0,
+            message: 'success',
+            data: {
+                isRegistered
+            }
+        });
+    } catch (error) {
+        console.error('Query node failed:', error);
+        return res.status(500).json({
+            code: 1003,
+            message: 'Query failed',
+            details: error.message
+        });
+    }
 });
 
 export { router as nodeRouter };
