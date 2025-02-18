@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero API Test</title>
+    <script type="module" src="/js/api-test.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Message Display -->
+        <div id="message" class="fixed top-4 right-4 z-50 hidden bg-blue-500 text-white px-6 py-3 rounded shadow-lg"></div>
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow">
+            <div class="flex items-center space-x-6">
+                <h1 class="text-2xl font-bold text-gray-800">Hero API Test</h1>
+                <nav class="flex space-x-6">
+                    <a href="../index.html" class="text-blue-500 hover:text-blue-600 font-medium">Home</a>
+                    <a href="hero-test.html" class="text-blue-500 hover:text-blue-600 font-medium">Hero System</a>
+                    <a href="hero-metadata.html" class="text-blue-500 hover:text-blue-600 font-medium">Metadata Management</a>
+                    <a href="hero-management.html" class="text-blue-500 hover:text-blue-600 font-medium">Hero Management</a>
+                    <a href="nft-contract.html" class="text-blue-500 hover:text-blue-600 font-medium">NFT Contract</a>
+                </nav>
+            </div>
+            <!-- Wallet Connection -->
+            <div class="flex items-center space-x-4">
+                <button id="connectWallet" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm font-medium">Connect Wallet</button>
+                <div id="connectedWallet" class="hidden">
+                    <p class="text-sm">Address: <span id="walletAddress" class="font-mono text-xs"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 gap-6">
+            <!-- Create Hero API -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Create Hero API</h2>
+                <div class="space-y-4">
+                    <div class="bg-gray-100 p-4 rounded mb-4">
+                        <p class="text-sm text-gray-600">POST /api/v1/hero/create</p>
+                        <p class="text-sm text-gray-600 mt-2">Required Headers:</p>
+                        <ul class="list-disc list-inside text-sm text-gray-600 ml-4">
+                            <li>signature: Ethereum signature of the message</li>
+                            <li>message: Message that was signed</li>
+                            <li>address: Ethereum address of the signer</li>
+                        </ul>
+                        <p class="text-sm text-gray-600 mt-2">Request Body:</p>
+                        <pre class="text-sm mt-1">
+{
+    "nftContract": "0x...",
+    "tokenId": "1",
+    "name": "Hero Name",
+    "race": 1,
+    "gender": 1
+}</pre>
+                    </div>
+                    <div class="space-y-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">NFT Contract:</label>
+                            <input type="text" id="createNftContract" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Token ID:</label>
+                            <input type="number" id="createTokenId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Hero Name:</label>
+                            <input type="text" id="createHeroName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Race:</label>
+                            <select id="createHeroRace" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="1">Human</option>
+                                <option value="2">Elf</option>
+                                <option value="3">Dwarf</option>
+                                <option value="4">Orc</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Gender:</label>
+                            <select id="createHeroGender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="1">Male</option>
+                                <option value="2">Female</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="window.testCreateHero()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet w-full font-medium" disabled>Test Create Hero</button>
+                    <div id="createHeroResponse" class="mt-4 bg-gray-100 p-4 rounded hidden">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">Response:</h3>
+                        <pre class="text-sm"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Load Hero API -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Load Hero API</h2>
+                <div class="space-y-4">
+                    <div class="bg-gray-100 p-4 rounded mb-4">
+                        <p class="text-sm text-gray-600">GET /api/v1/hero/{nftContract}/{tokenId}</p>
+                        <p class="text-sm text-gray-600 mt-2">Required Headers:</p>
+                        <ul class="list-disc list-inside text-sm text-gray-600 ml-4">
+                            <li>signature: Ethereum signature of the message</li>
+                            <li>message: Message that was signed</li>
+                            <li>address: Ethereum address of the signer</li>
+                        </ul>
+                    </div>
+                    <div class="space-y-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">NFT Contract:</label>
+                            <input type="text" id="loadNftContract" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Token ID:</label>
+                            <input type="number" id="loadTokenId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <button onclick="window.testLoadHero()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet w-full font-medium" disabled>Test Load Hero</button>
+                    <div id="loadHeroResponse" class="mt-4 bg-gray-100 p-4 rounded hidden">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">Response:</h3>
+                        <pre class="text-sm"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Hero API -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Save Hero API</h2>
+                <div class="space-y-4">
+                    <div class="bg-gray-100 p-4 rounded mb-4">
+                        <p class="text-sm text-gray-600">PUT /api/v1/hero/save</p>
+                        <p class="text-sm text-gray-600 mt-2">Required Headers:</p>
+                        <ul class="list-disc list-inside text-sm text-gray-600 ml-4">
+                            <li>signature: Ethereum signature of the message</li>
+                            <li>message: Message that was signed</li>
+                            <li>address: Ethereum address of the signer</li>
+                        </ul>
+                        <p class="text-sm text-gray-600 mt-2">Request Body:</p>
+                        <pre class="text-sm mt-1">
+{
+    "nftContract": "0x...",
+    "tokenId": "1",
+    "heroData": {
+        "name": "Updated Hero Name",
+        "race": 1,
+        "gender": 1,
+        "level": 1
+    }
+}</pre>
+                    </div>
+                    <div class="space-y-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">NFT Contract:</label>
+                            <input type="text" id="saveNftContract" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Token ID:</label>
+                            <input type="number" id="saveTokenId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Hero Name:</label>
+                            <input type="text" id="saveHeroName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Race:</label>
+                            <select id="saveHeroRace" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="1">Human</option>
+                                <option value="2">Elf</option>
+                                <option value="3">Dwarf</option>
+                                <option value="4">Orc</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Gender:</label>
+                            <select id="saveHeroGender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="1">Male</option>
+                                <option value="2">Female</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Level:</label>
+                            <input type="number" id="saveHeroLevel" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" value="1">
+                        </div>
+                    </div>
+                    <button onclick="window.testSaveHero()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 requires-wallet w-full font-medium" disabled>Test Save Hero</button>
+                    <div id="saveHeroResponse" class="mt-4 bg-gray-100 p-4 rounded hidden">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">Response:</h3>
+                        <pre class="text-sm"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 class="text-2xl font-semibold mb-4">Event Log</h2>
+            <pre id="eventLog" class="bg-gray-100 p-4 rounded h-48 overflow-y-auto font-mono text-sm"></pre>
+        </div>
+    </div>
+</body>
+</html> 

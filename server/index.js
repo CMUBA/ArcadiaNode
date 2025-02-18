@@ -4,6 +4,7 @@ import heroApi from './chain/hero-api.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { nodeRouter } from './node/index.js';
+import { heroRouter } from './hero/index.js';
 import dotenv from 'dotenv'; // 如果使用 ES 模块
 dotenv.config(); // 加载 .env 文件中的变量
 
@@ -46,7 +47,8 @@ function checkServices() {
     const endpoints = [
         { method: 'GET', path: '/api/health', desc: 'Service health check' },
         { method: 'GET', path: '/api/hero', desc: 'Hero API' },
-        { method: 'GET', path: '/api/v1/node', desc: 'Node API' }
+        { method: 'GET', path: '/api/v1/node', desc: 'Node API' },
+        { method: 'GET', path: '/api/v1/hero', desc: 'Hero API' }
     ];
     
     for (const ep of endpoints) {
@@ -93,6 +95,7 @@ app.use('/api/hero', heroApi);
 
 // Node API
 app.use('/api/v1/node', nodeRouter);
+app.use('/api/v1/hero', heroRouter);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {

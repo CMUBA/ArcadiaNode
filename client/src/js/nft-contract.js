@@ -577,11 +577,20 @@ async function checkNFTPrice() {
             throw new Error('Please enter a valid token ID');
         }
 
-        const ethPrice = await heroNFTContract.getDefaultNativePrice();
-        const tokenPrice = await heroNFTContract.getDefaultTokenPrice();
+        // Get price config for specific tokenId
+        const priceConfig = await heroNFTContract.getPriceConfig(tokenId);
         
-        getElement('ethPrice').textContent = `${ethers.formatEther(ethPrice)} ETH`;
-        getElement('tokenPrice').textContent = `${ethers.formatUnits(tokenPrice, 18)} Tokens`;
+        if (priceConfig?.isActive) {
+            getElement('ethPrice').textContent = `${ethers.formatEther(priceConfig?.price)} ETH`;
+            getElement('tokenPrice').textContent = `${ethers.formatUnits(priceConfig?.price, 18)} Tokens`;
+        } else {
+            // Fallback to default prices if no specific price config
+            const ethPrice = await heroNFTContract.getDefaultNativePrice();
+            const tokenPrice = await heroNFTContract.getDefaultTokenPrice();
+            
+            getElement('ethPrice').textContent = `${ethers.formatEther(ethPrice)} ETH`;
+            getElement('tokenPrice').textContent = `${ethers.formatUnits(tokenPrice, 18)} Tokens`;
+        }
 
         // Get balances
         const ethBalance = await provider.getBalance(connectedAddress);
@@ -603,14 +612,19 @@ async function checkNFTPrice() {
 
 async function mintWithEth() {
     try {
-        const tokenId = Number(getElement('mintTokenId').value);
-        if (!validateNumber(tokenId)) {
+        const tokenId = getElement('mintTokenId').value;
+        if (!tokenId || !validateNumber(tokenId)) {
             throw new Error('Please enter a valid token ID');
         }
 
-        const price = await heroNFTContract.getDefaultNativePrice();
-        const tx = await heroNFTContract.mint(tokenId, { value: price });
+        // Get price for specific tokenId
+        const priceConfig = await heroNFTContract.getPriceConfig(tokenId);
+        const price = priceConfig?.isActive ? priceConfig.price : await heroNFTContract.getDefaultNativePrice();
+        
         showMessage('Minting NFT... Please wait for confirmation');
+        
+        // Pass both the recipient address and tokenId
+        const tx = await heroNFTContract.mint(connectedAddress, tokenId, { value: price });
         await tx.wait();
         showMessage('NFT minted successfully with ETH');
         await checkNFTPrice(); // Refresh balances
@@ -621,14 +635,23 @@ async function mintWithEth() {
 
 async function mintWithToken() {
     try {
-        const tokenId = Number(getElement('mintTokenId').value);
-        if (!validateNumber(tokenId)) {
+        const tokenId = getElement('mintTokenId').value;
+        if (!tokenId || !validateNumber(tokenId)) {
             throw new Error('Please enter a valid token ID');
         }
 
         const paymentToken = await heroNFTContract.getDefaultPaymentToken();
-        const tx = await heroNFTContract.mintWithToken(tokenId, paymentToken);
+        if (!validateAddress(paymentToken)) {
+            throw new Error('Invalid payment token address');
+        }
+
+        // Get price for specific tokenId
+        const priceConfig = await heroNFTContract.getPriceConfig(tokenId);
+        const price = priceConfig?.isActive ? priceConfig.price : await heroNFTContract.getDefaultTokenPrice();
+
         showMessage('Minting NFT... Please wait for confirmation');
+        // Pass recipient address, tokenId, and payment token
+        const tx = await heroNFTContract.mintWithToken(connectedAddress, tokenId, paymentToken);
         await tx.wait();
         showMessage('NFT minted successfully with token');
         await checkNFTPrice(); // Refresh balances
@@ -682,10 +705,33 @@ async function batchMintWithToken() {
     }
 }
 
+// Add event listener for page load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Disable wallet-required buttons initially
+        const walletButtons = document.querySelectorAll('.requires-wallet');
+        for (const button of walletButtons) {
+            button.disabled = true;
+        }
+
+        if (window.ethereum?.selectedAddress) {
+            await connectWallet();
+        }
+
+        // Initialize contract info
+        await updateContractInfo();
+    } catch (error) {
+        console.error('Error during page initialization:', error);
+        showError(error);
+    }
+});
+
 // Export functions for use in HTML
 window.connectWallet = connectWallet;
-window.mintNFT = mintNFT;
-window.batchMintNFT = batchMintNFT;
+window.mintWithEth = mintWithEth;
+window.mintWithToken = mintWithToken;
+window.batchMintWithEth = batchMintWithEth;
+window.batchMintWithToken = batchMintWithToken;
 window.burnNFT = burnNFT;
 window.setPriceConfig = setPriceConfig;
 window.getPriceConfig = getPriceConfig;
@@ -698,10 +744,6 @@ window.getDefaultTokenPrice = getDefaultTokenPrice;
 window.setDefaultNativePrice = setDefaultNativePrice;
 window.setDefaultTokenPrice = setDefaultTokenPrice;
 window.checkNFTPrice = checkNFTPrice;
-window.mintWithEth = mintWithEth;
-window.mintWithToken = mintWithToken;
-window.batchMintWithEth = batchMintWithEth;
-window.batchMintWithToken = batchMintWithToken;
 
 // Export additional functions to window object
 Object.assign(window, {
@@ -714,17 +756,4 @@ Object.assign(window, {
     tokenURI,
     isApprovedForAll,
     getApproved
-});
-
-// Add event listener for page load
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        if (window.ethereum?.selectedAddress) {
-            await connectWallet();
-        }
-        await updateContractInfo();
-    } catch (error) {
-        console.error('Error during page initialization:', error);
-        showError(error);
-    }
 }); 
