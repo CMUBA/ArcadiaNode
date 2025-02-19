@@ -99,6 +99,7 @@ async function connectWallet() {
         }
 
         showMessage('Wallet connected successfully');
+        updateButtonStates();
         return true;
     } catch (error) {
         showError(error);
@@ -109,8 +110,13 @@ async function connectWallet() {
 // API test functions
 async function testCreateHero() {
     try {
-        if (!signer) {
-            throw new Error('Please connect your wallet first');
+        if (!provider || !signer) {
+            showMessage('Please connect your wallet first', 5000);
+            getElement('connectWallet').classList.add('animate-pulse');
+            setTimeout(() => {
+                getElement('connectWallet').classList.remove('animate-pulse');
+            }, 2000);
+            return;
         }
 
         const nftContract = getElement('createNftContract').value;
@@ -144,8 +150,13 @@ async function testCreateHero() {
 
 async function testLoadHero() {
     try {
-        if (!signer) {
-            throw new Error('Please connect your wallet first');
+        if (!provider || !signer) {
+            showMessage('Please connect your wallet first', 5000);
+            getElement('connectWallet').classList.add('animate-pulse');
+            setTimeout(() => {
+                getElement('connectWallet').classList.remove('animate-pulse');
+            }, 2000);
+            return;
         }
 
         const nftContract = getElement('loadNftContract').value;
@@ -168,8 +179,13 @@ async function testLoadHero() {
 
 async function testSaveHero() {
     try {
-        if (!signer) {
-            throw new Error('Please connect your wallet first');
+        if (!provider || !signer) {
+            showMessage('Please connect your wallet first', 5000);
+            getElement('connectWallet').classList.add('animate-pulse');
+            setTimeout(() => {
+                getElement('connectWallet').classList.remove('animate-pulse');
+            }, 2000);
+            return;
         }
 
         const nftContract = getElement('saveNftContract').value;
@@ -205,6 +221,23 @@ async function testSaveHero() {
     }
 }
 
+// Update button states based on wallet connection
+function updateButtonStates() {
+    const walletButtons = document.querySelectorAll('.requires-wallet');
+    for (const button of walletButtons) {
+        if (!signer) {
+            button.disabled = true;
+            button.title = 'Please connect your wallet first';
+            // Add visual indication
+            button.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            button.disabled = false;
+            button.title = '';
+            button.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+}
+
 // Initialize event handlers
 document.addEventListener('DOMContentLoaded', () => {
     // Attach wallet connection handler
@@ -213,15 +246,26 @@ document.addEventListener('DOMContentLoaded', () => {
         connectWalletBtn.addEventListener('click', connectWallet);
     }
 
-    // Disable wallet-required buttons initially
+    // Initialize wallet-required buttons
     const walletButtons = document.querySelectorAll('.requires-wallet');
+    
+    // Disable buttons initially
     for (const button of walletButtons) {
         button.disabled = true;
+        
+        // Add hover tooltips for disabled buttons
+        button.addEventListener('mouseover', () => {
+            if (button.disabled) {
+                showMessage('Please connect your wallet first', 2000);
+            }
+        });
     }
 
     if (window.ethereum?.selectedAddress) {
         connectWallet();
     }
+
+    updateButtonStates();
 });
 
 // Make functions available globally for onclick handlers

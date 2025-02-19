@@ -612,6 +612,11 @@ async function checkNFTPrice() {
 
 async function mintWithEth() {
     try {
+        if (!connectedAddress) {
+            showError('Please connect your wallet first');
+            return;
+        }
+
         const tokenId = getElement('mintTokenId').value;
         if (!tokenId || !validateNumber(tokenId)) {
             throw new Error('Please enter a valid token ID');
@@ -625,7 +630,22 @@ async function mintWithEth() {
         
         // Pass both the recipient address and tokenId
         const tx = await heroNFTContract.mint(connectedAddress, tokenId, { value: price });
-        await tx.wait();
+        const receipt = await tx.wait();
+        
+        // 更新显示
+        const resultDiv = document.createElement('div');
+        resultDiv.innerHTML = `
+            <div class="success-message">
+                NFT minted successfully!<br>
+                Transaction Hash: ${receipt.hash}<br>
+                <a href="https://sepolia-optimism.etherscan.io/tx/${receipt.hash}" target="_blank">View on Etherscan</a>
+            </div>
+        `;
+        getElement('mintResult').appendChild(resultDiv);
+        
+        // 更新 Event Log
+        logEvent(`NFT minted with ETH - TokenId: ${tokenId}, Hash: ${receipt.hash}`);
+        
         showMessage('NFT minted successfully with ETH');
         await checkNFTPrice(); // Refresh balances
     } catch (error) {
@@ -635,28 +655,62 @@ async function mintWithEth() {
 
 async function mintWithToken() {
     try {
-        const tokenId = getElement('mintTokenId').value;
-        if (!tokenId || !validateNumber(tokenId)) {
-            throw new Error('Please enter a valid token ID');
+        if (!connectedAddress) {
+            showError('Please connect your wallet first');
+            return;
         }
 
+        const tokenId = getElement('tokenId')?.value;
+        if (!tokenId || !validateNumber(tokenId)) {
+            showError('Please enter a valid token ID');
+            return;
+        }
+
+        // Get default payment token if not specified
         const paymentToken = await heroNFTContract.getDefaultPaymentToken();
         if (!validateAddress(paymentToken)) {
-            throw new Error('Invalid payment token address');
+            showError('Invalid payment token address');
+            return;
         }
 
-        // Get price for specific tokenId
+        // Get price config for specific tokenId
         const priceConfig = await heroNFTContract.getPriceConfig(tokenId);
         const price = priceConfig?.isActive ? priceConfig.price : await heroNFTContract.getDefaultTokenPrice();
 
+        // Check token approval
+        const tokenContract = new ethers.Contract(
+            paymentToken,
+            ['function allowance(address,address) view returns (uint256)', 'function approve(address,uint256)'],
+            signer
+        );
+
+        const allowance = await tokenContract.allowance(connectedAddress, nftContractAddress);
+        if (allowance < price) {
+            showMessage('Approving tokens... Please wait for confirmation');
+            const approveTx = await tokenContract.approve(nftContractAddress, price);
+            await approveTx.wait();
+            showMessage('Token approval successful');
+        }
+
         showMessage('Minting NFT... Please wait for confirmation');
-        // Pass recipient address, tokenId, and payment token
-        const tx = await heroNFTContract.mintWithToken(connectedAddress, tokenId, paymentToken);
-        await tx.wait();
-        showMessage('NFT minted successfully with token');
-        await checkNFTPrice(); // Refresh balances
+        const tx = await heroNFTContract.mintWithToken(
+            connectedAddress,
+            ethers.getBigInt(tokenId),
+            paymentToken
+        );
+
+        const receipt = await tx.wait();
+        
+        // Update event log
+        logEvent(`NFT minted successfully with token. Transaction hash: ${receipt.hash}`);
+        
+        showMessage('NFT minted successfully!');
+        
+        // Refresh contract info
+        await updateContractInfo();
     } catch (error) {
-        showError(error);
+        console.error('Mint with token error:', error);
+        showError(error.message || 'Failed to mint NFT with token');
     }
 }
 
@@ -685,6 +739,11 @@ async function batchMintWithEth() {
 
 async function batchMintWithToken() {
     try {
+        if (!connectedAddress) {
+            showError('Please connect your wallet first');
+            return;
+        }
+
         const tokenIds = getElement('batchTokenIds').value
             .split(',')
             .map(id => Number(id.trim()))

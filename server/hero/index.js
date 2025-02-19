@@ -42,13 +42,21 @@ router.post('/create', verifySignature, async (req, res) => {
             name,
             race,
             gender,
-            signedTx
+            transactionHash
         } = req.body;
 
         // Validate required parameters
-        if (!nftContract || !tokenId || !name || !race || !signedTx) {
+        if (!nftContract || !tokenId || !name || race === undefined || !transactionHash) {
             return res.status(400).json({
-                error: 'Missing required parameters'
+                error: 'Missing required parameters',
+                received: {
+                    nftContract,
+                    tokenId,
+                    name,
+                    race,
+                    gender,
+                    transactionHash
+                }
             });
         }
 
@@ -63,18 +71,19 @@ router.post('/create', verifySignature, async (req, res) => {
         // Initialize provider
         const provider = new ethers.JsonRpcProvider(rpcUrl);
 
-        // Send the signed transaction
-        const tx = await provider.broadcastTransaction(signedTx);
-        console.log('Create hero transaction sent:', tx.hash);
-        
-        const receipt = await tx.wait();
-        console.log('Create hero transaction confirmed:', receipt);
+        // 等待交易确认
+        const receipt = await provider.getTransactionReceipt(transactionHash);
+        if (!receipt) {
+            return res.status(400).json({
+                error: 'Transaction not confirmed yet'
+            });
+        }
 
         res.json({
             success: true,
             message: 'Hero created successfully',
             data: {
-                txHash: receipt.hash,
+                txHash: transactionHash,
                 nftContract,
                 tokenId,
                 name,
