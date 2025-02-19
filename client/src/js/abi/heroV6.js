@@ -1,4 +1,4 @@
-export const heroAbi = [
+export const heroV6Abi = [
     {
         "type": "constructor",
         "inputs": [],

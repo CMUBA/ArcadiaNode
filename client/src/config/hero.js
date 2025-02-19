@@ -8,9 +8,9 @@ export const heroConfig = {
         nodeUrl: 'https://sepolia.optimism.io',
         chainId: 11155420, // Optimism Sepolia testnet
         contracts: {
-            hero: '0x5B34103d15C848b9a58e311f1bC6D913395AcB1C',      // HeroV5
-            heroMetadata: '0xdB9E1B0Bb44cAA4b8B1073eAcfDd3FF1EA8d1C22', // HeroMetadata
-            heroNFT: '0x776f3f1137bc5f7363EE2c25116546661d2B8131',    // HeroNFT
+            hero: '0x4699c7C04332a49601459aB65Eb52f0549397ea8',      // HeroV6
+            heroMetadata: '0xa56b92ffBFbC2e4a9c51a151CA2b283953e764b5', // HeroMetadata
+            heroNFT: '0x145FAc26022318bC30808054b87f03327A9afCc9',    // HeroNFT
             paymentToken: '0x0000000000000000000000000000000000000000',  // ETH
             erc20Token: '0xBda48255DA1ed61a209641144Dd24696926aF3F0'     // ERC20 Token for payments
         },
