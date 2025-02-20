@@ -71,7 +71,7 @@ router.post('/create', verifySignature, async (req, res) => {
         // Initialize provider
         const provider = new ethers.JsonRpcProvider(rpcUrl);
 
-        // 等待交易确认
+        // Wait for transaction confirmation
         const receipt = await provider.getTransactionReceipt(transactionHash);
         if (!receipt) {
             return res.status(400).json({
@@ -79,18 +79,36 @@ router.post('/create', verifySignature, async (req, res) => {
             });
         }
 
-        res.json({
-            success: true,
-            message: 'Hero created successfully',
-            data: {
-                txHash: transactionHash,
-                nftContract,
-                tokenId,
-                name,
-                race,
-                gender
-            }
-        });
+        // Initialize contract
+        const abi = [
+            "function getHeroInfo(address nftContract, uint256 tokenId) view returns (string name, uint8 race, uint8 gender, uint256 level, uint256 energy, uint256 dailyPoints)"
+        ];
+        const contract = new ethers.Contract(heroContractAddress, abi, provider);
+
+        // Verify hero creation
+        try {
+            const heroInfo = await contract.getHeroInfo(nftContract, tokenId);
+            res.json({
+                success: true,
+                message: 'Hero created successfully',
+                data: {
+                    txHash: transactionHash,
+                    nftContract,
+                    tokenId,
+                    name: heroInfo[0],
+                    race: Number(heroInfo[1]),
+                    gender: Number(heroInfo[2]),
+                    level: Number(heroInfo[3]),
+                    energy: Number(heroInfo[4]),
+                    dailyPoints: Number(heroInfo[5])
+                }
+            });
+        } catch (error) {
+            res.status(500).json({
+                error: 'Failed to verify hero creation',
+                details: error.message
+            });
+        }
     } catch (error) {
         console.error('Create hero error:', error);
         res.status(500).json({
@@ -158,11 +176,11 @@ router.put('/save', verifySignature, async (req, res) => {
             nftContract,
             tokenId,
             heroData,
-            signedTx
+            transactionHash
         } = req.body;
 
         // Validate required parameters
-        if (!nftContract || !tokenId || !heroData || !signedTx) {
+        if (!nftContract || !tokenId || !heroData || !transactionHash) {
             return res.status(400).json({
                 error: 'Missing required parameters'
             });
@@ -179,23 +197,46 @@ router.put('/save', verifySignature, async (req, res) => {
         // Initialize provider
         const provider = new ethers.JsonRpcProvider(rpcUrl);
 
-        // Send the signed transaction
-        const tx = await provider.broadcastTransaction(signedTx);
-        console.log('Save hero transaction sent:', tx.hash);
-        
-        const receipt = await tx.wait();
-        console.log('Save hero transaction confirmed:', receipt);
+        // Wait for transaction confirmation
+        const receipt = await provider.getTransactionReceipt(transactionHash);
+        if (!receipt) {
+            return res.status(400).json({
+                error: 'Transaction not confirmed yet'
+            });
+        }
 
-        res.json({
-            success: true,
-            message: 'Hero saved successfully',
-            data: {
-                txHash: receipt.hash,
-                nftContract,
-                tokenId,
-                heroData
-            }
-        });
+        // Initialize contract
+        const abi = [
+            "function getHeroInfo(address nftContract, uint256 tokenId) view returns (string name, uint8 race, uint8 gender, uint256 level, uint256 energy, uint256 dailyPoints)"
+        ];
+        const contract = new ethers.Contract(heroContractAddress, abi, provider);
+
+        // Verify hero update
+        try {
+            const heroInfo = await contract.getHeroInfo(nftContract, tokenId);
+            res.json({
+                success: true,
+                message: 'Hero saved successfully',
+                data: {
+                    txHash: transactionHash,
+                    nftContract,
+                    tokenId,
+                    heroData: {
+                        name: heroInfo[0],
+                        race: Number(heroInfo[1]),
+                        gender: Number(heroInfo[2]),
+                        level: Number(heroInfo[3]),
+                        energy: Number(heroInfo[4]),
+                        dailyPoints: Number(heroInfo[5])
+                    }
+                }
+            });
+        } catch (error) {
+            res.status(500).json({
+                error: 'Failed to verify hero update',
+                details: error.message
+            });
+        }
     } catch (error) {
         console.error('Save hero error:', error);
         res.status(500).json({

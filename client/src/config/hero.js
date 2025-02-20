@@ -38,7 +38,8 @@ export const heroConfig = {
         classes: ['Warrior', 'Mage', 'Archer', 'Rogue', 'Priest'],
         seasons: ['Spring', 'Summer', 'Autumn', 'Winter'],
         maxSkillLevel: 10,
-        maxSkillId: 4
+        maxSkillId: 4,
+        SERVER_API_URL: 'http://localhost:3017/api/v1'
     },
     contractAddresses: {
         MOVE_HERO_NFT_ADDRESS: '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8',

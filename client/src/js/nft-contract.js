@@ -91,22 +91,44 @@ async function connectWallet() {
             throw new Error('MetaMask is not installed');
         }
 
-        // Request connection to Optimism Sepolia
-        await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xaa37dc' }],
-        });
-
-        const success = await initContract();
-        if (!success) {
-            throw new Error('Failed to initialize contract');
+        // Request account access
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (!accounts || accounts.length === 0) {
+            throw new Error('No accounts found');
         }
 
-        connectedAddress = await signer.getAddress();
-        updateWalletUI();
-        await updateContractInfo();
+        // Initialize provider and signer
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        connectedAddress = accounts[0];
+
+        // Initialize contract
+        await initContract();
+
+        // Update UI
+        const connectWalletBtn = getElement('connectWallet');
+        const connectedWalletDiv = getElement('connectedWallet');
+        const walletAddressSpan = getElement('walletAddress');
         
-        showMessage('Wallet connected successfully');
+        if (connectWalletBtn && connectedWalletDiv && walletAddressSpan) {
+            connectWalletBtn.textContent = 'Connected';
+            connectWalletBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            connectWalletBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            
+            connectedWalletDiv.classList.remove('hidden');
+            walletAddressSpan.textContent = connectedAddress;
+        }
+
+        // Enable wallet-required buttons
+        const walletButtons = document.querySelectorAll('.requires-wallet');
+        for (const button of walletButtons) {
+            button.disabled = false;
+        }
+
+        // Add event listeners for account and chain changes
+        window.ethereum.on('accountsChanged', handleAccountsChanged);
+        window.ethereum.on('chainChanged', handleChainChanged);
+        
         return true;
     } catch (error) {
         showError(error);
@@ -572,39 +594,36 @@ async function setDefaultTokenPrice() {
 // Add NFT price checking and minting functions
 async function checkNFTPrice() {
     try {
-        const tokenId = Number(getElement('mintTokenId').value);
-        if (!validateNumber(tokenId)) {
-            throw new Error('Please enter a valid token ID');
+        if (!provider || !signer) {
+            throw new Error('Please connect your wallet first');
         }
 
-        // Get price config for specific tokenId
-        const priceConfig = await heroNFTContract.getPriceConfig(tokenId);
+        const tokenId = getElement('mintTokenId').value;
+        if (!tokenId) {
+            throw new Error('Please enter a token ID');
+        }
+
+        // Initialize contract
+        await initContract();
         
-        if (priceConfig?.isActive) {
-            getElement('ethPrice').textContent = `${ethers.formatEther(priceConfig?.price)} ETH`;
-            getElement('tokenPrice').textContent = `${ethers.formatUnits(priceConfig?.price, 18)} Tokens`;
-        } else {
-            // Fallback to default prices if no specific price config
-            const ethPrice = await heroNFTContract.getDefaultNativePrice();
-            const tokenPrice = await heroNFTContract.getDefaultTokenPrice();
-            
-            getElement('ethPrice').textContent = `${ethers.formatEther(ethPrice)} ETH`;
-            getElement('tokenPrice').textContent = `${ethers.formatUnits(tokenPrice, 18)} Tokens`;
-        }
-
+        // Get prices
+        const ethPrice = await heroNFTContract.getDefaultNativePrice();
+        const tokenPrice = await heroNFTContract.getDefaultTokenPrice();
+        
+        // Update UI
+        getElement('ethPrice').textContent = ethers.formatEther(ethPrice);
+        getElement('tokenPrice').textContent = ethers.formatEther(tokenPrice);
+        
         // Get balances
-        const ethBalance = await provider.getBalance(connectedAddress);
-        getElement('ethBalance').textContent = `${ethers.formatEther(ethBalance)} ETH`;
-
-        const tokenContract = new ethers.Contract(
-            await heroNFTContract.getDefaultPaymentToken(),
-            ['function balanceOf(address) view returns (uint256)'],
-            provider
-        );
-        const tokenBalance = await tokenContract.balanceOf(connectedAddress);
-        getElement('tokenBalance').textContent = `${ethers.formatUnits(tokenBalance, 18)} Tokens`;
-
-        showMessage('Price information updated successfully');
+        const ethBalance = await provider.getBalance(await signer.getAddress());
+        getElement('ethBalance').textContent = ethers.formatEther(ethBalance);
+        
+        const paymentTokenAddress = await heroNFTContract.getDefaultPaymentToken();
+        if (paymentTokenAddress !== ethers.ZeroAddress) {
+            const erc20Contract = new ethers.Contract(paymentTokenAddress, erc20Abi, provider);
+            const tokenBalance = await erc20Contract.balanceOf(await signer.getAddress());
+            getElement('tokenBalance').textContent = ethers.formatEther(tokenBalance);
+        }
     } catch (error) {
         showError(error);
     }
@@ -612,44 +631,57 @@ async function checkNFTPrice() {
 
 async function mintWithEth() {
     try {
-        if (!connectedAddress) {
-            showError('Please connect your wallet first');
-            return;
+        if (!provider || !signer) {
+            throw new Error('Please connect your wallet first');
         }
 
         const tokenId = getElement('mintTokenId').value;
-        if (!tokenId || !validateNumber(tokenId)) {
-            throw new Error('Please enter a valid token ID');
+        if (!tokenId) {
+            throw new Error('Please enter a token ID');
         }
 
-        // Get price for specific tokenId
-        const priceConfig = await heroNFTContract.getPriceConfig(tokenId);
-        const price = priceConfig?.isActive ? priceConfig.price : await heroNFTContract.getDefaultNativePrice();
-        
+        // 检查代币是否已经被铸造
+        try {
+            const exists = await heroNFTContract.exists(tokenId);
+            if (exists) {
+                throw new Error(`Token ID ${tokenId} has already been minted`);
+            }
+        } catch (error) {
+            if (error.message.includes('token already minted')) {
+                showError(`Token ID ${tokenId} has already been minted`);
+                return;
+            }
+        }
+
+        const price = await heroNFTContract.getDefaultNativePrice();
+        const tx = await heroNFTContract.mint(await signer.getAddress(), tokenId, { value: price });
         showMessage('Minting NFT... Please wait for confirmation');
-        
-        // Pass both the recipient address and tokenId
-        const tx = await heroNFTContract.mint(connectedAddress, tokenId, { value: price });
         const receipt = await tx.wait();
-        
-        // 更新显示
-        const resultDiv = document.createElement('div');
-        resultDiv.innerHTML = `
-            <div class="success-message">
-                NFT minted successfully!<br>
-                Transaction Hash: ${receipt.hash}<br>
-                <a href="https://sepolia-optimism.etherscan.io/tx/${receipt.hash}" target="_blank">View on Etherscan</a>
-            </div>
-        `;
-        getElement('mintResult').appendChild(resultDiv);
-        
-        // 更新 Event Log
-        logEvent(`NFT minted with ETH - TokenId: ${tokenId}, Hash: ${receipt.hash}`);
-        
-        showMessage('NFT minted successfully with ETH');
-        await checkNFTPrice(); // Refresh balances
+
+        // 显示成功消息和 Etherscan 链接
+        const messageElement = getElement('message');
+        if (messageElement) {
+            const txHash = receipt.hash;
+            messageElement.innerHTML = `
+                NFT minted successfully! 
+                <a href="https://sepolia-optimism.etherscan.io/tx/${txHash}" 
+                   target="_blank" 
+                   class="text-blue-600 hover:text-blue-800">
+                    View on Etherscan
+                </a>
+            `;
+            messageElement.classList.remove('hidden');
+        }
+
+        // 刷新价格信息
+        await checkNFTPrice();
     } catch (error) {
-        showError(error);
+        if (error.message.includes('token already minted')) {
+            showError(`Token ID ${tokenId} has already been minted`);
+        } else {
+            console.error('Mint error:', error);
+            showError(error.message || 'Failed to mint NFT');
+        }
     }
 }
 
@@ -814,5 +846,100 @@ Object.assign(window, {
     balanceOf,
     tokenURI,
     isApprovedForAll,
-    getApproved
-}); 
+    getApproved,
+    addPaymentToken,
+    getPaymentTokens
+});
+
+async function addPaymentToken() {
+    try {
+        if (!provider || !signer) {
+            throw new Error('Please connect your wallet first');
+        }
+
+        // 确保合约已初始化
+        if (!heroNFTContract) {
+            await initContract();
+        }
+
+        const tokenAddress = getElement('paymentTokenAddress').value;
+        if (!ethers.isAddress(tokenAddress)) {
+            throw new Error('Invalid token address');
+        }
+
+        const tx = await heroNFTContract.addPaymentToken(tokenAddress);
+        showMessage('Adding payment token... Please wait for confirmation');
+        await tx.wait();
+        showMessage('Payment token added successfully');
+        
+        // 刷新支付代币列表
+        await getPaymentTokens();
+    } catch (error) {
+        if (error.message.includes('contract runner does not support sending transactions')) {
+            showError('Please connect your wallet to send transactions');
+        } else {
+            showError(error.message || 'Failed to add payment token');
+        }
+    }
+}
+
+async function getPaymentTokens() {
+    try {
+        // 使用只读提供者初始化合约
+        const readOnlyProvider = new ethers.JsonRpcProvider('https://sepolia.optimism.io');
+        const readOnlyContract = new ethers.Contract(nftContractAddress, heroNFTAbi, readOnlyProvider);
+
+        const tokens = await readOnlyContract.getPaymentTokens();
+        const tokensList = getElement('paymentTokensList');
+        if (tokensList) {
+            tokensList.innerHTML = tokens.map(token => `
+                <div class="flex items-center justify-between p-2 border-b">
+                    <a href="https://sepolia-optimism.etherscan.io/address/${token}" 
+                       target="_blank" 
+                       class="font-mono text-blue-600 hover:text-blue-800">
+                        ${token}
+                    </a>
+                    <button onclick="removePaymentToken('${token}')" 
+                            class="text-red-500 hover:text-red-700">
+                        Remove
+                    </button>
+                </div>
+            `).join('');
+        }
+        showMessage('Payment tokens retrieved successfully');
+    } catch (error) {
+        if (error.message.includes('missing revert data')) {
+            showError('Failed to get payment tokens: Contract function not available');
+        } else {
+            showError(error.message || 'Failed to get payment tokens');
+        }
+    }
+}
+
+async function removePaymentToken(tokenAddress) {
+    try {
+        if (!heroNFTContract) {
+            throw new Error('Contract not initialized');
+        }
+
+        const tx = await heroNFTContract.removePaymentToken(tokenAddress);
+        showMessage('Removing payment token... Please wait for confirmation');
+        await tx.wait();
+        showMessage('Payment token removed successfully');
+        
+        // Refresh the payment tokens list
+        await getPaymentTokens();
+    } catch (error) {
+        showError(error);
+    }
+}
+
+function handleAccountsChanged(accounts) {
+    if (accounts.length === 0) {
+        // MetaMask is locked or the user has not connected any accounts
+        console.log('Please connect to MetaMask.');
+    } else if (accounts[0] !== connectedAddress) {
+        connectedAddress = accounts[0];
+        updateWalletUI();
+    }
+} 

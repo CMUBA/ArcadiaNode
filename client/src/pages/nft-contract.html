@@ -187,6 +187,22 @@
                     <div id="priceConfigInfo" class="mt-2 text-sm text-gray-600"></div>
                 </div>
             </div>
+
+            <!-- ERC20 Payment Management -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">ERC20 Payment Management</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-gray-700">ERC20 Token Address:</label>
+                        <input type="text" id="paymentTokenAddress" class="border p-2 rounded w-full" placeholder="Enter ERC20 token address">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="addPaymentToken()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 requires-wallet font-medium" disabled>Add Payment Token</button>
+                        <button onclick="getPaymentTokens()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 requires-wallet font-medium" disabled>Get Payment Tokens</button>
+                    </div>
+                    <div id="paymentTokensList" class="mt-2 text-sm text-gray-600 bg-gray-100 p-4 rounded"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Event Log -->

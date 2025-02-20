@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { heroNFTAbi } from './abi/heroNFT.js';
 import { heroMetadataAbi } from './abi/heroMetadata.js';
-import { heroAbi } from './abi/hero.js';
+import { heroAbi } from './abi/hero-v6.js';
 import { heroConfig } from '../config/hero.js';
 
 // Validation helper functions
@@ -14,7 +14,7 @@ function validateAddress(address) {
 }
 
 function validateNumber(num) {
-    return !isNaN(num) && Number.isInteger(Number(num)) && Number(num) > 0;
+    return !Number.isNaN(Number(num)) && Number.isInteger(Number(num)) && Number(num) > 0;
 }
 
 function setInputValue(elementId, value) {
@@ -71,9 +71,9 @@ export function showMessage(message, duration = 3000) {
     logEvent(message);
 }
 
-export function showError(message, error = null) {
-    const errorMessage = error ? `${message}: ${error.message}` : message;
-    console.error(`[Error] ${errorMessage}`); // Add console logging
+export function showError(error) {
+    const errorMessage = error.message || error.toString();
+    console.error(`[Error] ${errorMessage}`);
     showMessage(`Error: ${errorMessage}`, 5000);
     logEvent(`Error: ${errorMessage}`);
 }
@@ -81,126 +81,96 @@ export function showError(message, error = null) {
 // Modified loadRegisteredNFTs function
 async function loadRegisteredNFTs() {
     try {
-        const nftList = document.getElementById('nftList');
-        if (!nftList) {
-            throw new Error('NFT list element not found');
-        }
-
-        nftList.innerHTML = '<p class="text-gray-500">Loading NFTs...</p>';
-        logEvent('Starting to load registered NFTs');
+        console.log('Loading registered NFTs...');
+        console.log('Config loaded:', heroConfig);
+        console.log('NFT contract address:', heroConfig.ethereum.contracts.heroNFT);
         
         if (!heroContract || !heroNFTContract) {
-            throw new Error('Contracts not initialized');
+            console.log('Initializing contracts...');
+            await initContract();
         }
 
-        // Get list of registered NFT contracts and remove duplicates
-        logEvent('Fetching registered NFT contracts...');
-        const registeredNFTs = await heroContract.getRegisteredNFTs();
-        const uniqueNFTs = [...new Set(registeredNFTs.map(addr => addr.toLowerCase()))];
-        logEvent(`Found ${uniqueNFTs.length} unique registered NFT contracts`);
-        
-        if (uniqueNFTs.length === 0) {
-            nftList.innerHTML = '<p class="text-gray-500">No registered NFT contracts found</p>';
-            logEvent('No registered NFT contracts found');
-            return;
-        }
+        const nfts = [];
+        const nftContractAddress = heroConfig.ethereum.contracts.heroNFT;
 
-        // Create container for registered NFTs
-        const contractsContainer = document.createElement('div');
-        contractsContainer.className = 'space-y-4';
-        let totalNFTsFound = 0;
-
-        // Process each unique registered NFT contract
-        for (const contractAddress of uniqueNFTs) {
+        // Poll first 20 token IDs
+        for (let i = 1; i <= 20; i++) {
             try {
-                logEvent(`Processing NFT contract: ${contractAddress}`);
-                const nftContract = new ethers.Contract(
-                    contractAddress,
-                    heroNFTAbi,
-                    signer
-                );
-
-                // Check first 20 token IDs
-                const maxTokenId = 20;
-                for (let tokenId = 1; tokenId <= maxTokenId; tokenId++) {
+                const owner = await heroNFTContract.ownerOf(i);
+                if (owner) {
+                    // Check if hero exists and get hero info
+                    let heroExists = false;
+                    let heroInfo = null;
                     try {
-                        const exists = await nftContract.exists(tokenId);
-                        if (!exists) continue;
-
-                        const owner = await nftContract.ownerOf(tokenId);
-                        if (owner.toLowerCase() === connectedAddress.toLowerCase()) {
-                            logEvent(`Found NFT owned by user - Contract: ${contractAddress}, TokenId: ${tokenId}`);
-                            totalNFTsFound++;
-
-                            // Check if hero exists for this NFT
-                            let heroInfo = null;
-                            try {
-                                heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
-                                logEvent(`Found hero for NFT - Contract: ${contractAddress}, TokenId: ${tokenId}`);
-                            } catch (error) {
-                                logEvent(`No hero found for NFT - Contract: ${contractAddress}, TokenId: ${tokenId}`);
-                            }
-
-                            const nftItem = document.createElement('div');
-                            nftItem.className = 'bg-white p-4 rounded-lg shadow flex flex-col space-y-2';
-                            
-                            if (heroInfo) {
-                                // Display hero information
-                                nftItem.innerHTML = `
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <span class="font-semibold">Contract: ${contractAddress}</span><br>
-                                            <span class="text-sm">Token ID: ${tokenId}</span>
-                                        </div>
-                                    </div>
-                                    <div class="text-sm text-gray-600">
-                                        <p>Hero Name: ${heroInfo.name || 'Unnamed'}</p>
-                                        <p>Race: ${heroInfo.race || 'Unknown'}</p>
-                                        <p>Level: ${heroInfo.level || '0'}</p>
-                                        <p>Experience: ${heroInfo.experience || '0'}</p>
-                                    </div>
-                                `;
-                            } else {
-                                // Display create hero button
-                                nftItem.innerHTML = `
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <span class="font-semibold">Contract: ${contractAddress}</span><br>
-                                            <span class="text-sm">Token ID: ${tokenId}</span>
-                                        </div>
-                                        <button onclick="prepareCreateHero('${contractAddress}', ${tokenId})" 
-                                                class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                                            Create Hero
-                                        </button>
-                                    </div>
-                                `;
-                            }
-                            contractsContainer.appendChild(nftItem);
-                        }
+                        heroInfo = await heroContract.getHeroInfo(nftContractAddress, i);
+                        heroExists = true;
+                        console.log(`Hero exists for token ${i}:`, heroInfo);
                     } catch (error) {
-                        console.error(`Error checking token ${tokenId}:`, error);
-                        logEvent(`Error checking token ${tokenId}: ${error.message}`);
+                        console.log(`No hero exists for token ${i}:`, error.message);
+                        heroExists = false;
                     }
+
+                    nfts.push({
+                        tokenId: i,
+                        owner: owner,
+                        heroExists: heroExists,
+                        heroInfo: heroExists ? {
+                            name: heroInfo[0],
+                            race: Number(heroInfo[1]),
+                            gender: Number(heroInfo[2]),
+                            level: Number(heroInfo[3]),
+                            energy: Number(heroInfo[4]),
+                            dailyPoints: Number(heroInfo[5])
+                        } : null
+                    });
                 }
             } catch (error) {
-                console.error(`Error processing contract ${contractAddress}:`, error);
-                logEvent(`Error processing contract ${contractAddress}: ${error.message}`);
+                // Token doesn't exist, skip to next
+                if (error.message.includes('owner query for nonexistent token')) {
+                    continue;
+                }
+                console.error(`Error checking token ${i}:`, error);
             }
         }
 
-        nftList.innerHTML = '';
-        if (contractsContainer.children.length === 0) {
-            nftList.innerHTML = '<p class="text-gray-500">No NFTs found for connected address</p>';
-            logEvent('No NFTs found for connected address');
-        } else {
-            nftList.appendChild(contractsContainer);
-            logEvent(`Successfully loaded ${totalNFTsFound} NFTs for connected address`);
+        // Update UI
+        const nftListElement = document.getElementById('nftList');
+        if (nftListElement) {
+            if (nfts.length > 0) {
+                nftListElement.innerHTML = nfts.map(nft => `
+                    <div class="p-2 bg-gray-50 rounded mb-2">
+                        <p>Token ID: ${nft.tokenId}</p>
+                        <p>Owner: <a href="https://sepolia-optimism.etherscan.io/address/${nft.owner}" 
+                                   target="_blank" 
+                                   class="text-blue-600 hover:text-blue-800 break-all">
+                            ${nft.owner}
+                        </a></p>
+                        ${nft.heroExists ? 
+                            `<div class="mt-2">
+                                <p class="text-green-500">Hero exists</p>
+                                <div class="mt-1 text-sm">
+                                    <p>Name: ${nft.heroInfo.name}</p>
+                                    <p>Race: ${nft.heroInfo.race}</p>
+                                    <p>Gender: ${nft.heroInfo.gender}</p>
+                                    <p>Level: ${nft.heroInfo.level}</p>
+                                    <p>Energy: ${nft.heroInfo.energy}</p>
+                                    <p>Daily Points: ${nft.heroInfo.dailyPoints}</p>
+                                </div>
+                            </div>` : 
+                            `<button onclick="prepareCreateHero('${nftContractAddress}', ${nft.tokenId})"
+                                     class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mt-2">
+                                Create Hero
+                            </button>`
+                        }
+                    </div>
+                `).join('');
+            } else {
+                nftListElement.innerHTML = '<p class="text-gray-500">No NFTs found</p>';
+            }
         }
-
     } catch (error) {
-        console.error('Error loading registered NFTs:', error);
-        showError('Failed to load registered NFTs', error);
-        logEvent(`Failed to load registered NFTs: ${error.message}`);
+        console.error('Error loading NFTs:', error);
+        showError(error);
     }
 }
 
@@ -391,9 +361,21 @@ document.addEventListener('DOMContentLoaded', () => {
 // Prepare create hero
 async function prepareCreateHero(contractAddress, tokenId) {
     try {
-        logEvent(`Preparing to create hero for NFT - Contract: ${contractAddress}, TokenId: ${tokenId}`);
+        console.log('Preparing to create hero with:', {
+            providedContractAddress: contractAddress,
+            tokenId,
+            configAddress: heroConfig.ethereum.contracts.heroNFT,
+            heroConfig: heroConfig
+        });
 
-        if (!validateAddress(contractAddress)) {
+        // 如果没有提供合约地址，使用配置中的地址
+        const nftContractAddress = heroConfig.ethereum.contracts.heroNFT;
+        console.log('NFT contract address55:', nftContractAddress);
+        if (!nftContractAddress || !ethers.isAddress(nftContractAddress)) {
+            console.error('Invalid contract address:', {
+                provided: contractAddress,
+                fromConfig: heroConfig.ethereum.contracts.heroNFT
+            });
             throw new Error('Invalid contract address');
         }
 
@@ -403,7 +385,7 @@ async function prepareCreateHero(contractAddress, tokenId) {
 
         // Verify NFT ownership
         logEvent('Verifying NFT ownership...');
-        const nftContract = new ethers.Contract(contractAddress, heroNFTAbi, signer);
+        const nftContract = new ethers.Contract(nftContractAddress, heroNFTAbi, signer);
         const owner = await nftContract.ownerOf(tokenId);
         
         if (owner.toLowerCase() !== connectedAddress.toLowerCase()) {
@@ -414,7 +396,7 @@ async function prepareCreateHero(contractAddress, tokenId) {
         // Check if hero already exists
         logEvent('Checking if hero already exists...');
         try {
-            const heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
+            const heroInfo = await heroContract.getHeroInfo(nftContractAddress, tokenId);
             if (heroInfo) {
                 throw new Error('Hero already exists for this NFT');
             }
@@ -424,7 +406,7 @@ async function prepareCreateHero(contractAddress, tokenId) {
         }
 
         // Set form values
-        setInputValue('heroNFTContract', contractAddress);
+        setInputValue('heroNFTContract', nftContractAddress);
         setInputValue('heroTokenId', tokenId);
         logEvent('Form values set for hero creation');
 
@@ -436,9 +418,8 @@ async function prepareCreateHero(contractAddress, tokenId) {
 
         showMessage('Ready to create hero');
     } catch (error) {
-        console.error('Error preparing hero creation:', error);
-        showError('Failed to prepare hero creation', error);
-        logEvent(`Failed to prepare hero creation: ${error.message}`);
+        console.error('Error in prepareCreateHero:', error);
+        showError(error);
     }
 }
 
@@ -463,16 +444,25 @@ async function createHero() {
             return;
         }
 
-        // Verify NFT ownership
-        const nftContract = new ethers.Contract(
-            contractAddress,
-            ['function ownerOf(uint256) view returns (address)'],
-            signer
-        );
+        // Validate contract address
+        if (!validateAddress(contractAddress)) {
+            showError('Invalid NFT contract address');
+            return;
+        }
 
-        const owner = await nftContract.ownerOf(tokenId);
-        if (owner.toLowerCase() !== connectedAddress.toLowerCase()) {
-            showError('You do not own this NFT');
+        // Initialize NFT contract with full ABI
+        const nftContract = new ethers.Contract(contractAddress, heroNFTAbi, signer);
+        
+        // Verify NFT ownership
+        try {
+            const owner = await nftContract.ownerOf(tokenId);
+            if (owner.toLowerCase() !== connectedAddress.toLowerCase()) {
+                showError('You do not own this NFT');
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking NFT ownership:', error);
+            showError('Failed to verify NFT ownership. The token may not exist.');
             return;
         }
 
@@ -482,13 +472,13 @@ async function createHero() {
             tokenId,
             name,
             race,
-            gender || 0 // Default to 0 if gender not specified
+            gender || 0
         );
 
         showMessage('Creating hero... Please wait for transaction confirmation');
         const receipt = await tx.wait();
         
-        // Display transaction hash with Etherscan link
+        // Display transaction hash
         const txHashInfo = document.getElementById('txHashInfo');
         const txHashLink = document.getElementById('txHashLink');
         if (txHashInfo && txHashLink) {
@@ -861,8 +851,9 @@ async function loadNFTsFromContract(contractAddress) {
                 if (owner.toLowerCase() === connectedAddress.toLowerCase()) {
                     // Check if hero exists for this NFT
                     let heroExists = false;
+                    let heroInfo = null;
                     try {
-                        await heroContract.getHeroInfo(contractAddress, tokenId);
+                        heroInfo = await heroContract.getHeroInfo(contractAddress, tokenId);
                         heroExists = true;
                     } catch (error) {
                         // Hero doesn't exist for this NFT
@@ -936,6 +927,45 @@ async function testCreateHeroAPI() {
         const race = document.getElementById('heroRace').value;
         const gender = document.getElementById('heroGender').value;
 
+        // Validate inputs
+        if (!validateAddress(nftContract)) {
+            showError('Invalid NFT contract address');
+            return;
+        }
+
+        if (!validateNumber(tokenId)) {
+            showError('Invalid token ID');
+            return;
+        }
+
+        if (!name || name.trim() === '') {
+            showError('Name is required');
+            return;
+        }
+
+        if (!validateNumber(race) || race < 0 || race > 4) {
+            showError('Invalid race value (must be 0-4)');
+            return;
+        }
+
+        if (gender !== undefined && (gender < 0 || gender > 1)) {
+            showError('Invalid gender value (must be 0-1)');
+            return;
+        }
+
+        // Create hero on-chain first
+        const tx = await heroContract.createHero(
+            nftContract,
+            tokenId,
+            name,
+            race,
+            gender || 0
+        );
+
+        showMessage('Creating hero on-chain... Please wait for confirmation');
+        const receipt = await tx.wait();
+        showMessage('Hero created on-chain successfully!');
+
         // Create message to sign
         const message = `Create Hero: ${nftContract}-${tokenId}`;
         const signature = await signer.signMessage(message);
@@ -954,20 +984,28 @@ async function testCreateHeroAPI() {
                 tokenId,
                 name,
                 race,
-                gender
+                gender: gender || 0,
+                transactionHash: receipt.hash
             })
         });
 
         const result = await response.json();
-        document.getElementById('apiResponse').textContent = JSON.stringify(result, null, 2);
+        
+        // Display result
+        const apiResponse = document.getElementById('apiResponse');
+        if (apiResponse) {
+            apiResponse.textContent = JSON.stringify(result, null, 2);
+            apiResponse.classList.remove('hidden');
+        }
         
         if (result.error) {
             showError(result.error);
         } else {
-            showMessage('Hero created successfully via API');
+            showMessage('Hero created and verified successfully via API');
         }
     } catch (error) {
-        showError('API test failed:', error);
+        console.error('API test failed:', error);
+        showError(`API test failed: ${error.message}`);
     }
 }
 
@@ -981,6 +1019,17 @@ async function testLoadHeroAPI() {
         // Get current values from form
         const nftContract = document.getElementById('heroNFTContract').value;
         const tokenId = document.getElementById('heroTokenId').value;
+
+        // Validate inputs
+        if (!validateAddress(nftContract)) {
+            showError('Invalid NFT contract address');
+            return;
+        }
+
+        if (!validateNumber(tokenId)) {
+            showError('Invalid token ID');
+            return;
+        }
 
         // Create message to sign
         const message = `Load Hero: ${nftContract}-${tokenId}`;
@@ -997,15 +1046,29 @@ async function testLoadHeroAPI() {
         });
 
         const result = await response.json();
-        document.getElementById('apiResponse').textContent = JSON.stringify(result, null, 2);
+        
+        // Display result
+        const apiResponse = document.getElementById('apiResponse');
+        if (apiResponse) {
+            apiResponse.textContent = JSON.stringify(result, null, 2);
+            apiResponse.classList.remove('hidden');
+        }
         
         if (result.error) {
             showError(result.error);
         } else {
             showMessage('Hero loaded successfully via API');
+            
+            // Update form with hero data if available
+            if (result.data) {
+                setInputValue('heroName', result.data.name);
+                setInputValue('heroRace', result.data.race);
+                setInputValue('heroGender', result.data.gender);
+            }
         }
     } catch (error) {
-        showError('API test failed:', error);
+        console.error('API test failed:', error);
+        showError(`API test failed: ${error.message}`);
     }
 }
 
@@ -1022,6 +1085,50 @@ async function testSaveHeroAPI() {
         const name = document.getElementById('heroName').value;
         const race = document.getElementById('heroRace').value;
         const gender = document.getElementById('heroGender').value;
+
+        // Validate inputs
+        if (!validateAddress(nftContract)) {
+            showError('Invalid NFT contract address');
+            return;
+        }
+
+        if (!validateNumber(tokenId)) {
+            showError('Invalid token ID');
+            return;
+        }
+
+        if (!name || name.trim() === '') {
+            showError('Name is required');
+            return;
+        }
+
+        if (!validateNumber(race) || race < 0 || race > 4) {
+            showError('Invalid race value (must be 0-4)');
+            return;
+        }
+
+        if (gender !== undefined && (gender < 0 || gender > 1)) {
+            showError('Invalid gender value (must be 0-1)');
+            return;
+        }
+
+        // Save hero on-chain first
+        const tx = await heroContract.saveHeroFullData(
+            nftContract,
+            tokenId,
+            {
+                name,
+                race,
+                gender: gender || 0,
+                level: 1,
+                energy: 100,
+                dailyPoints: 10
+            }
+        );
+
+        showMessage('Saving hero on-chain... Please wait for confirmation');
+        const receipt = await tx.wait();
+        showMessage('Hero saved on-chain successfully!');
 
         // Create message to sign
         const message = `Save Hero: ${nftContract}-${tokenId}`;
@@ -1042,22 +1149,32 @@ async function testSaveHeroAPI() {
                 heroData: {
                     name,
                     race,
-                    gender,
-                    level: '1'
-                }
+                    gender: gender || 0,
+                    level: 1,
+                    energy: 100,
+                    dailyPoints: 10
+                },
+                transactionHash: receipt.hash
             })
         });
 
         const result = await response.json();
-        document.getElementById('apiResponse').textContent = JSON.stringify(result, null, 2);
+        
+        // Display result
+        const apiResponse = document.getElementById('apiResponse');
+        if (apiResponse) {
+            apiResponse.textContent = JSON.stringify(result, null, 2);
+            apiResponse.classList.remove('hidden');
+        }
         
         if (result.error) {
             showError(result.error);
         } else {
-            showMessage('Hero saved successfully via API');
+            showMessage('Hero saved and verified successfully via API');
         }
     } catch (error) {
-        showError('API test failed:', error);
+        console.error('API test failed:', error);
+        showError(`API test failed: ${error.message}`);
     }
 }
 
