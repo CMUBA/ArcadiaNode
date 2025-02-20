@@ -1,4 +1,4 @@
-import { heroAbi } from '../js/abi/hero.js';
+import { heroAbi } from '../js/abi/hero-v6.js';
 import { heroMetadataAbi } from '../js/abi/heroMetadata.js';
 import { heroNFTAbi } from '../js/abi/heroNFT.js';
 
@@ -8,9 +8,9 @@ export const heroConfig = {
         nodeUrl: 'https://sepolia.optimism.io',
         chainId: 11155420, // Optimism Sepolia testnet
         contracts: {
-            hero: '0x4699c7C04332a49601459aB65Eb52f0549397ea8',      // HeroV6
-            heroMetadata: '0xa56b92ffBFbC2e4a9c51a151CA2b283953e764b5', // HeroMetadata
-            heroNFT: '0x145FAc26022318bC30808054b87f03327A9afCc9',    // HeroNFT
+            hero: '0x9a838413a9Cf204535CF61df4479aACa92eA9E81',      // HeroV6
+            heroMetadata: '0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB', // HeroMetadata
+            heroNFT: '0x00b203a541e4CD2C4373082bF2268A78E15CbD4B', 
             paymentToken: '0x0000000000000000000000000000000000000000',  // ETH
             erc20Token: '0xBda48255DA1ed61a209641144Dd24696926aF3F0'     // ERC20 Token for payments
         },

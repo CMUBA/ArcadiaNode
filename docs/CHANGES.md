@@ -1098,3 +1098,293 @@ http://localhost:3008/pages/nft-contract.html
 此页面我修改引用，import config from '../config/hero.js';替换了../config/index.js，为何浏览器还在寻找 index.js，如何每次启动强制刷新缓存？有其他解决思路么？
 
 
+### 2-20
+
+Traces:
+  [6342563] DeployAndInitV6Script::run()
+    ├─ [0] VM::envBytes32("HERO_PRIVATE_KEY") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← [Return] 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+    ├─ [0] VM::startBroadcast(<pk>)
+    │   └─ ← [Return]
+    ├─ [1754954] → new HeroNFT@0x00b203a541e4CD2C4373082bF2268A78E15CbD4B
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    │   └─ ← [Return] 8178 bytes of code
+    ├─ [0] console::log("HeroNFT deployed to:", HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [1087396] → new HeroMetadata@0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    │   └─ ← [Return] 5313 bytes of code
+    ├─ [0] console::log("HeroMetadata deployed to:", HeroMetadata: [0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [2423667] → new HeroV6@0x9a838413a9Cf204535CF61df4479aACa92eA9E81
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    │   └─ ← [Return] 11987 bytes of code
+    ├─ [0] console::log("HeroV6 deployed to:", HeroV6: [0x9a838413a9Cf204535CF61df4479aACa92eA9E81]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [49499] HeroMetadata::setSkill(0, 0, 1, "Eagle Eye", 2, true)
+    │   ├─ emit SkillUpdated(seasonId: 0, skillId: 0, level: 1, name: "Eagle Eye", points: 2)
+    │   └─ ← [Stop]
+    ├─ [49499] HeroMetadata::setSkill(0, 1, 1, "Spider Sense", 1, true)
+    │   ├─ emit SkillUpdated(seasonId: 0, skillId: 1, level: 1, name: "Spider Sense", points: 1)
+    │   └─ ← [Stop]
+    ├─ [49499] HeroMetadata::setSkill(0, 2, 1, "Holy Counter", 1, true)
+    │   ├─ emit SkillUpdated(seasonId: 0, skillId: 2, level: 1, name: "Holy Counter", points: 1)
+    │   └─ ← [Stop]
+    ├─ [118632] HeroMetadata::setRace(0, [10, 10, 10, 10], "Human race with balanced attributes", true)
+    │   ├─ emit RaceUpdated(raceId: 0, baseAttributes: [10, 10, 10, 10], description: "Human race with balanced attributes")
+    │   └─ ← [Stop]
+    ├─ [144202] HeroMetadata::setClass(0, [12, 15, 20, 18], [2, 3, 4, 3], "Warrior class focused on strength", true)
+    │   ├─ emit ClassUpdated(classId: 0, baseAttributes: [12, 15, 20, 18], growthRates: [2, 3, 4, 3], description: "Warrior class focused on strength")
+    │   └─ ← [Stop]
+    ├─ [91374] HeroV6::registerNFT(HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], true)
+    │   ├─ emit NFTRegistered(nftContract: HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], isOfficial: true)
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Registered NFT contract in Hero system") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [72796] HeroNFT::mint{value: 10000000000000000}(0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, 1)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1)
+    │   ├─ emit NFTMinted(to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1, paymentToken: 0x0000000000000000000000000000000000000000, price: 10000000000000000 [1e16], timestamp: 1740029944 [1.74e9])
+    │   └─ ← [Return]
+    ├─ [0] console::log("Successfully minted first NFT to deployer") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [165470] HeroV6::createHero(HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], 1, "Genesis Hero V6", 0, 0)
+    │   ├─ [844] HeroNFT::ownerOf(1) [staticcall]
+    │   │   └─ ← [Return] 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+    │   ├─ emit HeroCreated(nftContract: HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], tokenId: 1, name: "Genesis Hero V6")
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Successfully created first hero record") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [118962] HeroV6::saveHeroFullData(HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], 1, SaveHeroFullDataParams({ name: "Genesis Hero V6", race: 0, gender: 0, level: 1, energy: 100, dailyPoints: 0, seasonSkills: [SeasonSkills({ skillLevels: [10, 8, 6, 4, 2] }), SeasonSkills({ skillLevels: [10, 8, 6, 4, 2] }), SeasonSkills({ skillLevels: [10, 8, 6, 4, 2] }), SeasonSkills({ skillLevels: [10, 8, 6, 4, 2] })], equipment: [] }))
+    │   ├─ [844] HeroNFT::ownerOf(1) [staticcall]
+    │   │   └─ ← [Return] 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+    │   ├─ emit HeroSaved(nftContract: HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], tokenId: 1, functionIndex: 255)
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Successfully initialized hero data") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopBroadcast()
+    │   └─ ← [Return]
+    ├─ [0] console::log("\n=== Hero System V6 Deployment Information ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Deployer Address: %s", 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\nContract Addresses:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("HeroNFT: %s", HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("HeroMetadata: %s", HeroMetadata: [0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("HeroV6: %s", HeroV6: [0x9a838413a9Cf204535CF61df4479aACa92eA9E81]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\nInitial Setup:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Deployed core contracts") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Initialized metadata (skills, race, class)") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Registered NFT contract") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Minted first NFT (ID: 1)") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Created first hero record") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("- Initialized hero data with saveHeroFullData") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\nFor environment file (.env):") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("VITE_HERO_NFT_ADDRESS=%s", HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("VITE_HERO_METADATA_ADDRESS=%s", HeroMetadata: [0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("VITE_HERO_ADDRESS=%s", HeroV6: [0x9a838413a9Cf204535CF61df4479aACa92eA9E81]) [staticcall]
+    │   └─ ← [Stop]
+    └─ ← [Return]
+
+
+Script ran successfully.
+
+== Logs ==
+  HeroNFT deployed to: 0x00b203a541e4CD2C4373082bF2268A78E15CbD4B
+  HeroMetadata deployed to: 0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB
+  HeroV6 deployed to: 0x9a838413a9Cf204535CF61df4479aACa92eA9E81
+  Registered NFT contract in Hero system
+  Successfully minted first NFT to deployer
+  Successfully created first hero record
+  Successfully initialized hero data
+
+=== Hero System V6 Deployment Information ===
+  Deployer Address: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+
+Contract Addresses:
+  HeroNFT: 0x00b203a541e4CD2C4373082bF2268A78E15CbD4B
+  HeroMetadata: 0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB
+  HeroV6: 0x9a838413a9Cf204535CF61df4479aACa92eA9E81
+
+Initial Setup:
+  - Deployed core contracts
+  - Initialized metadata (skills, race, class)
+  - Registered NFT contract
+  - Minted first NFT (ID: 1)
+  - Created first hero record
+  - Initialized hero data with saveHeroFullData
+
+For environment file (.env):
+  VITE_HERO_NFT_ADDRESS=0x00b203a541e4CD2C4373082bF2268A78E15CbD4B
+  VITE_HERO_METADATA_ADDRESS=0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB
+  VITE_HERO_ADDRESS=0x9a838413a9Cf204535CF61df4479aACa92eA9E81
+
+## Setting up 1 EVM.
+==========================
+Simulated On-chain Traces:
+
+  [1754954] → new HeroNFT@0x00b203a541e4CD2C4373082bF2268A78E15CbD4B
+    ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    └─ ← [Return] 8178 bytes of code
+
+  [1087396] → new HeroMetadata@0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB
+    ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    └─ ← [Return] 5313 bytes of code
+
+  [2423667] → new HeroV6@0x9a838413a9Cf204535CF61df4479aACa92eA9E81
+    ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA)
+    └─ ← [Return] 11987 bytes of code
+
+  [51499] HeroMetadata::setSkill(0, 0, 1, "Eagle Eye", 2, true)
+    ├─ emit SkillUpdated(seasonId: 0, skillId: 0, level: 1, name: "Eagle Eye", points: 2)
+    └─ ← [Stop]
+
+  [51499] HeroMetadata::setSkill(0, 1, 1, "Spider Sense", 1, true)
+    ├─ emit SkillUpdated(seasonId: 0, skillId: 1, level: 1, name: "Spider Sense", points: 1)
+    └─ ← [Stop]
+
+  [51499] HeroMetadata::setSkill(0, 2, 1, "Holy Counter", 1, true)
+    ├─ emit SkillUpdated(seasonId: 0, skillId: 2, level: 1, name: "Holy Counter", points: 1)
+    └─ ← [Stop]
+
+  [120632] HeroMetadata::setRace(0, [10, 10, 10, 10], "Human race with balanced attributes", true)
+    ├─ emit RaceUpdated(raceId: 0, baseAttributes: [10, 10, 10, 10], description: "Human race with balanced attributes")
+    └─ ← [Stop]
+
+  [146202] HeroMetadata::setClass(0, [12, 15, 20, 18], [2, 3, 4, 3], "Warrior class focused on strength", true)
+    ├─ emit ClassUpdated(classId: 0, baseAttributes: [12, 15, 20, 18], growthRates: [2, 3, 4, 3], description: "Warrior class focused on strength")
+    └─ ← [Stop]
+
+  [93374] HeroV6::registerNFT(HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], true)
+    ├─ emit NFTRegistered(nftContract: HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], isOfficial: true)
+    └─ ← [Stop]
+
+  [76796] HeroNFT::mint{value: 10000000000000000}(0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, 1)
+    ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1)
+    ├─ emit NFTMinted(to: 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA, tokenId: 1, paymentToken: 0x0000000000000000000000000000000000000000, price: 10000000000000000 [1e16], timestamp: 1740029962 [1.74e9])
+    └─ ← [Return]
+
+  [171970] HeroV6::createHero(HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], 1, "Genesis Hero V6", 0, 0)
+    ├─ [2844] HeroNFT::ownerOf(1) [staticcall]
+    │   └─ ← [Return] 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+    ├─ emit HeroCreated(nftContract: HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], tokenId: 1, name: "Genesis Hero V6")
+    └─ ← [Stop]
+
+  [139962] HeroV6::saveHeroFullData(HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], 1, SaveHeroFullDataParams({ name: "Genesis Hero V6", race: 0, gender: 0, level: 1, energy: 100, dailyPoints: 0, seasonSkills: [SeasonSkills({ skillLevels: [10, 8, 6, 4, 2] }), SeasonSkills({ skillLevels: [10, 8, 6, 4, 2] }), SeasonSkills({ skillLevels: [10, 8, 6, 4, 2] }), SeasonSkills({ skillLevels: [10, 8, 6, 4, 2] })], equipment: [] }))
+    ├─ [2844] HeroNFT::ownerOf(1) [staticcall]
+    │   └─ ← [Return] 0xe24b6f321B0140716a2b671ed0D983bb64E7DaFA
+    ├─ emit HeroSaved(nftContract: HeroNFT: [0x00b203a541e4CD2C4373082bF2268A78E15CbD4B], tokenId: 1, functionIndex: 255)
+    └─ ← [Stop]
+
+
+==========================
+
+Chain 11155420
+
+Estimated gas price: 0.001000502 gwei
+
+Estimated total gas used for script: 9120479
+
+Estimated amount required: 0.000009125057480458 ETH
+
+==========================
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xe6003feeb827339296be29b4bbe71bf0903b66a2c9f280c1bc68838308fc628f
+Contract Address: 0x00b203a541e4CD2C4373082bF2268A78E15CbD4B
+Block: 24113716
+Paid: 0.00000195470050671 ETH (1954210 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x5a98ad869e7193d77e85a11e1711f35e2b6d394838bf973e496002661e4c1dbd
+Contract Address: 0x9a838413a9Cf204535CF61df4479aACa92eA9E81
+Block: 24113716
+Paid: 0.000002668280570361 ETH (2667611 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x2657de04aedfc875e102aa1e511a0d8620dca30332d549ba892184e5397f4537
+Block: 24113716
+Paid: 0.000000073821524553 ETH (73803 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xb859236de51ab4c28378c54cbdd5eb4e4d9068fed36a8eb3a3f6f0d2b82541cb
+Block: 24113716
+Paid: 0.000000169640569098 ETH (169598 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xc9b14397c1edb65345fb4e87ffbefe2b2032275ed216bb0e3d5f234e78359020
+Block: 24113716
+Paid: 0.000000073773512505 ETH (73755 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x2a75bfc8d80b585428eb8c77a45d08dee7f7276c72ebfdf8af0971ffe527f03a
+Contract Address: 0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB
+Block: 24113716
+Paid: 0.000001225611551304 ETH (1225304 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x0cc715a8cb2edb15bc5cbacc461f83ba87ff78f5d3cb3f70869f55be9b3498ca
+Block: 24113716
+Paid: 0.000000073821524553 ETH (73803 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xc137138141af6755ebfb1910fcbb7f6dafcd6d63a0d7089a431b53accf1b8f3c
+Block: 24113716
+Paid: 0.000000114962848434 ETH (114934 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x3c125905ee23e470d679ec6d99938a4111666dd22c81531f59a128ad2516dbfc
+Block: 24113716
+Paid: 0.00000014351601348 ETH (143480 gas * 0.001000251 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0xff957328cbc387ea1c1ea29fbe3f8166712504ff50fb5afd0dc2dec7a66db163
+Block: 24113717
+Paid: 0.00000007871483114 ETH (78695 gas * 0.001000252 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x08d4bf745ad348a3681d5ad0febdd2c7cc8d9d21116a2378f08e2b09f0527341
+Block: 24113717
+Paid: 0.000000194422982248 ETH (194374 gas * 0.001000252 gwei)
+
+
+##### optimism-sepolia
+✅  [Success]Hash: 0x77aac6718f3aa05df549ba5b819b5b4a468343397b8543a8fef986bc9a52faf4
+Block: 24113717
+Paid: 0.000000166047833512 ETH (166006 gas * 0.001000252 gwei)
+
+✅ Sequence #1 on optimism-sepolia | Total Paid: 0.000006937314267898 ETH (6935573 gas * avg 0.001000251 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/broadcast/DeployAndInitV6.s.sol/11155420/run-latest.json
+
+Sensitive values saved to: /Users/jason/Dev/Community/move/ArcadiaNode/contract/hero/cache/DeployAndInitV6.s.sol/11155420/run-latest.json

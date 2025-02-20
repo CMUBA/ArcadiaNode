@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract HeroV6 is Ownable {
     // State variables
@@ -114,6 +115,12 @@ contract HeroV6 is Ownable {
 
     constructor() Ownable() {}
 
+    // Add new function to verify NFT ownership
+    function verifyNFTOwnership(address nftContract, uint256 tokenId, address owner) public view returns (bool) {
+        IERC721 nft = IERC721(nftContract);
+        return nft.ownerOf(tokenId) == owner;
+    }
+
     // Original V5 functions
     function registerNFT(address nftContract, bool isOfficial) external onlyOwner {
         require(nftContract != address(0), "Invalid NFT address");
@@ -139,6 +146,7 @@ contract HeroV6 is Ownable {
     ) external {
         require(isRegistered[nftContract], "NFT not registered");
         require(bytes(heroes[nftContract][tokenId].name).length == 0, "Hero already exists");
+        require(verifyNFTOwnership(nftContract, tokenId, msg.sender), "Not the NFT owner");
         
         HeroData storage hero = heroes[nftContract][tokenId];
         hero.name = name;
@@ -257,9 +265,10 @@ contract HeroV6 is Ownable {
         uint256 tokenId,
         uint8 functionIndex,
         bytes calldata data
-    ) external onlyOwner {
+    ) external {
         require(isRegistered[nftContract], "NFT not registered");
         require(bytes(heroes[nftContract][tokenId].name).length > 0, "Hero does not exist");
+        require(verifyNFTOwnership(nftContract, tokenId, msg.sender), "Not the NFT owner");
 
         if (functionIndex == SAVE_BASIC_INFO) {
             SaveBasicInfoParams memory params = abi.decode(data, (SaveBasicInfoParams));
@@ -404,9 +413,10 @@ contract HeroV6 is Ownable {
         address nftContract,
         uint256 tokenId,
         SaveHeroFullDataParams calldata params
-    ) external onlyOwner {
+    ) external {
         require(isRegistered[nftContract], "NFT not registered");
         require(bytes(heroes[nftContract][tokenId].name).length > 0, "Hero does not exist");
+        require(verifyNFTOwnership(nftContract, tokenId, msg.sender), "Not the NFT owner");
         require(bytes(params.name).length <= 16, "Name too long");
         require(uint8(params.race) <= 4, "Invalid race");
         require(uint8(params.gender) <= 1, "Invalid gender");
