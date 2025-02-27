@@ -101,53 +101,99 @@ const api = {
         },
         load: async (nftContract, tokenId, signer) => {
             try {
+                console.log('Loading hero with params:', { nftContract, tokenId });
+                
+                // 输入验证
+                if (!nftContract || !ethers.isAddress(nftContract)) {
+                    throw new Error('Invalid NFT contract address');
+                }
+                if (!tokenId || Number.isNaN(Number(tokenId))) {
+                    throw new Error('Invalid token ID');
+                }
+                if (!signer) {
+                    throw new Error('Signer is required');
+                }
+
                 // Create message for API authentication
                 const message = `Load Hero: ${nftContract}-${tokenId}`;
                 const signature = await signer.signMessage(message);
                 const address = await signer.getAddress();
+                console.log('Authentication prepared:', { message, address });
 
-                // First check if hero exists on-chain
-                const abi = ["function getHeroInfo(address nftContract, uint256 tokenId) view returns (tuple(string name, uint8 race, uint8 gender, uint256 level, uint256 energy, uint256 dailyPoints))"];
-                const heroContractAddress = heroConfig.ethereum.contracts.hero;
-                const contract = new ethers.Contract(heroContractAddress, abi, signer);
-
+                // 尝试使用 API 加载英雄
                 try {
-                    await contract.getHeroInfo(nftContract, tokenId);
-                } catch (error) {
-                    if (error.message.includes("Hero does not exist")) {
-                        throw new Error("This hero has not been created yet. Please create the hero first.");
+                    console.log('Attempting to load hero via API...');
+                    console.log('API URL:', `${heroConfig.test.SERVER_API_URL}/hero/${nftContract}/${tokenId}`);
+                    
+                    const response = await fetch(`${heroConfig.test.SERVER_API_URL}/hero/${nftContract}/${tokenId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'signature': signature,
+                            'message': message,
+                            'address': address
+                        }
+                    });
+
+                    console.log('API Response status:', response.status);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('Hero loaded from API:', data);
+                        return {
+                            success: true,
+                            hero: data
+                        };
+                    } else {
+                        const errorText = await response.text();
+                        console.error('API error response:', errorText);
+                        console.log('Falling back to direct contract call...');
                     }
-                    throw error;
+                } catch (apiError) {
+                    console.error('API load failed:', apiError);
+                    console.log('Falling back to direct contract call...');
                 }
 
-                const response = await fetch(`${heroConfig.test.SERVER_API_URL}/hero/${nftContract}/${tokenId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'signature': signature,
-                        'message': message,
-                        'address': address
-                    }
-                });
-
-                console.log('Response:', response);
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    let errorMessage;
-                    try {
-                        const errorJson = JSON.parse(errorText);
-                        errorMessage = errorJson.error || errorJson.details || errorText;
-                    } catch {
-                        errorMessage = errorText;
-                    }
-                    throw new Error(`Failed to load hero: ${errorMessage}`);
+                // 如果 API 调用失败，直接调用合约
+                console.log('Loading hero directly from contract...');
+                const heroContractAddress = heroConfig.ethereum.contracts.hero;
+                
+                if (!heroContractAddress) {
+                    throw new Error('Hero contract address not configured');
                 }
-
-                return response.json();
+                
+                console.log('Hero contract address:', heroContractAddress);
+                
+                // 使用正确的 ABI 结构
+                const heroContract = new ethers.Contract(
+                    heroContractAddress,
+                    [
+                        "function getHeroInfo(address nftContract, uint256 tokenId) view returns (tuple(string name, uint8 race, uint8 gender, uint256 level, uint256 energy, uint256 dailyPoints))"
+                    ],
+                    signer
+                );
+                
+                const heroInfo = await heroContract.getHeroInfo(nftContract, tokenId);
+                console.log('Hero loaded from contract:', heroInfo);
+                
+                // 格式化结果
+                return {
+                    success: true,
+                    hero: {
+                        name: heroInfo.name,
+                        race: heroInfo.race.toString(),
+                        gender: heroInfo.gender.toString(),
+                        level: heroInfo.level.toString(),
+                        energy: heroInfo.energy.toString(),
+                        dailyPoints: heroInfo.dailyPoints.toString()
+                    }
+                };
             } catch (error) {
                 console.error('Load hero error:', error);
-                throw error;
+                return {
+                    success: false,
+                    error: error.message
+                };
             }
         },
         save: async (data, signer) => {

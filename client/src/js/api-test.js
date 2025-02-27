@@ -9,8 +9,7 @@ let connectedAddress;
 
 // Debug config
 console.log('Config loaded:', config);
-console.log('Hero contract address:', config.VITE_HERO_CONTRACT_ADDRESS);
-console.log('Environment variables:', import.meta.env);
+console.log('Hero contract address:', config.ethereum.contracts.hero);
 
 // Utility functions
 function getElement(id) {
@@ -169,9 +168,63 @@ async function testLoadHero() {
 
         showMessage('Loading hero...');
 
-        const result = await api.hero.load(nftContract, tokenId, signer);
-        updateResponseDisplay('loadHeroResponse', result);
-        showMessage('Hero loaded successfully');
+        try {
+            // 尝试使用 API 加载英雄
+            console.log('Attempting to load hero via API...');
+            const result = await api.hero.load(nftContract, tokenId, signer);
+            
+            if (result?.success) {
+                updateResponseDisplay('loadHeroResponse', result);
+                showMessage('Hero loaded successfully');
+            } else {
+                throw new Error('Failed to load hero data');
+            }
+        } catch (apiError) {
+            console.error('API load failed:', apiError);
+            
+            // 如果 API 调用失败，尝试直接从合约加载
+            try {
+                console.log('Attempting to load hero directly from contract...');
+                
+                // 获取合约地址
+                const heroContractAddress = config.ethereum.contracts.hero;
+                if (!heroContractAddress) {
+                    throw new Error('Hero contract address not configured');
+                }
+                
+                // 创建合约实例
+                const heroContract = new ethers.Contract(
+                    heroContractAddress,
+                    [
+                        "function getHeroInfo(address nftContract, uint256 tokenId) view returns (tuple(string name, uint8 race, uint8 gender, uint256 level, uint256 energy, uint256 dailyPoints))"
+                    ],
+                    signer
+                );
+                
+                // 调用合约
+                const heroInfo = await heroContract.getHeroInfo(nftContract, tokenId);
+                console.log('Hero loaded from contract:', heroInfo);
+                
+                // 格式化结果
+                const result = {
+                    success: true,
+                    hero: {
+                        name: heroInfo.name,
+                        race: heroInfo.race,
+                        gender: heroInfo.gender,
+                        level: heroInfo.level.toString(),
+                        energy: heroInfo.energy.toString(),
+                        dailyPoints: heroInfo.dailyPoints.toString()
+                    }
+                };
+                
+                updateResponseDisplay('loadHeroResponse', result);
+                showMessage('Hero loaded successfully from contract');
+            } catch (contractError) {
+                console.error('Contract load failed:', contractError);
+                throw new Error(`Failed to load hero: ${contractError.message}`);
+            }
+        }
     } catch (error) {
         showError(error);
     }

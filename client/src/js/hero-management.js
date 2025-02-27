@@ -55,7 +55,7 @@ let heroContract;
 // Contract addresses from config
 const {
     hero: heroContractAddress,
-    metadataContractAddress,
+    heroMetadata: metadataContractAddress,
     heroNFT: nftContractAddress
 } = heroConfig.ethereum.contracts;
 
@@ -923,7 +923,15 @@ async function initHeroContract() {
 
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
+        
+        console.log('Initializing hero contract with address:', heroContractAddress);
         heroContract = new ethers.Contract(heroContractAddress, heroAbi, signer);
+        
+        console.log('Initializing heroNFT contract with address:', nftContractAddress);
+        heroNFTContract = new ethers.Contract(nftContractAddress, heroNFTAbi, signer);
+        
+        console.log('Initializing heroMetadata contract with address:', metadataContractAddress);
+        heroMetadataContract = new ethers.Contract(metadataContractAddress, heroMetadataAbi, signer);
         
         return true;
     } catch (error) {
@@ -973,12 +981,37 @@ async function updateContractInfo() {
         console.log('Registered NFTs:', registeredNFTs);
 
         // Get total heroes
-        const totalHeroes = await heroContract.totalHeroes();
-        const totalHeroesElement = document.getElementById('totalHeroes');
-        if (totalHeroesElement) {
-            totalHeroesElement.textContent = totalHeroes.toString();
+        try {
+            console.log('Attempting to get total heroes...');
+            console.log('Hero contract address:', heroContractAddress);
+            
+            // 确保使用正确的 ABI
+            const totalHeroesAbi = [
+                "function totalHeroes() view returns (uint256)"
+            ];
+            
+            // 创建一个专门用于调用 totalHeroes 的合约实例
+            const totalHeroesContract = new ethers.Contract(
+                heroContractAddress,
+                totalHeroesAbi,
+                provider
+            );
+            
+            // 调用 totalHeroes 函数
+            const totalHeroes = await totalHeroesContract.totalHeroes();
+            const totalHeroesElement = document.getElementById('totalHeroes');
+            if (totalHeroesElement) {
+                totalHeroesElement.textContent = totalHeroes.toString();
+            }
+            console.log('Total heroes:', totalHeroes.toString());
+        } catch (error) {
+            console.error('Error getting total heroes:', error);
+            // 如果 totalHeroes 函数调用失败，设置为 "N/A"
+            const totalHeroesElement = document.getElementById('totalHeroes');
+            if (totalHeroesElement) {
+                totalHeroesElement.textContent = "N/A";
+            }
         }
-        console.log('Total heroes:', totalHeroes.toString());
 
         showMessage('Contract information updated successfully');
     } catch (error) {

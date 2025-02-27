@@ -1,5 +1,7 @@
 // 添加环境变量调试日志
-console.log('All env variables:', import.meta.env);
+// console.log('All env variables:', import.meta.env);
+
+// Load environment variables from .env file
 
 // 获取合约地址（从 Vite 的 define 配置中获取）
 const contractAddresses = window.__CONTRACT_ADDRESSES__ || {
@@ -14,13 +16,13 @@ const contractAddresses = window.__CONTRACT_ADDRESSES__ || {
     VITE_HERO_ADDRESS: '0x9a838413a9Cf204535CF61df4479aACa92eA9E81'
 };
 
-console.log('Contract addresses from define:', contractAddresses);
+// console.log('Contract addresses from define:', contractAddresses);
 
 // 基础配置
 export const config = {
     // API URLs
-    SERVER_API_URL: import.meta.env.VITE_SERVER_API_URL || 'http://localhost:3017/api/v1',
-    SERVERX_API_URL: import.meta.env.VITE_SERVERX_API_URL || 'http://localhost:3018/api/v1',
+    SERVER_API_URL: contractAddresses.VITE_SERVER_API_URL || 'http://localhost:3017/api/v1',
+    SERVERX_API_URL: contractAddresses.VITE_SERVERX_API_URL || 'http://localhost:3018/api/v1',
     TOKEN_CONTRACT_ADDRESS: contractAddresses.TOKEN_CONTRACT_ADDRESS,
     STAKE_MANAGER_ADDRESS: contractAddresses.STAKE_MANAGER_ADDRESS,
     NODE_REGISTRY_ADDRESS: contractAddresses.NODE_REGISTRY_ADDRESS,            
@@ -33,22 +35,22 @@ export const config = {
 
     
     // 其他配置
-    CLIENT_PORT: import.meta.env.VITE_CLIENT_PORT || 3008,
-    SERVER_PORT: import.meta.env.VITE_SERVER_PORT || 3017,
-    SERVERX_PORT: import.meta.env.VITE_SERVERX_PORT || 3018,
-    API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3017',
-    API_PREFIX: import.meta.env.VITE_API_PREFIX || '/api/v1',
+    CLIENT_PORT: contractAddresses.VITE_CLIENT_PORT || 3008,
+    SERVER_PORT: contractAddresses.VITE_SERVER_PORT || 3017,
+    SERVERX_PORT: contractAddresses.VITE_SERVERX_PORT || 3018,
+    API_BASE_URL: contractAddresses.VITE_API_BASE_URL || 'http://localhost:3017',
+    API_PREFIX: contractAddresses.VITE_API_PREFIX || '/api/v1',
 
     // 区块链配置
     ethereum: {
-        rpcUrl: import.meta.env.VITE_OPTIMISM_TESTNET_RPC_URL,
+        rpcUrl: contractAddresses.VITE_OPTIMISM_TESTNET_RPC_URL,
         contracts: {
-            hero: import.meta.env.VITE_HERO_CONTRACT_ADDRESS,
-            heroNFT: import.meta.env.VITE_HERO_NFT_CONTRACT_ADDRESS,
-            heroMetadata: import.meta.env.VITE_HERO_METADATA_CONTRACT_ADDRESS        }
+            hero: '0x9a838413a9Cf204535CF61df4479aACa92eA9E81',
+            heroNFT:'0x00b203a541e4CD2C4373082bF2268A78E15CbD4B',
+            heroMetadata: '0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB'   }
     }
 };
 
 export default config;
 
-console.log('Config:', config);
+// console.log('Config:', config);
