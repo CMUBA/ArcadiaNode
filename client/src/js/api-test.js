@@ -1,11 +1,13 @@
 import { ethers } from 'ethers';
 import config from '../config/index.js';
 import api from '../utils/api.js';
+import { heroAbi } from './abi/hero-v6.js';
 
 // Contract state
 let provider;
 let signer;
 let connectedAddress;
+let heroContract;
 
 // Debug config
 console.log('Config loaded:', config);
@@ -147,6 +149,21 @@ async function testCreateHero() {
     }
 }
 
+// Initialize hero contract
+async function initHeroContract() {
+    try {
+        const heroContractAddress = config.ethereum.contracts.hero;
+        if (!heroContractAddress) {
+            throw new Error('Hero contract address not configured');
+        }
+        heroContract = new ethers.Contract(heroContractAddress, heroAbi, signer);
+        return true;
+    } catch (error) {
+        console.error('Error initializing hero contract:', error);
+        return false;
+    }
+}
+
 async function testLoadHero() {
     try {
         if (!provider || !signer) {
@@ -158,75 +175,56 @@ async function testLoadHero() {
             return;
         }
 
+        // Ensure contract is initialized
+        if (!heroContract) {
+            await initHeroContract();
+        }
+
+        // Use correct element ID
         const nftContract = getElement('loadNftContract').value;
         const tokenId = getElement('loadTokenId').value;
 
         // Validate inputs
         if (!nftContract || !tokenId) {
-            throw new Error('Please fill in all required fields');
+            showError('Please fill in all required fields');
+            return;
         }
 
-        showMessage('Loading hero...');
+        // Validate input format
+        if (!ethers.isAddress(nftContract) || Number.isNaN(Number(tokenId))) {
+            showError('Please enter valid contract address and token ID');
+            return;
+        }
 
         try {
-            // 尝试使用 API 加载英雄
-            console.log('Attempting to load hero via API...');
-            const result = await api.hero.load(nftContract, tokenId, signer);
+            // Load hero information from contract
+            const info = await heroContract.getHeroInfo(nftContract, tokenId);
             
-            if (result?.success) {
-                updateResponseDisplay('loadHeroResponse', result);
-                showMessage('Hero loaded successfully');
+            // Convert BigInt values to strings for display
+            const displayInfo = {
+                name: info.name,
+                race: info.race.toString(),
+                gender: info.gender.toString(),
+                level: info.level.toString(),
+                energy: info.energy.toString(),
+                dailyPoints: info.dailyPoints.toString()
+            };
+
+            // Update display
+            updateResponseDisplay('loadHeroResponse', displayInfo);
+            showMessage('Hero info retrieved successfully');
+        } catch (error) {
+            if (error.message.includes('Hero does not exist')) {
+                updateResponseDisplay('loadHeroResponse', {
+                    error: `No hero exists for NFT Contract ${nftContract} and Token ID ${tokenId}`
+                });
+                showMessage('No hero found for this NFT');
             } else {
-                throw new Error('Failed to load hero data');
-            }
-        } catch (apiError) {
-            console.error('API load failed:', apiError);
-            
-            // 如果 API 调用失败，尝试直接从合约加载
-            try {
-                console.log('Attempting to load hero directly from contract...');
-                
-                // 获取合约地址
-                const heroContractAddress = config.ethereum.contracts.hero;
-                if (!heroContractAddress) {
-                    throw new Error('Hero contract address not configured');
-                }
-                
-                // 创建合约实例
-                const heroContract = new ethers.Contract(
-                    heroContractAddress,
-                    [
-                        "function getHeroInfo(address nftContract, uint256 tokenId) view returns (tuple(string name, uint8 race, uint8 gender, uint256 level, uint256 energy, uint256 dailyPoints))"
-                    ],
-                    signer
-                );
-                
-                // 调用合约
-                const heroInfo = await heroContract.getHeroInfo(nftContract, tokenId);
-                console.log('Hero loaded from contract:', heroInfo);
-                
-                // 格式化结果
-                const result = {
-                    success: true,
-                    hero: {
-                        name: heroInfo.name,
-                        race: heroInfo.race,
-                        gender: heroInfo.gender,
-                        level: heroInfo.level.toString(),
-                        energy: heroInfo.energy.toString(),
-                        dailyPoints: heroInfo.dailyPoints.toString()
-                    }
-                };
-                
-                updateResponseDisplay('loadHeroResponse', result);
-                showMessage('Hero loaded successfully from contract');
-            } catch (contractError) {
-                console.error('Contract load failed:', contractError);
-                throw new Error(`Failed to load hero: ${contractError.message}`);
+                throw error;
             }
         }
     } catch (error) {
-        showError(error);
+        showError(`Failed to get hero info: ${error.message}`);
     }
 }
 
