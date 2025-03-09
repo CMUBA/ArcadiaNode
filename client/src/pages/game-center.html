@@ -110,6 +110,10 @@
             theme: "dark"
         };
 
+        window.saveHero = function(dat) {
+            console.log('saveHero:', dat);
+        };
+
         // 添加getParentData函数，供Godot游戏调用
         window.getParentData = function(path) {
             try {
