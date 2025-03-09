@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en"></html>
+<head>
+    <meta charset="UTF-8">
+    <title>Arcadia Node - Game Center</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            line-height: 1.4;
+            background-color: #f5f7fa;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
+        }
+        .header {
+            background-color: #fff;
+            padding: 14px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .header h1 {
+            margin: 0;
+            color: #2c3e50;
+            text-align: center;
+        }
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            text-decoration: none;
+            color: #1976d2;
+        }
+        .language-selector {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+        }
+        .language-selector select {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .game-container {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .game-iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            border-radius: 4px;
+        }
+        .game-description {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <a href="/" class="back-link" id="backToHome">← Back to Home</a>
+            <div class="language-selector">
+                <select title="hello" id="languageSelect" onchange="changeLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                    <option value="th">ไทย</option>
+                </select>
+            </div>
+            <h1 id="pageTitle">Game Center</h1>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="game-container">
+            <iframe title="arcadia" id="gameFrame" src="/game/index.html" class="game-iframe" allowfullscreen></iframe>
+            <div class="game-description">
+                <h2 id="gameDescription">Game Description</h2>
+                <p id="gameIntro">This is an interactive game powered by Arcadia Node. Enjoy the gameplay and experience the integration of blockchain technology with traditional gaming.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import enLang from '../config/i18n/en.js';
+        import zhLang from '../config/i18n/zh.js';
+        import thLang from '../config/i18n/th.js';
+
+        const translations = {
+            en: enLang,
+            zh: zhLang,
+            th: thLang
+        };
+
+        // 游戏变量
+        const gameVariables = {
+            playerName: "Player1",
+            level: 1,
+            score: 0,
+            walletAddress: "0x123456789abcdef",
+            theme: "dark"
+        };
+
+        window.saveHero = function(dat) {
+            console.log('saveHero:', dat);
+        };
+
+        // 添加getParentData函数，供Godot游戏调用
+        window.getParentData = function(path) {
+            try {
+                // 使用Function构造函数安全地评估路径表达式
+                const getValue = new Function('return ' + path);
+                return getValue();
+            } catch (error) {
+                console.error('获取数据时出错:', error);
+                return null;
+            }
+        };
+
+        // 将数据暴露给全局window对象，以便Godot游戏可以访问
+        window.userData = {
+            username: "ArcadiaPlayer",
+            id: "12345",
+            email: "player@example.com",
+            level: 10,
+            score: 5000,
+            inventory: ["sword", "shield", "potion"],
+            wallet: {
+                address: "0x9876543210abcdef",
+                balance: 1000
+            },
+            settings: {
+                language: "zh",
+                theme: "dark",
+                soundEnabled: true
+            }
+        };
+        console.log('window.userData已初始化:', window.userData);
+        let currentLang = localStorage.getItem('language') || 'en';
+        
+        window.changeLanguage = function(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            updateContent();
+            
+            // 更新userData中的语言设置
+            if (window.userData && window.userData.settings) {
+                window.userData.settings.language = lang;
+                console.log('语言已更新:', window.userData.settings.language);
+            }
+        };
+
+        function updateContent() {
+            const t = translations[currentLang];
+            
+            // Update all text content
+            document.getElementById('pageTitle').textContent = t.gameCenter || 'Game Center';
+            document.getElementById('backToHome').textContent = t.backToHome || '← Back to Home';
+            document.getElementById('gameDescription').textContent = t.gameDescription || 'Game Description';
+            document.getElementById('gameIntro').textContent = t.gameIntro || 'This is an interactive game powered by Arcadia Node. Enjoy the gameplay and experience the integration of blockchain technology with traditional gaming.';
+            
+            // Update language selector
+            document.getElementById('languageSelect').value = currentLang;
+            
+            // 更新游戏变量中的语言设置
+            gameVariables.language = currentLang;
+            // 同时更新userData中的语言设置
+            if (window.userData && window.userData.settings) {
+                window.userData.settings.language = currentLang;
+            }
+        }
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化语言
+            document.getElementById('languageSelect').value = currentLang;
+            updateContent();
+            
+            // 初始化游戏变量
+            gameVariables.language = currentLang;
+        });
+    </script>
+</body>
+</html>
