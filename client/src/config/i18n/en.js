@@ -147,5 +147,9 @@ export default {
         success: 'Minting Successful',
         failed: 'Minting Failed'
     },
-    heroTestTitle: 'Hero System Test'
+    heroTestTitle: 'Hero System Test',
+    gameCenter: 'Game Center',
+    gameDescription: 'Game Description',
+    gameIntro: 'This is an interactive game powered by Arcadia Node. Enjoy the gameplay and experience the integration of blockchain technology with traditional gaming.',
+    backToHome: '← Back to Home'
 }; 
