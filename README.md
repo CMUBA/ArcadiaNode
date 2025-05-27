@@ -1,6 +1,6 @@
-# Arcadia Node
+# SDSS node registry
 
-A decentralized node management system for the Arcadia network.
+A decentralized node management system for SDSS system(fork from the Arcadia project).
 
 ## Features
 
