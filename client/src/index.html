@@ -105,7 +105,7 @@
     <div class="header">
         <div class="container">
             <div class="language-selector">
-                <select id="languageSelect" onchange="changeLanguage(this.value)">
+                <select title="langopt" id="languageSelect" onchange="changeLanguage(this.value)">
                     <option value="en">English</option>
                     <option value="zh">中文</option>
                     <option value="th">ไทย</option>
@@ -220,6 +220,19 @@
                 </ul>
             </div>
 
+            <!-- Game Center -->
+            <div class="service-group">
+                <h2 id="gameCenter">Game Center</h2>
+                <ul class="service-list">
+                    <li class="service-item">
+                        <a href="pages/game-center.html" class="service-link">
+                            <span id="gameIndex">Game Portal</span>
+                            <span class="service-index">Game</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
             <!-- Q&A Section -->
             <div class="service-group">
                 <h2 id="qaTitle">Q&A</h2>
@@ -276,6 +289,7 @@
             document.getElementById('serviceManagement').textContent = t.serviceManagement;
             document.getElementById('userManagement').textContent = t.userManagement;
             document.getElementById('chainInteraction').textContent = t.chainInteraction;
+            document.getElementById('gameCenter').textContent = t.gameCenter;
             
             // document.getElementById('nodeContracts').textContent = t.contracts.nodeContracts;
             // document.getElementById('heroContracts').textContent = t.contracts.heroContracts;

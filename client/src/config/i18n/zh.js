@@ -113,5 +113,9 @@ export default {
                 error: '创建英雄失败'
             }
         }
-    }
+    },
+    gameCenter: '游戏中心',
+    gameDescription: '游戏描述',
+    gameIntro: '这是由Arcadia Node提供支持的互动游戏。享受游戏乐趣，体验区块链技术与传统游戏的融合。',
+    backToHome: '← 返回首页'
 }; 
